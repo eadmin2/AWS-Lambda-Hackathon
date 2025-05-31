@@ -2,18 +2,20 @@ import { loadStripe } from '@stripe/stripe-js';
 import { supabase } from './supabase';
 
 const stripePromise = loadStripe(
-  import.meta.env.VITE_STRIPE_PUBLIC_KEY || ''
+  import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || ''
 );
+console.log('Stripe key:', import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
-export async function createUploadCheckoutSession(userId: string) {
+export async function createUploadCheckoutSession(userId?: string) {
   try {
+    const body: any = {
+      mode: 'payment',
+      success_url: `${window.location.origin}/dashboard?checkout=success`,
+      cancel_url: `${window.location.origin}/pricing?checkout=canceled`,
+    };
+    if (userId) body.user_id = userId;
     const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-      body: {
-        user_id: userId,
-        mode: 'payment',
-        success_url: `${window.location.origin}/dashboard?checkout=success`,
-        cancel_url: `${window.location.origin}/pricing?checkout=canceled`,
-      },
+      body,
     });
 
     if (error) {
@@ -36,15 +38,16 @@ export async function createUploadCheckoutSession(userId: string) {
   }
 }
 
-export async function createSubscriptionCheckoutSession(userId: string) {
+export async function createSubscriptionCheckoutSession(userId?: string) {
   try {
+    const body: any = {
+      mode: 'subscription',
+      success_url: `${window.location.origin}/dashboard?subscription=success`,
+      cancel_url: `${window.location.origin}/pricing?subscription=canceled`,
+    };
+    if (userId) body.user_id = userId;
     const { data, error } = await supabase.functions.invoke('create-checkout-session', {
-      body: {
-        user_id: userId,
-        mode: 'subscription',
-        success_url: `${window.location.origin}/dashboard?subscription=success`,
-        cancel_url: `${window.location.origin}/pricing?subscription=canceled`,
-      },
+      body,
     });
 
     if (error) {

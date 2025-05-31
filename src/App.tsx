@@ -14,6 +14,7 @@ import TermsPage from './pages/TermsPage';
 import DisclaimerPage from './pages/DisclaimerPage';
 import AdminDashboard from './pages/AdminDashboard';
 import { useAuth } from './contexts/AuthContext';
+import CheckoutPage from './pages/CheckoutPage';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -73,6 +74,14 @@ function App() {
             element={
               <ProtectedRoute adminOnly>
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/checkout"
+            element={
+              <ProtectedRoute>
+                <CheckoutPage />
               </ProtectedRoute>
             }
           />

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { FileText } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import AuthTabs from '../components/auth/AuthTabs';
@@ -8,9 +8,17 @@ import { useAuth } from '../contexts/AuthContext';
 const AuthPage: React.FC = () => {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const next = searchParams.get('next');
+  const type = searchParams.get('type');
 
   const handleAuthSuccess = () => {
-    navigate('/dashboard');
+    if (next === 'checkout' && type) {
+      navigate(`/checkout?type=${type}`);
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   // Redirect if already authenticated

@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../ui/Button';
-import { FileText, LogOut, Menu, User } from 'lucide-react';
+import { FileText, Menu } from 'lucide-react';
 
 const Navbar: React.FC = () => {
   const { user, profile, signOut, isLoading } = useAuth();
@@ -84,7 +84,7 @@ const Navbar: React.FC = () => {
                 ) : (
                   <div className="flex items-center space-x-4">
                     <Link
-                      to="/pricing"
+                      to="/pricing#pricing-section"
                       className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium mr-2"
                       onClick={() => setIsMenuOpen(false)}
                     >
@@ -138,7 +138,7 @@ const Navbar: React.FC = () => {
             )}
             {!user && (
               <Link
-                to="/pricing"
+                to="/pricing#pricing-section"
                 className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
                 onClick={() => setIsMenuOpen(false)}
               >

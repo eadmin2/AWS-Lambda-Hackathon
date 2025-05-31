@@ -6,53 +6,16 @@ import { corsHeaders } from '../_shared/cors.ts';
 serve(async (req) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, {
+      status: 204,
+      headers: {
+        ...corsHeaders,
+      },
+    });
   }
 
   try {
     const { user_id, mode, success_url, cancel_url } = await req.json();
-
-    if (!user_id) {
-      throw new Error('user_id is required');
-    }
-
-    // Get user's email from profiles table
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('email')
-      .eq('id', user_id)
-      .single();
-
-    if (profileError || !profile) {
-      throw new Error('User profile not found');
-    }
-
-    // Create or retrieve Stripe customer
-    const { data: payment } = await supabase
-      .from('payments')
-      .select('stripe_customer_id')
-      .eq('user_id', user_id)
-      .single();
-
-    let customerId = payment?.stripe_customer_id;
-
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: profile.email,
-        metadata: {
-          user_id,
-        },
-      });
-      customerId = customer.id;
-
-      // Store Stripe customer ID
-      await supabase
-        .from('payments')
-        .insert({
-          user_id,
-          stripe_customer_id: customerId,
-        });
-    }
 
     // Get the appropriate price ID based on mode
     const priceId = mode === 'subscription' 
@@ -63,9 +26,53 @@ serve(async (req) => {
       throw new Error(`Price ID not found for mode: ${mode}`);
     }
 
+    let customerId = undefined;
+    let metadata = {};
+
+    if (user_id) {
+      // Get user's email from profiles table
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('id', user_id)
+        .single();
+
+      if (profileError || !profile) {
+        throw new Error('User profile not found');
+      }
+
+      // Create or retrieve Stripe customer
+      const { data: payment } = await supabase
+        .from('payments')
+        .select('stripe_customer_id')
+        .eq('user_id', user_id)
+        .single();
+
+      customerId = payment?.stripe_customer_id;
+
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: profile.email,
+          metadata: {
+            user_id,
+          },
+        });
+        customerId = customer.id;
+
+        // Store Stripe customer ID
+        await supabase
+          .from('payments')
+          .insert({
+            user_id,
+            stripe_customer_id: customerId,
+          });
+      }
+      metadata = { user_id };
+    }
+
     // Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
-      customer: customerId,
+      ...(customerId ? { customer: customerId } : {}),
       mode: mode === 'subscription' ? 'subscription' : 'payment',
       payment_method_types: ['card'],
       line_items: [
@@ -76,9 +83,7 @@ serve(async (req) => {
       ],
       success_url,
       cancel_url,
-      metadata: {
-        user_id,
-      },
+      ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
     });
 
     return new Response(

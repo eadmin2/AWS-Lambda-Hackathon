@@ -1,6 +1,6 @@
-import React from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { FileText, Shield, Zap, Star, CheckCircle } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Link, useSearchParams, useLocation } from 'react-router-dom';
+import { FileText, Shield, Zap, Star, CheckCircle, AlertCircle } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Button from '../components/ui/Button';
 import { Card, CardContent } from '../components/ui/Card';
@@ -10,21 +10,27 @@ import { createUploadCheckoutSession, createSubscriptionCheckoutSession } from '
 const PricingPage = () => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const checkoutStatus = searchParams.get('checkout');
   const [isLoading, setIsLoading] = React.useState<'single' | 'subscription' | null>(null);
 
-  const handlePurchase = async (type: 'single' | 'subscription') => {
-    if (!user) {
-      window.location.href = '/auth';
-      return;
+  useEffect(() => {
+    if (location.hash) {
+      const id = location.hash.replace('#', '');
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
     }
+  }, [location]);
 
+  const handlePurchase = async (type: 'single' | 'subscription') => {
+    setIsLoading(type);
     try {
-      setIsLoading(type);
       if (type === 'single') {
-        await createUploadCheckoutSession(user.id);
+        await createUploadCheckoutSession(user?.id);
       } else {
-        await createSubscriptionCheckoutSession(user.id);
+        await createSubscriptionCheckoutSession(user?.id);
       }
     } catch (error) {
       console.error('Error creating checkout session:', error);
@@ -104,7 +110,7 @@ const PricingPage = () => {
             <p className="text-xl text-gray-600">Choose the plan that works best for you</p>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto" id="pricing-section">
             <Card>
               <CardContent className="p-8">
                 <div className="text-center mb-6">
@@ -134,7 +140,13 @@ const PricingPage = () => {
 
                 <Button
                   className="w-full"
-                  onClick={() => handlePurchase('single')}
+                  onClick={() => {
+                    if (!user) {
+                      window.location.href = '/auth?next=checkout&type=single';
+                    } else {
+                      handlePurchase('single');
+                    }
+                  }}
                   isLoading={isLoading === 'single'}
                 >
                   Get Started
@@ -171,7 +183,13 @@ const PricingPage = () => {
 
                 <Button
                   className="w-full"
-                  onClick={() => handlePurchase('subscription')}
+                  onClick={() => {
+                    if (!user) {
+                      window.location.href = '/auth?next=checkout&type=subscription';
+                    } else {
+                      handlePurchase('subscription');
+                    }
+                  }}
                   isLoading={isLoading === 'subscription'}
                 >
                   Start Subscription
