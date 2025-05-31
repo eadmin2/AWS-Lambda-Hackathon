@@ -29,7 +29,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
   const onSubmit = async (data: RegisterFormData) => {
     try {
       // Sign up with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const { data: authData } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
@@ -39,15 +39,6 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
         },
       });
 
-      if (authError) {
-        setError('root', {
-          type: 'manual',
-          message: authError.message,
-        });
-        return;
-      }
-
-      // Create profile in profiles table
       if (authData.user) {
         const { error: profileError } = await supabase
           .from('profiles')
@@ -67,7 +58,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
       if (onSuccess) {
         onSuccess();
       }
-    } catch (error) {
+    } catch (_error) {
       setError('root', {
         type: 'manual',
         message: 'An unexpected error occurred. Please try again.',

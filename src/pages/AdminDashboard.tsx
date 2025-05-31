@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Users, FileText, CreditCard, BarChart3, Search } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
@@ -8,6 +8,35 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { formatDate } from '../lib/utils';
 
+interface AdminUser {
+  id: string;
+  email: string;
+  full_name?: string;
+  role: string;
+  documents?: { count: number }[];
+  payments?: {
+    subscription_status?: string;
+    subscription_end_date?: string;
+    upload_credits?: number;
+  }[];
+}
+
+interface AdminDocument {
+  id: string;
+  file_name: string;
+  file_url?: string;
+  uploaded_at?: string;
+  profiles?: {
+    email?: string;
+    full_name?: string;
+  };
+  disability_estimates?: {
+    condition?: string;
+    estimated_rating?: number;
+    combined_rating?: number;
+  }[];
+}
+
 const AdminDashboard = () => {
   const { user, profile, isLoading } = useAuth();
   const [stats, setStats] = useState({
@@ -16,18 +45,15 @@ const AdminDashboard = () => {
     activeSubscriptions: 0,
     revenueThisMonth: 0,
   });
-  const [users, setUsers] = useState([]);
-  const [documents, setDocuments] = useState([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [documents, setDocuments] = useState<AdminDocument[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoadingData, setIsLoadingData] = useState(true);
 
   useEffect(() => {
     if (!user || profile?.role !== 'admin') return;
 
     const fetchData = async () => {
       try {
-        setIsLoadingData(true);
-
         // Fetch stats
         const { data: usersData } = await supabase
           .from('profiles')
@@ -46,7 +72,7 @@ const AdminDashboard = () => {
           totalUsers: usersData?.length || 0,
           totalDocuments: docsData?.length || 0,
           activeSubscriptions: paymentsData?.length || 0,
-          revenueThisMonth: paymentsData?.reduce((acc, payment) => acc + 49, 0) || 0,
+          revenueThisMonth: paymentsData?.reduce((acc) => acc + 49, 0) || 0,
         });
 
         // Fetch users with their documents and payments
@@ -82,8 +108,6 @@ const AdminDashboard = () => {
         setDocuments(recentDocs || []);
       } catch (error) {
         console.error('Error fetching admin data:', error);
-      } finally {
-        setIsLoadingData(false);
       }
     };
 
@@ -222,15 +246,15 @@ const AdminDashboard = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {user.documents?.[0]?.count || 0}
+                          {user.documents?.[0]?.count ?? 0}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
                             {user.payments?.[0]?.subscription_status || 'None'}
                           </div>
-                          {user.payments?.[0]?.upload_credits > 0 && (
+                          {user.payments?.[0]?.upload_credits && (
                             <div className="text-sm text-gray-500">
-                              {user.payments[0].upload_credits} credits
+                              {user.payments?.[0]?.upload_credits} credits
                             </div>
                           )}
                         </td>
@@ -307,7 +331,7 @@ const AdminDashboard = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {formatDate(doc.uploaded_at)}
+                          {doc.uploaded_at ? formatDate(doc.uploaded_at) : ''}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {doc.disability_estimates?.[0] ? (

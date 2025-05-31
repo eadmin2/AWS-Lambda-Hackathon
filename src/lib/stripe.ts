@@ -1,14 +1,8 @@
-import { loadStripe } from '@stripe/stripe-js';
 import { supabase } from './supabase';
-
-const stripePromise = loadStripe(
-  import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || ''
-);
-console.log('Stripe key:', import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
 export async function createUploadCheckoutSession(userId?: string) {
   try {
-    const body: any = {
+    const body: Record<string, unknown> = {
       mode: 'payment',
       success_url: `${window.location.origin}/dashboard?checkout=success`,
       cancel_url: `${window.location.origin}/pricing?checkout=canceled`,
@@ -40,7 +34,7 @@ export async function createUploadCheckoutSession(userId?: string) {
 
 export async function createSubscriptionCheckoutSession(userId?: string) {
   try {
-    const body: any = {
+    const body: Record<string, unknown> = {
       mode: 'subscription',
       success_url: `${window.location.origin}/dashboard?subscription=success`,
       cancel_url: `${window.location.origin}/pricing?subscription=canceled`,
@@ -107,4 +101,51 @@ export async function checkUserUploadCredits(userId: string): Promise<number> {
     console.error('Error checking upload credits:', error);
     return 0;
   }
+}
+
+export async function openStripeCustomerPortal() {
+  const supabaseClient = supabase;
+  const session = supabaseClient.auth.getSession ? (await supabaseClient.auth.getSession()).data.session : null;
+  const accessToken = session?.access_token;
+  if (!accessToken) {
+    throw new Error('User is not authenticated');
+  }
+  const response = await fetch('/functions/v1/create-customer-portal-session', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  const data = await response.json();
+  if (!response.ok || !data.url) {
+    throw new Error(data.error || 'Failed to create Stripe customer portal session');
+  }
+  window.location.href = data.url;
+}
+
+export interface StripeBillingInfo {
+  subscription: Record<string, unknown> | null;
+  invoices: Record<string, unknown>[];
+}
+
+export async function fetchStripeBillingInfo(): Promise<StripeBillingInfo> {
+  const supabaseClient = supabase;
+  const session = supabaseClient.auth.getSession ? (await supabaseClient.auth.getSession()).data.session : null;
+  const accessToken = session?.access_token;
+  if (!accessToken) {
+    throw new Error('User is not authenticated');
+  }
+  const response = await fetch('/functions/v1/get-stripe-billing-info', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || 'Failed to fetch Stripe billing info');
+  }
+  return data as StripeBillingInfo;
 }

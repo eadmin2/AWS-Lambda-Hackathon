@@ -16,13 +16,13 @@ const CheckoutPage: React.FC = () => {
       if (type === 'single') {
         try {
           await createUploadCheckoutSession(user.id);
-        } catch (e) {
+        } catch {
           setError('Failed to start single upload checkout.');
         }
       } else if (type === 'subscription') {
         try {
           await createSubscriptionCheckoutSession(user.id);
-        } catch (e) {
+        } catch {
           setError('Failed to start subscription checkout.');
         }
       } else {
@@ -30,7 +30,7 @@ const CheckoutPage: React.FC = () => {
       }
     };
     doCheckout();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [user, type]);
 
   return (

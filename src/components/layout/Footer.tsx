@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, FileText, Info, HelpCircle } from 'lucide-react';
+import { FileText } from 'lucide-react';
 
 const Footer: React.FC = () => {
   return (

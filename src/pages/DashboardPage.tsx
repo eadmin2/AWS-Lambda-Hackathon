@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Upload, AlertCircle } from 'lucide-react';
+import { Upload, AlertCircle, CheckCircle } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import FileUploader from '../components/documents/FileUploader';
 import DocumentsList from '../components/documents/DocumentsList';
@@ -63,7 +63,7 @@ const DashboardPage: React.FC = () => {
         setEstimates(estimatesData);
         
         // Check subscription status
-        const hasActiveSubscription = await checkUserSubscription(user.id);
+        const hasActiveSubscription = await checkUserSubscription();
         setHasSubscription(hasActiveSubscription);
         
         // Check upload credits
@@ -84,7 +84,8 @@ const DashboardPage: React.FC = () => {
     fetchData();
   }, [user]);
 
-  const handleUploadComplete = async (documentId: string) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleUploadComplete: (documentId: string) => Promise<void> = async (_documentId) => {
     if (!user) return;
     
     try {
@@ -176,7 +177,7 @@ const DashboardPage: React.FC = () => {
                   
                   <FileUploader
                     userId={user?.id || ''}
-                    onUploadComplete={handleUploadComplete}
+                    onUploadComplete={handleUploadComplete as (documentId: string) => void}
                     onUploadError={handleUploadError}
                     canUpload={canUpload}
                   />

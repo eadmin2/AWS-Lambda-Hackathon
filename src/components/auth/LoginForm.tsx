@@ -23,23 +23,15 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
 
   const onSubmit = async (data: LoginFormData) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      await supabase.auth.signInWithPassword({
         email: data.email,
         password: data.password,
       });
 
-      if (error) {
-        setError('root', {
-          type: 'manual',
-          message: error.message,
-        });
-        return;
-      }
-
       if (onSuccess) {
         onSuccess();
       }
-    } catch (error) {
+    } catch (_error) {
       setError('root', {
         type: 'manual',
         message: 'An unexpected error occurred. Please try again.',

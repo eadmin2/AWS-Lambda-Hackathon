@@ -1,9 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, X, FileText, AlertCircle, Check } from 'lucide-react';
+import { Upload, X, FileText, AlertCircle } from 'lucide-react';
 import Button from '../ui/Button';
 import { uploadDocument, supabase } from '../../lib/supabase';
-import { isValidFileType, isValidFileSize, generateRandomString } from '../../lib/utils';
+import { isValidFileType, isValidFileSize } from '../../lib/utils';
 import { analyzeMedicalDocument } from '../../lib/picaos';
 
 interface FileUploaderProps {

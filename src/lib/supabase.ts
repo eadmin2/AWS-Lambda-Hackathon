@@ -42,7 +42,7 @@ export type DisabilityEstimate = {
 export async function getProfile(user: User): Promise<Profile> {
   try {
     // First attempt to get the existing profile
-    let { data, error } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)

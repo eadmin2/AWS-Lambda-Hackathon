@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { User, Mail, Key, AlertCircle, Save } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Button from '../components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../components/ui/Card';
 import { useAuth } from '../contexts/AuthContext';
-import { updateProfile } from '../lib/supabase';
+import { updateProfile, supabase } from '../lib/supabase';
 import { useForm } from 'react-hook-form';
+import { openStripeCustomerPortal, fetchStripeBillingInfo, StripeBillingInfo } from '../lib/stripe';
 
 interface ProfileFormData {
   fullName: string;
@@ -18,6 +19,9 @@ const ProfilePage: React.FC = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [billingInfo, setBillingInfo] = useState<StripeBillingInfo | null>(null);
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [billingError, setBillingError] = useState<string | null>(null);
 
   const {
     register,
@@ -50,6 +54,14 @@ const ProfilePage: React.FC = () => {
       setIsUpdating(false);
     }
   };
+
+  useEffect(() => {
+    setBillingLoading(true);
+    fetchStripeBillingInfo()
+      .then(setBillingInfo)
+      .catch((err) => setBillingError(err.message))
+      .finally(() => setBillingLoading(false));
+  }, []);
 
   // Redirect if not authenticated
   if (!isAuthLoading && !user) {
@@ -216,6 +228,77 @@ const ProfilePage: React.FC = () => {
                         </p>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="mt-6">
+                  <CardHeader>
+                    <CardTitle>Subscription & Billing</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Manage your subscription, view payment history, download invoices, or cancel your plan securely via Stripe.
+                    </p>
+                    {billingLoading && <div className="text-sm text-gray-500 mb-2">Loading billing info...</div>}
+                    {billingError && <div className="text-sm text-error-500 mb-2">{billingError}</div>}
+                    {billingInfo && (
+                      <div className="mb-4">
+                        <div className="mb-2">
+                          <span className="font-medium">Status:</span> {typeof billingInfo.subscription?.status === 'string' ? billingInfo.subscription.status : 'No active subscription'}
+                        </div>
+                        {billingInfo.subscription && typeof billingInfo.subscription.current_period_start === 'number' && typeof billingInfo.subscription.current_period_end === 'number' && (
+                          <>
+                            <div className="mb-2">
+                              <span className="font-medium">Current Period:</span> {new Date(billingInfo.subscription.current_period_start * 1000).toLocaleDateString()} - {new Date(billingInfo.subscription.current_period_end * 1000).toLocaleDateString()}
+                            </div>
+                            <div className="mb-2">
+                              <span className="font-medium">Next Payment:</span> {new Date(billingInfo.subscription.current_period_end * 1000).toLocaleDateString()}
+                            </div>
+                          </>
+                        )}
+                        {billingInfo.invoices && billingInfo.invoices.length > 0 && (
+                          <div className="mt-4">
+                            <div className="font-medium mb-1">Payment History:</div>
+                            <table className="w-full text-sm border">
+                              <thead>
+                                <tr>
+                                  <th className="text-left p-1 border">Date</th>
+                                  <th className="text-left p-1 border">Amount</th>
+                                  <th className="text-left p-1 border">Status</th>
+                                  <th className="text-left p-1 border">Invoice</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {billingInfo.invoices.map((inv: Record<string, unknown>) => (
+                                  <tr key={String(inv.id)}>
+                                    <td className="p-1 border">{typeof inv.created === 'number' ? new Date(inv.created * 1000).toLocaleDateString() : ''}</td>
+                                    <td className="p-1 border">{typeof inv.amount_paid === 'number' ? `$${(inv.amount_paid / 100).toFixed(2)}` : ''}</td>
+                                    <td className="p-1 border">{typeof inv.status === 'string' ? inv.status : ''}</td>
+                                    <td className="p-1 border">{typeof inv.invoice_pdf === 'string' ? <a href={inv.invoice_pdf} target="_blank" rel="noopener noreferrer" className="text-primary-600 underline">View</a> : '-'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <Button
+                      className="w-full"
+                      onClick={async () => {
+                        setIsUpdating(true);
+                        try {
+                          await openStripeCustomerPortal();
+                        } catch {
+                          alert('Failed to open Stripe portal. Please try again.');
+                        } finally {
+                          setIsUpdating(false);
+                        }
+                      }}
+                      isLoading={isUpdating}
+                    >
+                      Manage Subscription & Invoices
+                    </Button>
                   </CardContent>
                 </Card>
 
