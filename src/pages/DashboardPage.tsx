@@ -140,7 +140,7 @@ const DashboardPage: React.FC = () => {
       const ext = doc.file_name.split('.').pop();
       const old_file_name = `${user.id}/${doc.file_name}`;
       const new_file_name = `${user.id}/${newBaseName}.${ext}`;
-      const res = await fetch('https://algojcmqstokyghijcyc.functions.supabase.co/delete-document', {
+      const res = await fetch('https://algojcmqstokyghijcyc.functions.supabase.co/rename-document', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,

@@ -1,8 +1,8 @@
 // @ts-nocheck
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import { supabase } from '../_shared/supabase.ts';
-import { stripe } from '../_shared/stripe.ts';
-import { corsHeaders } from '../_shared/cors.ts';
+import { supabase } from './_shared/supabase.ts';
+import { stripe } from './_shared/stripe.ts';
+import { corsHeaders } from './_shared/cors.ts';
 
 Deno.serve(async (req) => {
   // Handle CORS preflight

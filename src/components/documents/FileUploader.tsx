@@ -4,38 +4,13 @@ import { Upload, X, FileText, AlertCircle, FileImage, File } from 'lucide-react'
 import Button from '../ui/Button';
 import { supabase } from '../../lib/supabase';
 import { isValidFileType, isValidFileSize } from '../../lib/utils';
+import { uploadDocument } from '../../lib/supabase';
 
 interface FileUploaderProps {
   userId: string;
   onUploadComplete: (documentId: string) => void;
   onUploadError: (error: string) => void;
   canUpload: boolean;
-}
-
-// Add secureUpload utility
-async function secureUpload(file: File, userId: string, fileName: string): Promise<{ url: string, path: string } | { error: string }> {
-  const { data } = await supabase.auth.getSession();
-  const accessToken = data.session?.access_token;
-  console.log("Access token being sent:", accessToken);
-  if (!accessToken) return { error: 'Not authenticated' };
-
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('fileName', fileName);
-
-  const res = await fetch('https://algojcmqstokyghijcyc.functions.supabase.co/secure-upload', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-    },
-    body: formData,
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    return { error: err.error || 'Failed to upload file' };
-  }
-  return await res.json();
 }
 
 const FileUploader: React.FC<FileUploaderProps> = ({
@@ -103,9 +78,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         const { file, name } = files[i];
         const ext = file.name.split('.').pop();
         const finalName = `${name}.${ext}`;
-        // Secure upload via Edge Function
-        const uploadResult = await secureUpload(new window.File([file], finalName, { type: file.type }), userId, finalName);
-        if ('error' in uploadResult) throw new Error(uploadResult.error);
+        // Upload directly to Supabase Storage
+        const uploadResult = await uploadDocument(new window.File([file], finalName, { type: file.type }), userId);
         const { url: fileUrl } = uploadResult;
         // Insert document record in database
         const { data: documentData, error: documentError } = await supabase
