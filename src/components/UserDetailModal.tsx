@@ -29,9 +29,10 @@ interface UserDetailModalProps {
   onSave: (updated: { id: string; full_name?: string; role: string }) => Promise<void>;
   loading?: boolean;
   onUpdateCredits?: (userId: string, paymentId: string, newCredits: number) => Promise<void>;
+  canEditCredits?: boolean;
 }
 
-const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user, onSave, loading, onUpdateCredits }) => {
+const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user, onSave, loading, onUpdateCredits, canEditCredits }) => {
   const [fullName, setFullName] = useState(user?.full_name || '');
   const [role, setRole] = useState(user?.role || '');
   const [saving, setSaving] = useState(false);
@@ -122,13 +123,13 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
                       className="border border-gray-300 rounded px-2 py-1 w-20 text-xs"
                       value={creditsEdit[pay.id] !== undefined ? creditsEdit[pay.id] : pay.upload_credits || 0}
                       onChange={e => handleCreditsChange(pay.id, Number(e.target.value))}
-                      disabled={creditsSaving[pay.id]}
+                      disabled={creditsSaving[pay.id] || !canEditCredits}
                     />
                     <Button
                       size="sm"
                       variant="secondary"
                       isLoading={creditsSaving[pay.id]}
-                      disabled={creditsSaving[pay.id] || creditsEdit[pay.id] === pay.upload_credits}
+                      disabled={creditsSaving[pay.id] || creditsEdit[pay.id] === pay.upload_credits || !canEditCredits}
                       onClick={() => handleCreditsSave(pay.id)}
                     >
                       Save

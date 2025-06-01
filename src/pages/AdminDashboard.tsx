@@ -87,6 +87,8 @@ function renderLogDetails(details: any) {
   return typeof parsed === 'string' ? parsed : JSON.stringify(parsed);
 }
 
+const IMPERSONATION_KEY = 'admin_impersonation_session';
+
 const AdminDashboard = () => {
   const { user, profile, isLoading } = useAuth();
   const [stats, setStats] = useState({
@@ -114,6 +116,9 @@ const AdminDashboard = () => {
   // Notifications state
   const [notifications, setNotifications] = useState<any[]>([]);
   const [bellOpen, setBellOpen] = useState(false);
+
+  // Impersonation state
+  const [isImpersonating, setIsImpersonating] = useState(false);
 
   // Handler to dismiss a notification
   const handleDismissNotification = (idx: number) => {
@@ -260,6 +265,12 @@ const AdminDashboard = () => {
       setNotifications(notifs);
     };
     fetchNotifications();
+
+    // Check if we're in impersonation mode on load
+    const stored = localStorage.getItem(IMPERSONATION_KEY);
+    if (stored) {
+      setIsImpersonating(true);
+    }
   }, [user, profile]);
 
   // Fetch activity logs
@@ -276,8 +287,8 @@ const AdminDashboard = () => {
     fetchLogs();
   }, [user, profile]);
 
-  // Redirect if not admin
-  if (!isLoading && (!user || profile?.role !== 'admin')) {
+  // Redirect if not admin or not allowed
+  if (!isLoading && (!user || !profile || profile.admin_level === 'readonly')) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -386,6 +397,48 @@ const AdminDashboard = () => {
     setActivityLogs(data || []);
   };
 
+  // Impersonate user handler
+  const handleImpersonate = async (userId: string) => {
+    // Store current session
+    const currentSession = await supabase.auth.getSession();
+    localStorage.setItem(IMPERSONATION_KEY, JSON.stringify({
+      session: currentSession.data.session,
+      impersonatedUserId: userId
+    }));
+    // Call Edge Function
+    const resp = await fetch('/functions/v1/impersonate-user', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${currentSession.data.session?.access_token}`
+      },
+      body: JSON.stringify({ user_id: userId })
+    });
+    const data = await resp.json();
+    if (data.session && data.session.access_token) {
+      await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token
+      });
+      setIsImpersonating(true);
+      window.location.reload(); // reload to update context
+    } else {
+      alert(data.error || 'Failed to impersonate user');
+    }
+  };
+
+  // Return to admin handler
+  const handleReturnToAdmin = async () => {
+    const stored = localStorage.getItem(IMPERSONATION_KEY);
+    if (stored) {
+      const { session } = JSON.parse(stored);
+      await supabase.auth.setSession(session);
+      localStorage.removeItem(IMPERSONATION_KEY);
+      setIsImpersonating(false);
+      window.location.reload();
+    }
+  };
+
   return (
     <PageLayout
       notifications={notifications}
@@ -393,6 +446,16 @@ const AdminDashboard = () => {
       bellOpen={bellOpen}
       onBellOpenChange={setBellOpen}
     >
+      {isImpersonating && (
+        <div className="bg-yellow-100 border-b border-yellow-300 text-yellow-900 px-4 py-2 flex items-center justify-between">
+          <span>
+            <b>Impersonation Mode:</b> You are viewing the dashboard as another user.
+          </span>
+          <Button variant="danger" size="sm" onClick={handleReturnToAdmin}>
+            Return to Admin
+          </Button>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <h1 className="text-2xl font-bold text-gray-900 mb-6">Admin Dashboard</h1>
@@ -531,6 +594,7 @@ const AdminDashboard = () => {
                             size="sm"
                             onClick={() => handleViewUser(user)}
                             isLoading={userModalLoading && selectedUser?.id === user.id}
+                            disabled={profile?.admin_level === 'readonly'}
                           >
                             View
                           </Button>
@@ -538,9 +602,19 @@ const AdminDashboard = () => {
                             variant="secondary"
                             size="sm"
                             onClick={() => handleToggleRole(user)}
+                            disabled={profile?.admin_level === 'readonly'}
                           >
                             Toggle Role
                           </Button>
+                          {profile?.admin_level === 'super_admin' && user.id !== profile.id && (
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              onClick={() => handleImpersonate(user.id)}
+                            >
+                              Impersonate
+                            </Button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -737,6 +811,7 @@ const AdminDashboard = () => {
         onSave={handleSaveUser}
         loading={userModalLoading}
         onUpdateCredits={handleUpdateCredits}
+        canEditCredits={profile?.admin_level === 'admin' || profile?.admin_level === 'super_admin'}
       />
     </PageLayout>
   );
