@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { User, Mail, Key, AlertCircle, Save } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import Button from '../components/ui/Button';
@@ -8,10 +8,32 @@ import { useAuth } from '../contexts/AuthContext';
 import { updateProfile, supabase } from '../lib/supabase';
 import { useForm } from 'react-hook-form';
 import { openStripeCustomerPortal, fetchStripeBillingInfo, StripeBillingInfo } from '../lib/stripe';
+import Modal from '../components/ui/Modal';
 
 interface ProfileFormData {
   fullName: string;
   email: string;
+}
+
+// Utility function to call the delete-account Edge Function
+async function deleteAccountRequest(): Promise<{ success?: boolean; error?: string }> {
+  const { data } = await supabase.auth.getSession();
+  const accessToken = data.session?.access_token;
+  if (!accessToken) {
+    return { error: 'Not authenticated' };
+  }
+  const res = await fetch('https://algojcmqstokyghijcyc.functions.supabase.co/delete-account', {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    return { error: data.error || 'Failed to delete account' };
+  }
+  return { success: true };
 }
 
 const ProfilePage: React.FC = () => {
@@ -22,6 +44,11 @@ const ProfilePage: React.FC = () => {
   const [billingInfo, setBillingInfo] = useState<StripeBillingInfo | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
   const [billingError, setBillingError] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const {
     register,
@@ -319,6 +346,69 @@ const ProfilePage: React.FC = () => {
                     </Button>
                   </CardContent>
                 </Card>
+                {/* Danger Zone */}
+                <div className="mt-8 border-t pt-8">
+                  <h2 className="text-lg font-bold text-error-600 mb-2">Danger Zone</h2>
+                  <p className="text-sm text-error-700 mb-4">Permanently delete your profile and all associated data. This action cannot be undone.</p>
+                  <Button
+                    variant="danger"
+                    className="w-full"
+                    onClick={() => setShowDeleteModal(true)}
+                  >
+                    Delete My Profile
+                  </Button>
+                </div>
+                {/* Delete Confirmation Modal */}
+                <Modal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)}>
+                  <div className="p-6">
+                    <h2 className="text-xl font-bold text-error-700 mb-4">Confirm Account Deletion</h2>
+                    <p className="mb-4 text-gray-700">This will permanently delete your account and all data. This action cannot be undone.<br/>To confirm, type <span className="font-mono font-bold">DELETE</span> below.</p>
+                    <input
+                      type="text"
+                      className="input w-full mb-4"
+                      placeholder="Type DELETE to confirm"
+                      value={deleteConfirm}
+                      onChange={e => setDeleteConfirm(e.target.value)}
+                    />
+                    {deleteError && (
+                      <div className="mb-4 text-error-600 text-sm">{deleteError}</div>
+                    )}
+                    <div className="flex gap-3">
+                      <Button
+                        variant="danger"
+                        className="flex-1"
+                        disabled={deleteConfirm !== 'DELETE' || deleteLoading}
+                        isLoading={deleteLoading}
+                        onClick={async () => {
+                          setDeleteLoading(true);
+                          setDeleteError(null);
+                          const result = await deleteAccountRequest();
+                          if (result.success) {
+                            // Log out and redirect to goodbye page
+                            try {
+                              await supabase.auth.signOut();
+                            } catch {}
+                            setDeleteLoading(false);
+                            navigate('/goodbye');
+                          } else {
+                            setDeleteLoading(false);
+                            setDeleteError(result.error || 'Failed to delete account');
+                          }
+                        }}
+                      >
+                        Permanently Delete
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        className="flex-1"
+                        onClick={() => setShowDeleteModal(false)}
+                        disabled={deleteLoading}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                </Modal>
               </div>
             </div>
           </div>

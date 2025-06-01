@@ -1,6 +1,7 @@
 import React from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
+import CookieConsentBanner from '../CookieConsentBanner';
 
 interface PageLayoutProps {
   children: React.ReactNode;
@@ -21,6 +22,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({ children, notifications, onDism
       />
       <main className="flex-grow">{children}</main>
       <Footer />
+      <CookieConsentBanner />
     </div>
   );
 };

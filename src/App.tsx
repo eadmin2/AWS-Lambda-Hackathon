@@ -15,6 +15,7 @@ import DisclaimerPage from './pages/DisclaimerPage';
 import AdminDashboard from './pages/AdminDashboard';
 import { useAuth } from './contexts/AuthContext';
 import CheckoutPage from './pages/CheckoutPage';
+import GoodbyePage from './pages/GoodbyePage';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -53,6 +54,7 @@ function App() {
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
           <Route path="/disclaimer" element={<DisclaimerPage />} />
+          <Route path="/goodbye" element={<GoodbyePage />} />
           <Route
             path="/dashboard"
             element={

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FileText } from 'lucide-react';
+import { openCookieConsentBanner } from '../CookieConsentBanner';
 
 const Footer: React.FC = () => {
   return (
@@ -79,6 +80,15 @@ const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
+                <button
+                  type="button"
+                  onClick={openCookieConsentBanner}
+                  className="text-base text-gray-600 hover:text-gray-900 underline focus:outline-none"
+                >
+                  Cookie Settings
+                </button>
+              </li>
+              <li>
                 <Link to="/terms" className="text-base text-gray-600 hover:text-gray-900">
                   Terms of Service
                 </Link>
@@ -96,6 +106,13 @@ const Footer: React.FC = () => {
             <Link to="/privacy" className="text-gray-500 hover:text-gray-600">
               <span className="text-sm">Privacy</span>
             </Link>
+            <button
+              type="button"
+              onClick={openCookieConsentBanner}
+              className="text-gray-500 hover:text-gray-600 underline focus:outline-none"
+            >
+              <span className="text-sm">Cookie Settings</span>
+            </button>
             <Link to="/terms" className="text-gray-500 hover:text-gray-600">
               <span className="text-sm">Terms</span>
             </Link>
