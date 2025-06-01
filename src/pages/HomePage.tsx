@@ -18,7 +18,7 @@ const HomePage: React.FC = () => {
               transition={{ duration: 0.5 }}
             >
               <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-4">
-                Simplify Your VA Disability Claim Process
+                Simplify Your VA Disability Claim Process!
               </h1>
               <p className="text-xl md:text-2xl text-gray-200 mb-8">
                 Upload your medical documents and get an estimated VA disability rating in minutes using advanced AI.
