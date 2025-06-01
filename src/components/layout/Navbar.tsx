@@ -17,6 +17,8 @@ const Navbar: React.FC<NavbarProps> = ({ notifications = [], onDismissNotificati
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const bellRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const userMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const userMenuDropdownRef = useRef<HTMLDivElement>(null);
 
   const handleSignOut = async () => {
     await signOut();
@@ -38,6 +40,22 @@ const Navbar: React.FC<NavbarProps> = ({ notifications = [], onDismissNotificati
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [bellOpen, onBellOpenChange]);
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        userMenuButtonRef.current &&
+        !userMenuButtonRef.current.contains(event.target as Node) &&
+        userMenuDropdownRef.current &&
+        !userMenuDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isMenuOpen]);
 
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200">
@@ -118,6 +136,7 @@ const Navbar: React.FC<NavbarProps> = ({ notifications = [], onDismissNotificati
                     <div className="relative ml-3">
                       <div>
                         <button
+                          ref={userMenuButtonRef}
                           onClick={() => setIsMenuOpen(!isMenuOpen)}
                           className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                         >
@@ -128,7 +147,10 @@ const Navbar: React.FC<NavbarProps> = ({ notifications = [], onDismissNotificati
                         </button>
                       </div>
                       {isMenuOpen && (
-                        <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 z-10">
+                        <div
+                          ref={userMenuDropdownRef}
+                          className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 z-10"
+                        >
                           <Link
                             to="/profile"
                             className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

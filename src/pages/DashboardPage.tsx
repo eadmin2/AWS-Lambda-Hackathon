@@ -10,9 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSearchParams } from 'react-router-dom';
 import { 
   getUserDocuments, 
-  getUserDisabilityEstimates, 
   Document, 
-  DisabilityEstimate,
   supabase
 } from '../lib/supabase';
 import { 
@@ -115,19 +113,74 @@ const DashboardPage: React.FC = () => {
     }
   };
 
-  const handleViewDocument = (doc: DocumentRow) => {
-    window.open(doc.file_url, '_blank', 'noopener,noreferrer');
+  const handleViewDocument = async (doc: DocumentRow) => {
+    if (!user) return;
+    
+    console.log('Viewing document:', doc.file_name);
+    console.log('Original URL:', doc.file_url);
+    
+    // First try the original URL
+    if (doc.file_url && doc.file_url.includes('supabase.co')) {
+      try {
+        const response = await fetch(doc.file_url, { method: 'HEAD' });
+        if (response.ok) {
+          window.open(doc.file_url, '_blank', 'noopener,noreferrer');
+          return;
+        }
+      } catch (error) {
+        console.log('Original URL failed, trying to generate new one');
+      }
+    }
+    
+    // If original URL fails, generate a new signed URL
+    try {
+      const { data, error } = await supabase.storage
+        .from('documents') // Replace 'documents' with your actual bucket name
+        .createSignedUrl(`${user.id}/${doc.file_name}`, 3600);
+      
+      if (error) {
+        console.error('Error creating signed URL:', error);
+        setError(`Failed to view document: ${error.message}`);
+        return;
+      }
+      
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, '_blank', 'noopener,noreferrer');
+      } else {
+        setError('Failed to generate document view URL.');
+      }
+    } catch (error) {
+      console.error('Error viewing document:', error);
+      setError('Failed to view document. Please try again.');
+    }
   };
 
-  const handleDownloadDocument = (doc: DocumentRow) => {
-    // Create a temporary link to trigger download
-    const link = document.createElement('a');
-    link.href = doc.file_url;
-    link.download = doc.file_name;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownloadDocument = async (doc: DocumentRow) => {
+    if (!user) return;
+    
+    try {
+      // Generate a fresh signed URL for downloading
+      const { data, error } = await supabase.storage
+        .from('documents') // Replace with your bucket name
+        .createSignedUrl(`${user.id}/${doc.file_name}`, 300); // 5 minutes
+      
+      if (error || !data.signedUrl) {
+        setError('Failed to generate download URL.');
+        return;
+      }
+      
+      // Create download link
+      const link = document.createElement('a');
+      link.href = data.signedUrl;
+      link.download = doc.file_name;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      setError('Failed to download document.');
+    }
   };
 
   const handleRenameDocument = async (doc: DocumentRow, newBaseName: string) => {
@@ -162,7 +215,7 @@ const DashboardPage: React.FC = () => {
 
   // Redirect if not authenticated
   if (!isAuthLoading && !user) {
-    return <Navigate to="/auth\" replace />;
+    return <Navigate to="/auth" replace />;
   }
 
   return (

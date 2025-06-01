@@ -3,6 +3,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { supabase } from './_shared/supabase.ts';
 import { stripe } from './_shared/stripe.ts';
 import { corsHeaders } from './_shared/cors.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -20,12 +21,20 @@ Deno.serve(async (req) => {
   if (!authHeader) {
     return new Response('Missing authorization header', { status: 401, headers: corsHeaders });
   }
-  const jwt = authHeader.replace('Bearer ', '');
+  // Create a Supabase client as the current user (JWT in global.headers)
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+  const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: { Authorization: authHeader },
+    },
+    auth: { persistSession: false }
+  });
   let userId;
   try {
-    const { payload } = await supabase.auth.getUser(jwt);
-    userId = payload?.sub;
-    if (!userId) throw new Error('No user ID in JWT');
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    userId = user?.id;
+    if (userError || !userId) throw new Error('No user ID in JWT');
   } catch (err) {
     return new Response('Invalid or expired token', { status: 401, headers: corsHeaders });
   }

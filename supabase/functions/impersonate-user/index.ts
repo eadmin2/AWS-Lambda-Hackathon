@@ -12,17 +12,19 @@ serve(async (req) => {
   if (!authHeader) {
     return new Response(JSON.stringify({ error: 'Missing authorization header' }), { status: 401 })
   }
-  const jwt = authHeader.replace('Bearer ', '')
 
-  // Create a Supabase client as the current user
-  // @ts-ignore: Deno is available in Edge Function runtime
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-  // @ts-ignore: Deno is available in Edge Function runtime
-  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
+  // Create a Supabase client as the current user (JWT in global.headers)
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: { Authorization: authHeader },
+    },
+    auth: { persistSession: false }
+  })
 
   // Get the current user's profile
-  const { data: { user }, error: userError } = await supabase.auth.getUser(jwt)
+  const { data: { user }, error: userError } = await supabase.auth.getUser()
   if (userError || !user) {
     return new Response(JSON.stringify({ error: 'Invalid user session' }), { status: 401 })
   }

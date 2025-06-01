@@ -74,8 +74,9 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
           <div className="mt-1 text-gray-900">{user.email}</div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Full Name</label>
+          <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">Full Name</label>
           <input
+            id="fullName"
             type="text"
             className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
             value={fullName}
@@ -83,8 +84,9 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Role</label>
+          <label htmlFor="role" className="block text-sm font-medium text-gray-700">Role</label>
           <select
+            id="role"
             className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
             value={role}
             onChange={e => setRole(e.target.value)}
@@ -119,6 +121,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
                   <div className="flex items-center gap-2 mt-1">
                     <span>Credits:</span>
                     <input
+                      id={`credits-${pay.id}`}
                       type="number"
                       className="border border-gray-300 rounded px-2 py-1 w-20 text-xs"
                       value={creditsEdit[pay.id] !== undefined ? creditsEdit[pay.id] : pay.upload_credits || 0}

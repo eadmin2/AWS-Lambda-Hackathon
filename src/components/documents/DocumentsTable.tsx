@@ -40,6 +40,41 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDo
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
 
+  const handleStartEdit = (row: DocumentRow) => {
+    console.log('Starting edit for:', row.id, row.file_name);
+    const base = row.file_name.replace(/\.[^.]+$/, '');
+    setEditingId(row.id);
+    setEditingName(base);
+  };
+
+  const handleSaveEdit = async (row: DocumentRow) => {
+    console.log('Saving edit for:', row.id, 'New name:', editingName);
+    if (editingName.trim() && onRename) {
+      try {
+        await onRename(row, editingName.trim());
+        setEditingId(null);
+        setEditingName('');
+      } catch (error) {
+        console.error('Error renaming file:', error);
+        // Keep editing mode active on error
+      }
+    }
+  };
+
+  const handleCancelEdit = () => {
+    console.log('Canceling edit');
+    setEditingId(null);
+    setEditingName('');
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent, row: DocumentRow) => {
+    if (e.key === 'Enter') {
+      handleSaveEdit(row);
+    } else if (e.key === 'Escape') {
+      handleCancelEdit();
+    }
+  };
+
   const columns = useMemo<ColumnDef<DocumentRow, any>[]>(
     () => [
       {
@@ -48,8 +83,8 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDo
         cell: info => {
           const row = info.row.original;
           const ext = row.file_name.split('.').pop();
-          const base = row.file_name.replace(/\.[^.]+$/, '');
           const isEditing = editingId === row.id;
+          
           return (
             <div className="flex items-center gap-2">
               {getFileIcon(row.file_name)}
@@ -59,19 +94,20 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDo
                     className="input w-32"
                     value={editingName}
                     onChange={e => setEditingName(e.target.value.replace(/[^a-zA-Z0-9-_ ]/g, ''))}
+                    onKeyDown={e => handleKeyPress(e, row)}
                     autoFocus
                   />
                   <span className="text-xs text-gray-500">.{ext}</span>
                   <button
                     className="ml-1 text-green-600 hover:text-green-800"
-                    onClick={() => { onRename?.(row, editingName); setEditingId(null); }}
+                    onClick={() => handleSaveEdit(row)}
                     title="Save"
                   >
                     <Check className="h-4 w-4" />
                   </button>
                   <button
                     className="ml-1 text-gray-400 hover:text-gray-600"
-                    onClick={() => setEditingId(null)}
+                    onClick={handleCancelEdit}
                     title="Cancel"
                   >
                     <X className="h-4 w-4" />
@@ -82,7 +118,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDo
                   <span className="truncate max-w-xs" title={row.file_name}>{row.file_name}</span>
                   <button
                     className="ml-1 text-gray-400 hover:text-gray-600"
-                    onClick={() => { setEditingId(row.id); setEditingName(base); }}
+                    onClick={() => handleStartEdit(row)}
                     title="Edit file name"
                   >
                     <Pencil className="h-4 w-4" />
@@ -117,7 +153,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDo
         enableSorting: false,
       },
     ],
-    [onView, onDownload, onDelete, onRename]
+    [onView, onDownload, onDelete, onRename, editingId, editingName] // Added missing dependencies
   );
 
   const table = useReactTable({
@@ -204,8 +240,9 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDo
           Showing {table.getRowModel().rows.length} of {documents.length} documents
         </div>
         <div>
-          <label className="mr-2 text-sm text-gray-600">Rows per page:</label>
+          <label htmlFor="rows-per-page" className="mr-2 text-sm text-gray-600">Rows per page:</label>
           <select
+            id="rows-per-page"
             className="input w-20"
             value={table.getState().pagination.pageSize}
             onChange={e => table.setPageSize(Number(e.target.value))}
@@ -220,4 +257,4 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDo
   );
 };
 
-export default DocumentsTable; 
+export default DocumentsTable;

@@ -110,9 +110,10 @@ export async function getUserDocuments(userId: string) {
 // Storage helper functions
 export async function uploadDocument(file: File, userId: string) {
   try {
-    // Generate a unique file name
+    // Use predictable file name for easier rename/delete
     const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const baseName = file.name.replace(/\.[^.]+$/, '');
+    const fileName = `${userId}/${baseName}.${fileExt}`;
 
     // Upload file to Supabase Storage
     const { data, error } = await supabase.storage
