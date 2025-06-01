@@ -1,18 +1,43 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../ui/Button';
-import { FileText, Menu } from 'lucide-react';
+import { FileText, Menu, Bell } from 'lucide-react';
 
-const Navbar: React.FC = () => {
+interface NavbarProps {
+  notifications?: any[];
+  onDismissNotification?: (idx: number) => void;
+  bellOpen?: boolean;
+  onBellOpenChange?: (open: boolean) => void;
+}
+
+const Navbar: React.FC<NavbarProps> = ({ notifications = [], onDismissNotification, bellOpen, onBellOpenChange }) => {
   const { user, profile, signOut, isLoading } = useAuth();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const bellRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
   };
+
+  useEffect(() => {
+    if (!bellOpen) return;
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        bellRef.current &&
+        !bellRef.current.contains(event.target as Node) &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        onBellOpenChange && onBellOpenChange(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [bellOpen, onBellOpenChange]);
 
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200">
@@ -39,13 +64,56 @@ const Navbar: React.FC = () => {
                       Dashboard
                     </Link>
                     {profile?.role === 'admin' && (
-                      <Link
-                        to="/admin"
-                        className="text-purple-700 hover:text-purple-600 px-3 py-2 rounded-md text-sm font-medium"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        Admin
-                      </Link>
+                      <>
+                        <Link
+                          to="/admin"
+                          className="text-purple-700 hover:text-purple-600 px-3 py-2 rounded-md text-sm font-medium"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          Admin
+                        </Link>
+                        <div className="relative flex items-center">
+                          <button
+                            ref={bellRef}
+                            className="relative p-1 rounded-full hover:bg-gray-100 focus:outline-none"
+                            onClick={() => onBellOpenChange && onBellOpenChange(!bellOpen)}
+                            aria-label="Notifications"
+                          >
+                            <Bell className="h-5 w-5 text-gray-700" />
+                            {notifications.length > 0 && (
+                              <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full transform translate-x-1/2 -translate-y-1/2">
+                                {notifications.length}
+                              </span>
+                            )}
+                          </button>
+                          {bellOpen && (
+                            <div ref={dropdownRef} className="absolute right-0 mt-4 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                              <div className="p-4 border-b font-semibold text-gray-800">Notifications</div>
+                              <ul className="max-h-80 overflow-y-auto divide-y divide-gray-100">
+                                {notifications.length === 0 && (
+                                  <li className="p-4 text-gray-500 text-sm">No notifications</li>
+                                )}
+                                {notifications.map((notif, idx) => (
+                                  <li key={idx} className="p-4 text-sm flex justify-between items-start gap-2">
+                                    <div>
+                                      <div className="font-medium text-gray-900">{notif.type}</div>
+                                      <div className="text-gray-700">{notif.user}</div>
+                                      <div className="text-xs text-gray-500 mt-1">{notif.date ? notif.date : ''}</div>
+                                    </div>
+                                    <button
+                                      className="ml-2 text-gray-400 hover:text-red-500 text-xs"
+                                      aria-label="Dismiss notification"
+                                      onClick={() => onDismissNotification && onDismissNotification(idx)}
+                                    >
+                                      ×
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </>
                     )}
                     <div className="relative ml-3">
                       <div>

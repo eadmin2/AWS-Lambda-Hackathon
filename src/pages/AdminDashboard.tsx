@@ -7,6 +7,8 @@ import Button from '../components/ui/Button';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { formatDate } from '../lib/utils';
+import UserDetailModal from '../components/UserDetailModal';
+import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, Legend } from 'recharts';
 
 interface AdminUser {
   id: string;
@@ -37,6 +39,54 @@ interface AdminDocument {
   }[];
 }
 
+interface AdminActivityLog {
+  id: string;
+  admin_id: string;
+  admin_email: string;
+  action: string;
+  target_type: string;
+  target_id: string;
+  details: any;
+  created_at: string;
+}
+
+// Helper to render compact details
+function renderLogDetails(details: any) {
+  let parsed: any = details;
+  if (typeof details === 'string') {
+    try {
+      parsed = JSON.parse(details);
+    } catch {
+      return details;
+    }
+  }
+  if (parsed && parsed.old && parsed.new) {
+    // Show only changed fields
+    const changes = Object.keys(parsed.new)
+      .filter(key => parsed.old[key] !== parsed.new[key])
+      .map(key => `${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}: ${parsed.old[key] ?? '—'} → ${parsed.new[key] ?? '—'}`);
+    return changes.length > 0 ? changes.join(', ') : 'No changes';
+  } else if (parsed && typeof parsed === 'object') {
+    // For other actions, show key: old → new or key: value
+    return Object.entries(parsed)
+      .map(([key, value]) => {
+        if (
+          value &&
+          typeof value === 'object' &&
+          'old' in value &&
+          'new' in value &&
+          value.old !== undefined &&
+          value.new !== undefined
+        ) {
+          return `${key}: ${value.old} → ${value.new}`;
+        }
+        return `${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}: ${value}`;
+      })
+      .join(', ');
+  }
+  return typeof parsed === 'string' ? parsed : JSON.stringify(parsed);
+}
+
 const AdminDashboard = () => {
   const { user, profile, isLoading } = useAuth();
   const [stats, setStats] = useState({
@@ -48,6 +98,31 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [documents, setDocuments] = useState<AdminDocument[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activityLogs, setActivityLogs] = useState<AdminActivityLog[]>([]);
+
+  // User detail modal state
+  const [selectedUser, setSelectedUser] = useState<AdminUser & { user_documents?: any[] } | null>(null);
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [userModalLoading, setUserModalLoading] = useState(false);
+
+  // Analytics state
+  const [userSignups, setUserSignups] = useState<any[]>([]);
+  const [documentUploads, setDocumentUploads] = useState<any[]>([]);
+  const [revenueTrends, setRevenueTrends] = useState<any[]>([]);
+  const [activeInactiveUsers, setActiveInactiveUsers] = useState<any[]>([]);
+
+  // Notifications state
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [bellOpen, setBellOpen] = useState(false);
+
+  // Handler to dismiss a notification
+  const handleDismissNotification = (idx: number) => {
+    setNotifications((prev) => {
+      const newNotifs = prev.filter((_, i) => i !== idx);
+      if (newNotifs.length === 0) setBellOpen(false);
+      return newNotifs;
+    });
+  };
 
   useEffect(() => {
     if (!user || profile?.role !== 'admin') return;
@@ -112,6 +187,93 @@ const AdminDashboard = () => {
     };
 
     fetchData();
+
+    // Fetch analytics data
+    const fetchAnalytics = async () => {
+      // User signups by month
+      const { data: signupData } = await supabase.rpc('monthly_user_signups');
+      setUserSignups(signupData || []);
+      // Document uploads by month
+      const { data: docData } = await supabase.rpc('monthly_document_uploads');
+      setDocumentUploads(docData || []);
+      // Revenue by month
+      const { data: revData } = await supabase.rpc('monthly_revenue');
+      setRevenueTrends(revData || []);
+      // Active vs inactive users
+      const { data: activeData } = await supabase.rpc('active_inactive_users');
+      setActiveInactiveUsers(activeData || []);
+    };
+    fetchAnalytics();
+
+    // Fetch notifications
+    const fetchNotifications = async () => {
+      const now = new Date();
+      const in7days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      // Expiring subscriptions (end date within 7 days)
+      const { data: expiring } = await supabase
+        .from('payments')
+        .select('id, user_id, subscription_end_date, subscription_status, profiles (email, full_name)')
+        .eq('subscription_status', 'active')
+        .gte('subscription_end_date', now.toISOString())
+        .lte('subscription_end_date', in7days.toISOString());
+      // New orders (last 7 days, status active)
+      const { data: newOrders } = await supabase
+        .from('payments')
+        .select('id, user_id, created_at, subscription_status, profiles (email, full_name)')
+        .eq('subscription_status', 'active')
+        .gte('created_at', new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString());
+      // Recently cancelled orders (last 7 days, status cancelled)
+      const { data: cancelled } = await supabase
+        .from('payments')
+        .select('id, user_id, created_at, subscription_status, profiles (email, full_name)')
+        .eq('subscription_status', 'cancelled')
+        .gte('created_at', new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString());
+      // Failed payments (last 7 days, status failed)
+      const { data: failed } = await supabase
+        .from('payments')
+        .select('id, user_id, created_at, subscription_status, profiles (email, full_name)')
+        .eq('subscription_status', 'failed')
+        .gte('created_at', new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString());
+      // Combine and sort notifications
+      const notifs = [
+        ...(expiring || []).map((n: any) => ({
+          type: 'Expiring Subscription',
+          user: n.profiles?.full_name || n.profiles?.email || n.user_id,
+          date: n.subscription_end_date,
+        })),
+        ...(newOrders || []).map((n: any) => ({
+          type: 'New Order',
+          user: n.profiles?.full_name || n.profiles?.email || n.user_id,
+          date: n.created_at,
+        })),
+        ...(cancelled || []).map((n: any) => ({
+          type: 'Cancelled Order',
+          user: n.profiles?.full_name || n.profiles?.email || n.user_id,
+          date: n.created_at,
+        })),
+        ...(failed || []).map((n: any) => ({
+          type: 'Failed Payment',
+          user: n.profiles?.full_name || n.profiles?.email || n.user_id,
+          date: n.created_at,
+        })),
+      ].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      setNotifications(notifs);
+    };
+    fetchNotifications();
+  }, [user, profile]);
+
+  // Fetch activity logs
+  useEffect(() => {
+    if (!user || profile?.role !== 'admin') return;
+    const fetchLogs = async () => {
+      const { data } = await supabase
+        .from('admin_activity_log')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      setActivityLogs(data || []);
+    };
+    fetchLogs();
   }, [user, profile]);
 
   // Redirect if not admin
@@ -124,8 +286,113 @@ const AdminDashboard = () => {
     user.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Handler to open modal and fetch user documents and payments
+  const handleViewUser = async (user: AdminUser) => {
+    setUserModalLoading(true);
+    // Fetch user's documents
+    const { data: userDocs } = await supabase
+      .from('documents')
+      .select('id, file_name, uploaded_at')
+      .eq('user_id', user.id)
+      .order('uploaded_at', { ascending: false });
+    // Fetch user's payments (all records)
+    const { data: userPayments } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+    setSelectedUser({ ...user, user_documents: userDocs || [], payments: userPayments || [] });
+    setIsUserModalOpen(true);
+    setUserModalLoading(false);
+  };
+
+  // Handler to update upload credits for a user
+  const handleUpdateCredits = async (userId: string, paymentId: string, newCredits: number) => {
+    await supabase
+      .from('payments')
+      .update({ upload_credits: newCredits })
+      .eq('id', paymentId);
+    // Refresh user payments in modal
+    if (selectedUser && selectedUser.id === userId) {
+      const { data: userPayments } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      setSelectedUser({ ...selectedUser, payments: userPayments || [] });
+    }
+  };
+
+  // Handler to save user edits
+  const handleSaveUser = async (updated: { id: string; full_name?: string; role: string }) => {
+    const oldUser = users.find(u => u.id === updated.id);
+    await supabase
+      .from('profiles')
+      .update({ full_name: updated.full_name, role: updated.role })
+      .eq('id', updated.id);
+    setUsers(users => users.map(u =>
+      u.id === updated.id ? { ...u, full_name: updated.full_name, role: updated.role } : u
+    ));
+    // Log admin action
+    await supabase.from('admin_activity_log').insert([
+      {
+        admin_id: profile?.id,
+        admin_email: profile?.email,
+        action: 'edited user',
+        target_type: 'user',
+        target_id: updated.id,
+        details: JSON.stringify({
+          old: { full_name: oldUser?.full_name, role: oldUser?.role },
+          new: { full_name: updated.full_name, role: updated.role }
+        })
+      }
+    ]);
+    // Refresh logs
+    const { data } = await supabase
+      .from('admin_activity_log')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(20);
+    setActivityLogs(data || []);
+  };
+
+  // Handler to toggle user role
+  const handleToggleRole = async (user: AdminUser) => {
+    const newRole = user.role === 'admin' ? 'veteran' : 'admin';
+    await supabase
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('id', user.id);
+    setUsers(users => users.map(u =>
+      u.id === user.id ? { ...u, role: newRole } : u
+    ));
+    // Log admin action
+    await supabase.from('admin_activity_log').insert([
+      {
+        admin_id: profile?.id,
+        admin_email: profile?.email,
+        action: 'toggled role',
+        target_type: 'user',
+        target_id: user.id,
+        details: JSON.stringify({ old: user.role, new: newRole })
+      }
+    ]);
+    // Refresh logs
+    const { data } = await supabase
+      .from('admin_activity_log')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(20);
+    setActivityLogs(data || []);
+  };
+
   return (
-    <PageLayout>
+    <PageLayout
+      notifications={notifications}
+      onDismissNotification={handleDismissNotification}
+      bellOpen={bellOpen}
+      onBellOpenChange={setBellOpen}
+    >
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <h1 className="text-2xl font-bold text-gray-900 mb-6">Admin Dashboard</h1>
@@ -258,23 +525,19 @@ const AdminDashboard = () => {
                             </div>
                           )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-2">
                           <Button
                             variant="secondary"
                             size="sm"
-                            onClick={() => {
-                              // Implement role toggle
-                              const newRole = user.role === 'admin' ? 'veteran' : 'admin';
-                              supabase
-                                .from('profiles')
-                                .update({ role: newRole })
-                                .eq('id', user.id)
-                                .then(() => {
-                                  setUsers(users.map(u => 
-                                    u.id === user.id ? { ...u, role: newRole } : u
-                                  ));
-                                });
-                            }}
+                            onClick={() => handleViewUser(user)}
+                            isLoading={userModalLoading && selectedUser?.id === user.id}
+                          >
+                            View
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleToggleRole(user)}
                           >
                             Toggle Role
                           </Button>
@@ -283,6 +546,42 @@ const AdminDashboard = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Admin Activity Log */}
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Admin Activity Log</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Admin</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Target</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Details</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {activityLogs.map(log => (
+                      <tr key={log.id}>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm">{log.admin_email}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm">{log.action}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm">{log.target_type} <span className="text-gray-400">/</span> {log.target_id}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-600 max-w-xs truncate" title={renderLogDetails(log.details)}>
+                          {renderLogDetails(log.details)}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-500">{formatDate(log.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {activityLogs.length === 0 && <div className="text-gray-500 text-sm py-4">No recent admin activity.</div>}
               </div>
             </CardContent>
           </Card>
@@ -363,8 +662,82 @@ const AdminDashboard = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Analytics & Trends */}
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Analytics & Trends</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* User Signups Over Time */}
+                <div>
+                  <h3 className="font-semibold mb-2">User Signups Over Time</h3>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <LineChart data={userSignups} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="count" stroke="#8884d8" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Document Uploads Over Time */}
+                <div>
+                  <h3 className="font-semibold mb-2">Document Uploads Over Time</h3>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <LineChart data={documentUploads} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="count" stroke="#82ca9d" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Revenue Trends */}
+                <div>
+                  <h3 className="font-semibold mb-2">Revenue Trends</h3>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <BarChart data={revenueTrends} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip />
+                      <Bar dataKey="revenue" fill="#ffc658" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Active vs Inactive Users */}
+                <div>
+                  <h3 className="font-semibold mb-2">Active vs Inactive Users</h3>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <PieChart>
+                      <Pie data={activeInactiveUsers} dataKey="count" nameKey="status" cx="50%" cy="50%" outerRadius={80} label>
+                        {activeInactiveUsers.map((_, idx) => (
+                          <Cell key={`cell-${idx}`} fill={idx === 0 ? '#82ca9d' : '#d0d0d0'} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
+      {/* User Detail Modal */}
+      <UserDetailModal
+        isOpen={isUserModalOpen}
+        onClose={() => setIsUserModalOpen(false)}
+        user={selectedUser}
+        onSave={handleSaveUser}
+        loading={userModalLoading}
+        onUpdateCredits={handleUpdateCredits}
+      />
     </PageLayout>
   );
 };
