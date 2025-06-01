@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { Upload, AlertCircle, CheckCircle } from 'lucide-react';
 import PageLayout from '../components/layout/PageLayout';
 import FileUploader from '../components/documents/FileUploader';
-import DocumentsList from '../components/documents/DocumentsList';
+import DocumentsTable, { DocumentRow } from '../components/documents/DocumentsTable';
 import PaymentOptions from '../components/payment/PaymentOptions';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,7 +12,8 @@ import {
   getUserDocuments, 
   getUserDisabilityEstimates, 
   Document, 
-  DisabilityEstimate 
+  DisabilityEstimate,
+  supabase
 } from '../lib/supabase';
 import { 
   checkUserSubscription, 
@@ -25,42 +26,21 @@ const DashboardPage: React.FC = () => {
   const checkoutStatus = searchParams.get('checkout');
   
   const [documents, setDocuments] = useState<Document[]>([]);
-  const [estimates, setEstimates] = useState<Record<string, DisabilityEstimate[]>>({});
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasSubscription, setHasSubscription] = useState(false);
   const [uploadCredits, setUploadCredits] = useState(0);
   const [canUpload, setCanUpload] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [renameError, setRenameError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
 
     const fetchData = async () => {
       try {
-        setIsLoading(true);
-        
         // Fetch user documents
         const docs = await getUserDocuments(user.id);
         setDocuments(docs);
-        
-        // Fetch disability estimates for each document
-        const estimatesData: Record<string, DisabilityEstimate[]> = {};
-        
-        const allEstimates = await getUserDisabilityEstimates(user.id);
-        
-        // Group estimates by document
-        docs.forEach(doc => {
-          // For this demo, we'll just use the first set of estimates for each document
-          // In a real app, you'd have a document_id field in the disability_estimates table
-          const docEstimates = allEstimates.filter(
-            (est, index, self) => 
-              self.findIndex(e => e.condition === est.condition) === index
-          );
-          
-          estimatesData[doc.id] = docEstimates;
-        });
-        
-        setEstimates(estimatesData);
         
         // Check subscription status
         const hasActiveSubscription = await checkUserSubscription();
@@ -76,8 +56,6 @@ const DashboardPage: React.FC = () => {
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         setError('Failed to load your data. Please try again.');
-      } finally {
-        setIsLoading(false);
       }
     };
     
@@ -105,6 +83,81 @@ const DashboardPage: React.FC = () => {
 
   const handleUploadError = (errorMessage: string) => {
     setError(errorMessage);
+  };
+
+  const handleDeleteDocument = async (doc: DocumentRow) => {
+    if (!user) return;
+    if (!window.confirm(`Are you sure you want to delete "${doc.file_name}"? This cannot be undone.`)) return;
+    setDeleteError(null);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const accessToken = data.session?.access_token;
+      if (!accessToken) throw new Error('Not authenticated');
+      // file_name in storage is user_id/filename
+      const file_name = `${user.id}/${doc.file_name}`;
+      const res = await fetch('https://algojcmqstokyghijcyc.functions.supabase.co/delete-document', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ document_id: doc.id, file_name }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to delete document');
+      }
+      // Refresh documents list
+      const docs = await getUserDocuments(user.id);
+      setDocuments(docs);
+    } catch (error: any) {
+      setDeleteError(error.message || 'Failed to delete document');
+    }
+  };
+
+  const handleViewDocument = (doc: DocumentRow) => {
+    window.open(doc.file_url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleDownloadDocument = (doc: DocumentRow) => {
+    // Create a temporary link to trigger download
+    const link = document.createElement('a');
+    link.href = doc.file_url;
+    link.download = doc.file_name;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleRenameDocument = async (doc: DocumentRow, newBaseName: string) => {
+    if (!user) return;
+    setRenameError(null);
+    try {
+      const { data } = await supabase.auth.getSession();
+      const accessToken = data.session?.access_token;
+      if (!accessToken) throw new Error('Not authenticated');
+      const ext = doc.file_name.split('.').pop();
+      const old_file_name = `${user.id}/${doc.file_name}`;
+      const new_file_name = `${user.id}/${newBaseName}.${ext}`;
+      const res = await fetch('https://algojcmqstokyghijcyc.functions.supabase.co/delete-document', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ document_id: doc.id, old_file_name, new_file_name }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to rename document');
+      }
+      // Refresh documents list
+      const docs = await getUserDocuments(user.id);
+      setDocuments(docs);
+    } catch (error: any) {
+      setRenameError(error.message || 'Failed to rename document');
+    }
   };
 
   // Redirect if not authenticated
@@ -223,11 +276,25 @@ const DashboardPage: React.FC = () => {
             
             <div className="mb-8">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Your Documents</h2>
-              <DocumentsList
-                documents={documents}
-                estimates={estimates}
-                isLoading={isLoading}
+              <DocumentsTable
+                documents={documents as DocumentRow[]}
+                onView={handleViewDocument}
+                onDownload={handleDownloadDocument}
+                onDelete={handleDeleteDocument}
+                onRename={handleRenameDocument}
               />
+              {deleteError && (
+                <div className="mt-4 bg-error-100 border border-error-200 p-3 rounded-md flex items-start">
+                  <AlertCircle className="h-5 w-5 text-error-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <p className="text-error-700 text-sm">{deleteError}</p>
+                </div>
+              )}
+              {renameError && (
+                <div className="mt-4 bg-error-100 border border-error-200 p-3 rounded-md flex items-start">
+                  <AlertCircle className="h-5 w-5 text-error-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <p className="text-error-700 text-sm">{renameError}</p>
+                </div>
+              )}
             </div>
             
             {!hasSubscription && (

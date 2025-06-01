@@ -15,6 +15,7 @@
     "@supabase/auth-ui-react": "^0.4.7",
     "@supabase/auth-ui-shared": "^0.1.8",
     "@supabase/supabase-js": "^2.39.3",
+    "@tanstack/react-table": "^8.21.3",
     "axios": "^1.6.5",
     "clsx": "^2.1.0",
     "framer-motion": "^10.16.16",

@@ -1,10 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, X, FileText, AlertCircle } from 'lucide-react';
+import { Upload, X, FileText, AlertCircle, FileImage, File } from 'lucide-react';
 import Button from '../ui/Button';
-import { uploadDocument, supabase } from '../../lib/supabase';
+import { supabase } from '../../lib/supabase';
 import { isValidFileType, isValidFileSize } from '../../lib/utils';
-import { analyzeMedicalDocument } from '../../lib/picaos';
 
 interface FileUploaderProps {
   userId: string;
@@ -13,125 +12,140 @@ interface FileUploaderProps {
   canUpload: boolean;
 }
 
+// Add secureUpload utility
+async function secureUpload(file: File, userId: string, fileName: string): Promise<{ url: string, path: string } | { error: string }> {
+  const { data } = await supabase.auth.getSession();
+  const accessToken = data.session?.access_token;
+  console.log("Access token being sent:", accessToken);
+  if (!accessToken) return { error: 'Not authenticated' };
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('fileName', fileName);
+
+  const res = await fetch('https://algojcmqstokyghijcyc.functions.supabase.co/secure-upload', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+    },
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    return { error: err.error || 'Failed to upload file' };
+  }
+  return await res.json();
+}
+
 const FileUploader: React.FC<FileUploaderProps> = ({
   userId,
   onUploadComplete,
   onUploadError,
   canUpload
 }) => {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<{ file: File; name: string }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [processingDocument, setProcessingDocument] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    const selectedFile = acceptedFiles[0];
-    
-    if (!selectedFile) return;
-    
-    if (!isValidFileType(selectedFile)) {
-      setError('Invalid file type. Please upload a PDF, JPEG, PNG, or TIFF file.');
-      return;
-    }
-    
-    if (!isValidFileSize(selectedFile)) {
-      setError('File is too large. Maximum size is 10MB.');
-      return;
-    }
-    
-    setFile(selectedFile);
+    const newFiles = acceptedFiles
+      .filter(selectedFile => {
+        if (!isValidFileType(selectedFile)) {
+          setError('Invalid file type. Please upload a PDF, JPEG, PNG, or TIFF file.');
+          return false;
+        }
+        if (!isValidFileSize(selectedFile)) {
+          setError('File is too large. Maximum size is 10MB.');
+          return false;
+        }
+        return true;
+      })
+      .map(selectedFile => ({
+        file: selectedFile,
+        name: selectedFile.name.replace(/\.[^.]+$/, ''), // filename without extension
+      }));
+    setFiles(prev => [...prev, ...newFiles]);
     setError(null);
   }, []);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
     accept: {
       'application/pdf': ['.pdf'],
       'image/jpeg': ['.jpg', '.jpeg'],
       'image/png': ['.png'],
       'image/tiff': ['.tiff', '.tif'],
+      'application/msword': ['.doc'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      'text/plain': ['.txt'],
     },
-    maxFiles: 1,
+    maxFiles: 20,
     disabled: uploading || !canUpload,
   });
 
+  const handleRemoveFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+    setError(null);
+  };
+
+  const handleFileNameChange = (index: number, newName: string) => {
+    setFiles(prev => prev.map((f, i) => i === index ? { ...f, name: newName } : f));
+  };
+
   const handleUpload = async () => {
-    if (!file || !userId || !canUpload) return;
-    
+    if (!files.length || !userId || !canUpload) return;
+    setUploading(true);
+    setUploadProgress(0);
     try {
-      setUploading(true);
-      setUploadProgress(0);
-      
-      // Upload document using helper function
-      const { path, url: fileUrl } = await uploadDocument(file, userId);
-      
-      // Insert document record in database
-      const { data: documentData, error: documentError } = await supabase
-        .from('documents')
-        .insert([
-          {
-            user_id: userId,
-            file_name: file.name,
-            file_path: path,
-            file_url: fileUrl,
-          },
-        ])
-        .select()
-        .single();
-      
-      if (documentError) throw documentError;
-      
-      // Process document with Picaos AI
-      setProcessingDocument(true);
-      setUploadProgress(100);
-      
-      const documentId = documentData.id;
-      
-      // Send to Picaos for analysis
-      await analyzeMedicalDocument(fileUrl, userId)
-        .then(async (result) => {
-          // Store results in disability_estimates table
-          const estimatesPromises = result.estimated_ratings.map((rating) =>
-            supabase.from('disability_estimates').insert([
-              {
-                user_id: userId,
-                document_id: documentId, // Add document_id to create the relationship
-                condition: rating.condition,
-                estimated_rating: rating.estimated_rating,
-                combined_rating: result.combined_rating,
-              },
-            ])
-          );
-          
-          await Promise.all(estimatesPromises);
-          
-          onUploadComplete(documentId);
-        })
-        .catch((error) => {
-          console.error('Error analyzing document:', error);
-          onUploadError('Failed to analyze document. Please try again later.');
-        });
-      
+      for (let i = 0; i < files.length; i++) {
+        const { file, name } = files[i];
+        const ext = file.name.split('.').pop();
+        const finalName = `${name}.${ext}`;
+        // Secure upload via Edge Function
+        const uploadResult = await secureUpload(new window.File([file], finalName, { type: file.type }), userId, finalName);
+        if ('error' in uploadResult) throw new Error(uploadResult.error);
+        const { url: fileUrl } = uploadResult;
+        // Insert document record in database
+        const { data: documentData, error: documentError } = await supabase
+          .from('documents')
+          .insert([
+            {
+              user_id: userId,
+              file_name: finalName,
+              file_url: fileUrl,
+            },
+          ])
+          .select()
+          .single();
+        if (documentError) throw documentError;
+        setUploadProgress(Math.round(((i + 1) / files.length) * 100));
+        onUploadComplete(documentData.id);
+      }
     } catch (error) {
       console.error('Error uploading document:', error);
       setError('Failed to upload document. Please try again.');
       onUploadError('Failed to upload document. Please try again.');
     } finally {
       setUploading(false);
-      setProcessingDocument(false);
-      setFile(null);
+      setFiles([]);
     }
   };
 
-  const handleRemoveFile = () => {
-    setFile(null);
-    setError(null);
-  };
+  // Add getFileIcon helper for file icons
+  function getFileIcon(fileName: string) {
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    if (["jpg", "jpeg", "png", "gif", "tiff", "tif"].includes(ext || "")) return <FileImage className="h-5 w-5 text-primary-500" />;
+    if (ext === "pdf") return <FileText className="h-5 w-5 text-red-500" />;
+    if (["doc", "docx"].includes(ext || "")) return <FileText className="h-5 w-5 text-blue-500" />;
+    if (ext === "txt") return <FileText className="h-5 w-5 text-gray-500" />;
+    return <File className="h-5 w-5 text-gray-400" />;
+  }
 
   return (
     <div className="w-full">
-      {!file ? (
+      {files.length === 0 ? (
         <div
           {...getRootProps()}
           className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center transition-colors ${
@@ -164,7 +178,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
               size="sm"
               onClick={(e) => {
                 e.stopPropagation();
-                document.getElementById('fileInput')?.click();
+                open();
               }}
             >
               Browse Files
@@ -180,30 +194,52 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         </div>
       ) : (
         <div className="border rounded-lg p-4 bg-white">
-          <div className="flex items-center">
-            <div className="flex-shrink-0 mr-3">
-              <FileText className="h-8 w-8 text-primary-500" />
-            </div>
-            <div className="flex-grow min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {file.name}
-              </p>
-              <p className="text-xs text-gray-500">
-                {Math.round(file.size / 1024)} KB
-              </p>
-            </div>
-            <div className="flex-shrink-0 ml-4">
-              <button
-                onClick={handleRemoveFile}
-                className="text-gray-400 hover:text-gray-500 focus:outline-none"
-                disabled={uploading}
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
+          <div className="space-y-4">
+            {files.map((f, idx) => {
+              const ext = f.file.name.split('.').pop();
+              return (
+                <div key={idx} className="flex items-center gap-3 border-b pb-2 last:border-b-0">
+                  {getFileIcon(f.file.name)}
+                  <input
+                    className="input w-40"
+                    value={f.name}
+                    onChange={e => handleFileNameChange(idx, e.target.value.replace(/[^a-zA-Z0-9-_ ]/g, ''))}
+                    disabled={uploading}
+                  />
+                  <span className="text-xs text-gray-500">.{ext}</span>
+                  <button
+                    onClick={() => handleRemoveFile(idx)}
+                    className="ml-2 text-gray-400 hover:text-gray-500 focus:outline-none"
+                    disabled={uploading}
+                    title="Remove file"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
-
-          {(uploading || processingDocument) && (
+          <div className="mt-4 flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setFiles([])}
+              disabled={uploading}
+            >
+              Cancel All
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleUpload}
+              isLoading={uploading}
+              disabled={uploading}
+              leftIcon={<Upload className="h-4 w-4" />}
+            >
+              Upload {files.length > 1 ? `${files.length} Files` : 'File'}
+            </Button>
+          </div>
+          {uploading && (
             <div className="mt-4">
               <div className="w-full bg-gray-200 rounded-full h-2.5">
                 <div
@@ -211,40 +247,15 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                   style={{ width: `${uploadProgress}%` }}
                 ></div>
               </div>
-              <p className="text-sm text-gray-600 mt-2">
-                {processingDocument ? 'Analyzing document...' : `Uploading... ${uploadProgress}%`}
-              </p>
+              <p className="text-sm text-gray-600 mt-2">Uploading... {uploadProgress}%</p>
             </div>
           )}
-
           {error && (
             <div className="mt-4 bg-error-100 p-3 rounded-md flex items-start">
               <AlertCircle className="h-5 w-5 text-error-500 mr-2 flex-shrink-0 mt-0.5" />
               <p className="text-error-700 text-sm">{error}</p>
             </div>
           )}
-
-          <div className="mt-4 flex justify-end">
-            <Button
-              variant="secondary"
-              size="sm"
-              className="mr-2"
-              onClick={handleRemoveFile}
-              disabled={uploading || processingDocument}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleUpload}
-              isLoading={uploading || processingDocument}
-              disabled={uploading || processingDocument}
-              leftIcon={<Upload className="h-4 w-4" />}
-            >
-              Upload
-            </Button>
-          </div>
         </div>
       )}
     </div>
