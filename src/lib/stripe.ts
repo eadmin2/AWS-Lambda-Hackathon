@@ -110,16 +110,15 @@ export async function openStripeCustomerPortal() {
   if (!accessToken) {
     throw new Error('User is not authenticated');
   }
-  const response = await fetch('/functions/v1/create-customer-portal-session', {
-    method: 'POST',
+  const { data, error } = await supabase.functions.invoke('create-customer-portal-session', {
+    body: {},
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
+      Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
   });
-  const data = await response.json();
-  if (!response.ok || !data.url) {
-    throw new Error(data.error || 'Failed to create Stripe customer portal session');
+  if (error || !data?.url) {
+    throw new Error((error && error.message) || 'Failed to create Stripe customer portal session');
   }
   window.location.href = data.url;
 }
@@ -136,16 +135,15 @@ export async function fetchStripeBillingInfo(): Promise<StripeBillingInfo> {
   if (!accessToken) {
     throw new Error('User is not authenticated');
   }
-  const response = await fetch('/functions/v1/get-stripe-billing-info', {
-    method: 'POST',
+  const { data, error } = await supabase.functions.invoke('get-stripe-billing-info', {
+    body: {},
     headers: {
-      'Authorization': `Bearer ${accessToken}`,
+      Authorization: `Bearer ${accessToken}`,
       'Content-Type': 'application/json',
     },
   });
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.error || 'Failed to fetch Stripe billing info');
+  if (error) {
+    throw new Error(error.message || 'Failed to fetch Stripe billing info');
   }
   return data as StripeBillingInfo;
 }

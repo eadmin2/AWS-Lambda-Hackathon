@@ -84,27 +84,22 @@ const DashboardPage: React.FC = () => {
     fetchData();
   }, [user]);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleUploadComplete: (documentId: string) => Promise<void> = async (_documentId) => {
     if (!user) return;
-    
     try {
       // Refresh documents list
       const docs = await getUserDocuments(user.id);
       setDocuments(docs);
-      
-      // If user doesn't have a subscription, decrement their upload credits
-      if (!hasSubscription) {
-        setUploadCredits(prev => Math.max(0, prev - 1));
-        if (uploadCredits <= 1) {
-          setCanUpload(false);
-        }
-      }
-      
+
+      // Always re-fetch upload credits from backend
+      const credits = await checkUserUploadCredits(user.id);
+      setUploadCredits(credits);
+      setCanUpload(hasSubscription || credits > 0);
+
       // Show success message
       setError(null);
     } catch (error) {
-      console.error('Error refreshing documents:', error);
+      console.error('Error refreshing documents or credits:', error);
     }
   };
 

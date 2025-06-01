@@ -24,7 +24,7 @@ const HomePage: React.FC = () => {
                 Upload your medical documents and get an estimated VA disability rating in minutes using advanced AI.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link to="/pricing">
+                <Link to="/pricing#pricing-section">
                   <Button size="lg" className="w-full sm:w-auto">
                     View Pricing
                   </Button>
@@ -206,7 +206,7 @@ const HomePage: React.FC = () => {
             <p className="text-xl text-gray-200 mb-8">
               Choose a plan and get your estimated VA disability rating in minutes.
             </p>
-            <Link to="/pricing">
+            <Link to="/pricing#pricing-section">
               <Button size="lg" className="min-w-[200px]">
                 View Plans
               </Button>

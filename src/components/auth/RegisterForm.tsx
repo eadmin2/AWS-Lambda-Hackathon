@@ -29,7 +29,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
   const onSubmit = async (data: RegisterFormData) => {
     try {
       // Sign up with Supabase Auth
-      const { data: authData } = await supabase.auth.signUp({
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
         options: {
@@ -39,16 +39,32 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
         },
       });
 
+      if (authError) {
+        if (authError.code === 'user_already_exists') {
+          setError('root', {
+            type: 'manual',
+            message: 'A user with this email already exists. Please log in or use a different email.',
+          });
+          return;
+        }
+        setError('root', {
+          type: 'manual',
+          message: authError.message || 'An unexpected error occurred. Please try again.',
+        });
+        return;
+      }
+
       if (authData.user) {
         const { error: profileError } = await supabase
           .from('profiles')
-          .insert([
+          .upsert([
             {
               id: authData.user.id,
               email: data.email,
               full_name: data.fullName,
+              role: 'veteran',
             },
-          ]);
+          ], { onConflict: 'id' });
 
         if (profileError) {
           console.error('Error creating profile:', profileError);

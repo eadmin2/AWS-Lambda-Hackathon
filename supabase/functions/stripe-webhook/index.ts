@@ -55,18 +55,26 @@ Deno.serve(async (req) => {
 });
 
 async function handleEvent(event: Stripe.Event) {
+  console.log('handleEvent called with event:', event.type, 'ID:', event.id);
+  
   const stripeData = event?.data?.object ?? {};
 
   if (!stripeData) {
+    console.log('No stripeData in event');
     return;
   }
 
+  // Log the full event for debugging
+  console.log('Event data:', JSON.stringify(stripeData, null, 2));
+
   if (!('customer' in stripeData)) {
+    console.log('No customer in stripeData');
     return;
   }
 
   // for one time payments, we only listen for the checkout.session.completed event
-  if (event.type === 'payment_intent.succeeded' && event.data.object.invoice === null) {
+  if (event.type === 'payment_intent.succeeded') {
+    console.log('Ignoring payment_intent.succeeded event');
     return;
   }
 
@@ -74,78 +82,96 @@ async function handleEvent(event: Stripe.Event) {
 
   if (!customerId || typeof customerId !== 'string') {
     console.error(`No customer received on event: ${JSON.stringify(event)}`);
-  } else {
-    let isSubscription = true;
+    return;
+  }
 
-    if (event.type === 'checkout.session.completed') {
-      const { mode } = stripeData as Stripe.Checkout.Session;
-
-      isSubscription = mode === 'subscription';
-
-      console.info(`Processing ${isSubscription ? 'subscription' : 'one-time payment'} checkout session`);
-    }
-
+  // Check if this is a checkout.session.completed event
+  if (event.type === 'checkout.session.completed') {
     const { mode, payment_status } = stripeData as Stripe.Checkout.Session;
+    
+    console.log(`Processing checkout.session.completed: mode=${mode}, payment_status=${payment_status}`);
 
-    if (isSubscription) {
+    if (mode === 'subscription') {
       console.info(`Starting subscription sync for customer: ${customerId}`);
       await syncCustomerFromStripe(customerId);
-    } else if (mode === 'payment' && payment_status === 'paid') {
+      return;
+    }
+
+    // Handle one-time payment
+    if (mode === 'payment' && payment_status === 'paid') {
       try {
-        // Extract the necessary information from the session
-        const {
-          id: checkout_session_id,
-          payment_intent,
-          amount_subtotal,
-          amount_total,
-          currency,
-        } = stripeData as Stripe.Checkout.Session;
+        console.log('Processing one-time payment for customerId:', customerId);
+        console.log('Session metadata:', stripeData.metadata);
 
-        // Insert the order into the stripe_orders table
-        const { error: orderError } = await supabase.from('stripe_orders').insert({
-          checkout_session_id,
-          payment_intent_id: payment_intent,
-          customer_id: customerId,
-          amount_subtotal,
-          amount_total,
-          currency,
-          payment_status,
-          status: 'completed', // assuming we want to mark it as completed since payment is successful
-        });
+        // Ensure stripe_customers mapping exists (upsert)
+        if (stripeData.metadata && stripeData.metadata.user_id) {
+          const { error: upsertCustomerError } = await supabase.from('stripe_customers').upsert({
+            user_id: stripeData.metadata.user_id,
+            customer_id: customerId,
+          }, { onConflict: 'user_id' });
 
-        if (orderError) {
-          console.error('Error inserting order:', orderError);
-          return;
+          if (upsertCustomerError) {
+            console.error('Failed to upsert stripe_customers after order:', upsertCustomerError);
+          } else {
+            console.info('stripe_customers mapping ensured for user:', stripeData.metadata.user_id);
+          }
+        } else {
+          console.warn('No user_id in session metadata; cannot upsert stripe_customers.');
         }
-        console.info(`Successfully processed one-time payment for session: ${checkout_session_id}`);
 
-        // Increment upload credits for the user
-        const { data: paymentUser, error: paymentUserError } = await supabase
-          .from('payments')
-          .select('user_id, upload_credits')
-          .eq('stripe_customer_id', customerId)
+        // Find the user associated with this Stripe customer
+        const { data: customerMap, error: customerMapError } = await supabase
+          .from('stripe_customers')
+          .select('user_id')
+          .eq('customer_id', customerId)
+          .is('deleted_at', null)
           .maybeSingle();
 
-        if (paymentUserError || !paymentUser) {
-          console.error('Could not find user for Stripe customer:', customerId, paymentUserError);
+        console.log('stripe_customers lookup result:', customerMap, customerMapError);
+
+        if (customerMapError || !customerMap?.user_id) {
+          console.error('Could not find user for Stripe customer:', customerId, customerMapError);
           return;
         }
 
-        const { error: updateCreditsError } = await supabase
-          .from('payments')
-          .update({ upload_credits: (paymentUser.upload_credits || 0) + 1 })
-          .eq('user_id', paymentUser.user_id);
+        console.log('About to call increment_upload_credits RPC for user:', customerMap.user_id);
 
-        if (updateCreditsError) {
-          console.error('Failed to increment upload credits:', updateCreditsError);
+        // Use RPC function for atomic increment
+        const { data, error } = await supabase
+          .rpc('increment_upload_credits', {
+            p_user_id: customerMap.user_id,
+            p_stripe_customer_id: customerId,
+            p_increment_by: 1
+          });
+
+        console.log('RPC call result:', { data, error });
+
+        if (error) {
+          console.error('Failed to increment upload credits:', error);
+        } else if (data) {
+          // Handle both array and single object responses
+          const result = Array.isArray(data) ? data[0] : data;
+          
+          if (result && result.success) {
+            console.info(`Successfully incremented upload credits for user ${customerMap.user_id} to ${result.new_credits}`);
+          } else if (result) {
+            console.error('RPC function returned failure:', result.message || 'Unknown error');
+          } else {
+            console.warn('No result data from increment_upload_credits RPC');
+          }
         } else {
-          console.info(`Incremented upload credits for user ${paymentUser.user_id}`);
+          console.warn('No data returned from increment_upload_credits RPC');
         }
+
       } catch (error) {
         console.error('Error processing one-time payment:', error);
       }
+      return;
     }
   }
+
+  // Handle other webhook events if needed
+  console.log(`Unhandled event type: ${event.type}`);
 }
 
 // based on the excellent https://github.com/t3dotgg/stripe-recommendations
@@ -159,7 +185,7 @@ async function syncCustomerFromStripe(customerId: string) {
       expand: ['data.default_payment_method'],
     });
 
-    // TODO verify if needed
+    // Handle no subscriptions case
     if (subscriptions.data.length === 0) {
       console.info(`No active subscriptions found for customer: ${customerId}`);
       const { error: noSubError } = await supabase.from('stripe_subscriptions').upsert(
@@ -176,6 +202,7 @@ async function syncCustomerFromStripe(customerId: string) {
         console.error('Error updating subscription status:', noSubError);
         throw new Error('Failed to update subscription status in database');
       }
+      return;
     }
 
     // assumes that a customer can only have a single subscription
@@ -202,6 +229,25 @@ async function syncCustomerFromStripe(customerId: string) {
         onConflict: 'customer_id',
       },
     );
+
+    // Also update the payments table for this user
+    // First, look up the user_id from stripe_customers
+    const { data: customerMap, error: customerMapError } = await supabase
+      .from('stripe_customers')
+      .select('user_id')
+      .eq('customer_id', customerId)
+      .is('deleted_at', null)
+      .maybeSingle();
+    
+    if (!customerMapError && customerMap?.user_id) {
+      await supabase
+        .from('payments')
+        .update({
+          subscription_status: subscription.status,
+          subscription_end_date: subscription.current_period_end ? new Date(subscription.current_period_end * 1000).toISOString() : null
+        })
+        .eq('user_id', customerMap.user_id);
+    }
 
     if (subError) {
       console.error('Error syncing subscription:', subError);

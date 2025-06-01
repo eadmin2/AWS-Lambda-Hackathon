@@ -58,31 +58,19 @@ export async function getProfile(user: User): Promise<Profile> {
       };
 
       try {
-        // Attempt to create a new profile
-        const { data: createdProfile, error: createError } = await supabase
+        // Use upsert instead of insert to avoid conflicts
+        const { data: upsertedProfile, error: upsertError } = await supabase
           .from('profiles')
-          .insert([newProfile])
+          .upsert([newProfile], { onConflict: 'id' })
           .select()
           .single();
 
-        if (createError) {
-          // If error is due to duplicate key, profile was created concurrently
-          if (createError.code === '23505') {
-            // Fetch the existing profile
-            const { data: existingProfile, error: fetchError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', user.id)
-              .single();
-
-            if (fetchError) throw fetchError;
-            return existingProfile as Profile;
-          }
-          throw createError;
+        if (upsertError) {
+          throw upsertError;
         }
-        return createdProfile as Profile;
+        return upsertedProfile as Profile;
       } catch (err) {
-        console.error('Error in profile creation:', err);
+        console.error('Error in profile upsert:', err);
         throw err;
       }
     }
