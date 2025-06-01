@@ -39,16 +39,5 @@ jobs:
           key: ${{ secrets.DEPLOY_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           source: "dist/*"
-          target: "/var/www/095a0a1a-15d8-4dfa-ab50-f52c4294c9ce/varatingassistant.com"
+          target: "/var/www/095a0a1a-15d8-4dfa-ab50-f52c4294c9ce/public_html/"
           strip_components: 1
-
-      # Optional: Fix permissions after upload (uncomment if needed)
-      # - name: Set permissions on server
-      #   uses: appleboy/ssh-action@master
-      #   with:
-      #     host: ${{ secrets.SSH_HOST }}
-      #     username: ${{ secrets.SSH_USER }}
-      #     key: ${{ secrets.DEPLOY_KEY }}
-      #     passphrase: ${{ secrets.SSH_PASSPHRASE }}
-      #     script: |
-      #       chmod -R 755 /var/www/095a0a1a-15d8-4dfa-ab50-f52c4294c9ce/varatingassistant.com 
