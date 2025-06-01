@@ -1,4 +1,6 @@
+// @ts-ignore: Deno runtime and remote module imports are valid in Supabase Edge Functions
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+// @ts-ignore: Deno runtime and remote module imports are valid in Supabase Edge Functions
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7'
 
 serve(async (req) => {
@@ -13,7 +15,9 @@ serve(async (req) => {
   const jwt = authHeader.replace('Bearer ', '')
 
   // Create a Supabase client as the current user
+  // @ts-ignore: Deno is available in Edge Function runtime
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+  // @ts-ignore: Deno is available in Edge Function runtime
   const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
 
