@@ -19,6 +19,7 @@ import {
   Pencil,
   X,
   Check,
+  MoreVertical,
 } from "lucide-react";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
@@ -61,12 +62,14 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
   const [selectedDocument, setSelectedDocument] = useState<DocumentRow | null>(
     null,
   );
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   const handleStartEdit = (row: DocumentRow) => {
     console.log("Starting edit for:", row.id, row.file_name);
     const base = row.file_name.replace(/\.[^.]+$/, "");
     setEditingId(row.id);
     setEditingName(base);
+    setActiveDropdown(null);
   };
 
   const handleSaveEdit = async (row: DocumentRow) => {
@@ -95,6 +98,128 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
     } else if (e.key === "Escape") {
       handleCancelEdit();
     }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 1) return "Today";
+    if (diffDays === 2) return "Yesterday";
+    if (diffDays <= 7) return `${diffDays - 1} days ago`;
+    
+    return date.toLocaleDateString();
+  };
+
+  // Mobile card view for small screens
+  const MobileDocumentCard = ({ document }: { document: DocumentRow }) => {
+    const isEditing = editingId === document.id;
+    const ext = document.file_name.split(".").pop();
+    const showDropdown = activeDropdown === document.id;
+
+    return (
+      <div className="bg-white border border-gray-200 rounded-lg p-4 mb-3">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            {getFileIcon(document.file_name)}
+            <div className="flex-1 min-w-0">
+              {isEditing ? (
+                <div className="flex items-center gap-2 mb-1">
+                  <input
+                    className="input text-sm w-full max-w-[150px]"
+                    value={editingName}
+                    onChange={(e) =>
+                      setEditingName(
+                        e.target.value.replace(/[^a-zA-Z0-9-_ ]/g, ""),
+                      )
+                    }
+                    onKeyDown={(e) => handleKeyPress(e, document)}
+                    autoFocus
+                  />
+                  <span className="text-xs text-gray-500 whitespace-nowrap">.{ext}</span>
+                  <button
+                    className="text-green-600 hover:text-green-800 p-1"
+                    onClick={() => handleSaveEdit(document)}
+                    title="Save"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button
+                    className="text-gray-400 hover:text-gray-600 p-1"
+                    onClick={handleCancelEdit}
+                    title="Cancel"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-medium text-gray-900 truncate text-sm">
+                    {document.file_name}
+                  </h3>
+                  <button
+                    className="text-gray-400 hover:text-gray-600 p-1 flex-shrink-0"
+                    onClick={() => handleStartEdit(document)}
+                    title="Edit file name"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                </div>
+              )}
+              <p className="text-xs text-gray-500">
+                {formatDate(document.uploaded_at)}
+              </p>
+            </div>
+          </div>
+          
+          <div className="relative flex-shrink-0">
+            <button
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full"
+              onClick={() => setActiveDropdown(showDropdown ? null : document.id)}
+            >
+              <MoreVertical className="h-4 w-4" />
+            </button>
+            
+            {showDropdown && (
+              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
+                <button
+                  className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                  onClick={() => {
+                    setSelectedDocument(document);
+                    setActiveDropdown(null);
+                  }}
+                >
+                  <FileText className="h-4 w-4" />
+                  View
+                </button>
+                <button
+                  className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                  onClick={() => {
+                    onDownload?.(document);
+                    setActiveDropdown(null);
+                  }}
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                </button>
+                <button
+                  className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-gray-100"
+                  onClick={() => {
+                    onDelete?.(document);
+                    setActiveDropdown(null);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const columns = useMemo<ColumnDef<DocumentRow, any>[]>(
@@ -214,6 +339,18 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
     getFilteredRowModel: getFilteredRowModel(),
   });
 
+  // Close dropdown when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (activeDropdown) {
+        setActiveDropdown(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [activeDropdown]);
+
   return (
     <div className="w-full">
       <Modal
@@ -222,8 +359,10 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
       >
         {selectedDocument && <DocumentViewer document={selectedDocument} />}
       </Modal>
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
-        <div className="relative w-full md:w-72">
+      
+      {/* Search and Controls */}
+      <div className="flex flex-col gap-4 mb-4">
+        <div className="relative">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
           <input
             className="input pl-10 w-full"
@@ -232,30 +371,51 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
             onChange={(e) => setGlobalFilter(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-2 mt-2 md:mt-0">
+        
+        {/* Mobile Pagination Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <span className="text-sm text-gray-600">
             Page {table.getState().pagination.pageIndex + 1} of{" "}
             {table.getPageCount()}
           </span>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            Previous
-          </Button>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            Next
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              Previous
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              Next
+            </Button>
+          </div>
         </div>
       </div>
-      <div className="overflow-x-auto rounded-lg border bg-white">
+
+      {/* Mobile Card View (visible on small screens) */}
+      <div className="block md:hidden">
+        {table.getRowModel().rows.length === 0 ? (
+          <div className="text-center py-8 text-gray-400 bg-white rounded-lg border">
+            No documents found.
+          </div>
+        ) : (
+          <div>
+            {table.getRowModel().rows.map((row) => (
+              <MobileDocumentCard key={row.id} document={row.original} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Table View (hidden on small screens) */}
+      <div className="hidden md:block overflow-x-auto rounded-lg border bg-white">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             {table.getHeaderGroups().map((headerGroup) => (
@@ -308,13 +468,15 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
           </tbody>
         </table>
       </div>
-      <div className="flex items-center justify-between mt-4">
+
+      {/* Bottom Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-4">
         <div className="text-sm text-gray-600">
           Showing {table.getRowModel().rows.length} of {documents.length}{" "}
           documents
         </div>
-        <div>
-          <label htmlFor="rows-per-page" className="mr-2 text-sm text-gray-600">
+        <div className="flex items-center gap-2">
+          <label htmlFor="rows-per-page" className="text-sm text-gray-600 whitespace-nowrap">
             Rows per page:
           </label>
           <select

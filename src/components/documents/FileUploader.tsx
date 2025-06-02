@@ -7,6 +7,7 @@ import {
   AlertCircle,
   FileImage,
   File,
+  Plus,
 } from "lucide-react";
 import Button from "../ui/Button";
 import { supabase } from "../../lib/supabase";
@@ -134,12 +135,21 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     return <File className="h-5 w-5 text-gray-400" />;
   }
 
+  // Format file size for display
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   return (
     <div className="w-full">
       {files.length === 0 ? (
         <div
           {...getRootProps()}
-          className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center transition-colors ${
+          className={`border-2 border-dashed rounded-lg p-4 sm:p-6 flex flex-col items-center justify-center transition-colors min-h-[200px] ${
             isDragActive
               ? "border-primary-500 bg-primary-50"
               : "border-gray-300 hover:border-primary-400"
@@ -148,18 +158,18 @@ const FileUploader: React.FC<FileUploaderProps> = ({
           <input {...getInputProps()} />
 
           <Upload
-            className={`h-12 w-12 mb-4 ${
+            className={`h-8 w-8 sm:h-12 sm:w-12 mb-3 sm:mb-4 ${
               isDragActive ? "text-primary-500" : "text-gray-400"
             }`}
           />
 
-          <p className="text-sm font-medium text-gray-700 mb-1">
+          <p className="text-sm font-medium text-gray-700 mb-1 text-center">
             {isDragActive
               ? "Drop your file here..."
               : "Drag & drop your medical document here"}
           </p>
 
-          <p className="text-xs text-gray-500 mb-4">
+          <p className="text-xs text-gray-500 mb-4 text-center px-2">
             Supported formats: PDF, JPEG, PNG, TIFF (max 10MB)
           </p>
 
@@ -171,11 +181,13 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                 e.stopPropagation();
                 open();
               }}
+              className="w-full sm:w-auto"
             >
+              <Plus className="h-4 w-4 mr-2" />
               Browse Files
             </Button>
           ) : (
-            <div className="bg-error-100 p-3 rounded-md mt-2 flex items-start max-w-md">
+            <div className="bg-error-100 p-3 rounded-md mt-2 flex items-start w-full max-w-sm">
               <AlertCircle className="h-5 w-5 text-error-500 mr-2 flex-shrink-0 mt-0.5" />
               <p className="text-error-700 text-sm">
                 You need to purchase access before uploading documents.
@@ -184,46 +196,110 @@ const FileUploader: React.FC<FileUploaderProps> = ({
           )}
         </div>
       ) : (
-        <div className="border rounded-lg p-4 bg-white">
-          <div className="space-y-4">
+        <div className="border rounded-lg p-3 sm:p-4 bg-white">
+          {/* Mobile: Cards layout, Desktop: List layout */}
+          <div className="space-y-3 sm:space-y-4">
             {files.map((f, idx) => {
               const ext = f.file.name.split(".").pop();
               return (
-                <div
-                  key={idx}
-                  className="flex items-center gap-3 border-b pb-2 last:border-b-0"
-                >
-                  {getFileIcon(f.file.name)}
-                  <input
-                    className="input w-40"
-                    value={f.name}
-                    onChange={(e) =>
-                      handleFileNameChange(
-                        idx,
-                        e.target.value.replace(/[^a-zA-Z0-9-_ ]/g, ""),
-                      )
-                    }
-                    disabled={uploading}
-                  />
-                  <span className="text-xs text-gray-500">.{ext}</span>
-                  <button
-                    onClick={() => handleRemoveFile(idx)}
-                    className="ml-2 text-gray-400 hover:text-gray-500 focus:outline-none"
-                    disabled={uploading}
-                    title="Remove file"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
+                <div key={idx}>
+                  {/* Mobile Card Layout */}
+                  <div className="block sm:hidden bg-gray-50 rounded-lg p-3">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {getFileIcon(f.file.name)}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {f.file.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatFileSize(f.file.size)}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveFile(idx)}
+                        className="text-gray-400 hover:text-gray-600 p-1"
+                        disabled={uploading}
+                        title="Remove file"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        className="input flex-1 text-sm"
+                        value={f.name}
+                        onChange={(e) =>
+                          handleFileNameChange(
+                            idx,
+                            e.target.value.replace(/[^a-zA-Z0-9-_ ]/g, ""),
+                          )
+                        }
+                        disabled={uploading}
+                        placeholder="File name"
+                      />
+                      <span className="text-xs text-gray-500 whitespace-nowrap">.{ext}</span>
+                    </div>
+                  </div>
+
+                  {/* Desktop List Layout */}
+                  <div className="hidden sm:flex items-center gap-3 border-b pb-2 last:border-b-0">
+                    {getFileIcon(f.file.name)}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-500 truncate">
+                        {f.file.name} ({formatFileSize(f.file.size)})
+                      </p>
+                    </div>
+                    <input
+                      className="input w-40"
+                      value={f.name}
+                      onChange={(e) =>
+                        handleFileNameChange(
+                          idx,
+                          e.target.value.replace(/[^a-zA-Z0-9-_ ]/g, ""),
+                        )
+                      }
+                      disabled={uploading}
+                    />
+                    <span className="text-xs text-gray-500">.{ext}</span>
+                    <button
+                      onClick={() => handleRemoveFile(idx)}
+                      className="ml-2 text-gray-400 hover:text-gray-500 focus:outline-none"
+                      disabled={uploading}
+                      title="Remove file"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
                 </div>
               );
             })}
           </div>
-          <div className="mt-4 flex justify-end gap-2">
+
+          {/* Add More Files Button */}
+          {!uploading && canUpload && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={open}
+                className="w-full sm:w-auto"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add More Files
+              </Button>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="mt-4 flex flex-col sm:flex-row justify-end gap-2">
             <Button
               variant="secondary"
               size="sm"
               onClick={() => setFiles([])}
               disabled={uploading}
+              className="w-full sm:w-auto order-2 sm:order-1"
             >
               Cancel All
             </Button>
@@ -234,10 +310,13 @@ const FileUploader: React.FC<FileUploaderProps> = ({
               isLoading={uploading}
               disabled={uploading}
               leftIcon={<Upload className="h-4 w-4" />}
+              className="w-full sm:w-auto order-1 sm:order-2"
             >
               Upload {files.length > 1 ? `${files.length} Files` : "File"}
             </Button>
           </div>
+
+          {/* Progress Bar */}
           {uploading && (
             <div className="mt-4">
               <div className="w-full bg-gray-200 rounded-full h-2.5">
@@ -246,11 +325,13 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                   style={{ width: `${uploadProgress}%` }}
                 ></div>
               </div>
-              <p className="text-sm text-gray-600 mt-2">
+              <p className="text-sm text-gray-600 mt-2 text-center sm:text-left">
                 Uploading... {uploadProgress}%
               </p>
             </div>
           )}
+
+          {/* Error Message */}
           {error && (
             <div className="mt-4 bg-error-100 p-3 rounded-md flex items-start">
               <AlertCircle className="h-5 w-5 text-error-500 mr-2 flex-shrink-0 mt-0.5" />

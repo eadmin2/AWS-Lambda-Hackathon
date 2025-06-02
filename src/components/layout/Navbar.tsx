@@ -19,7 +19,11 @@ const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const { user, profile, signOut, isLoading } = useAuth();
   const navigate = useNavigate();
-  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  
+  // Separate state variables for different menus
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
+  
   const bellRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const userMenuButtonRef = useRef<HTMLButtonElement>(null);
@@ -47,7 +51,7 @@ const Navbar: React.FC<NavbarProps> = ({
   }, [bellOpen, onBellOpenChange]);
 
   useEffect(() => {
-    if (!isMenuOpen) return;
+    if (!isUserMenuOpen) return;
     function handleClickOutside(event: MouseEvent) {
       if (
         userMenuButtonRef.current &&
@@ -55,12 +59,12 @@ const Navbar: React.FC<NavbarProps> = ({
         userMenuDropdownRef.current &&
         !userMenuDropdownRef.current.contains(event.target as Node)
       ) {
-        setIsMenuOpen(false);
+        setIsUserMenuOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isMenuOpen]);
+  }, [isUserMenuOpen]);
 
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200">
@@ -80,14 +84,14 @@ const Navbar: React.FC<NavbarProps> = ({
             <Link
               to="/"
               className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => setIsMobileMenuOpen(false)}
             >
               Home
             </Link>
             <Link
               to="/calculator"
               className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => setIsMobileMenuOpen(false)}
             >
               Calculator
             </Link>
@@ -98,7 +102,7 @@ const Navbar: React.FC<NavbarProps> = ({
                     <Link
                       to="/dashboard"
                       className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
-                      onClick={() => setIsMenuOpen(false)}
+                      onClick={() => setIsMobileMenuOpen(false)}
                     >
                       Dashboard
                     </Link>
@@ -107,7 +111,7 @@ const Navbar: React.FC<NavbarProps> = ({
                         <Link
                           to="/admin"
                           className="text-purple-700 hover:text-purple-600 px-3 py-2 rounded-md text-sm font-medium"
-                          onClick={() => setIsMenuOpen(false)}
+                          onClick={() => setIsMobileMenuOpen(false)}
                         >
                           Admin
                         </Link>
@@ -179,7 +183,7 @@ const Navbar: React.FC<NavbarProps> = ({
                       <div>
                         <button
                           ref={userMenuButtonRef}
-                          onClick={() => setIsMenuOpen(!isMenuOpen)}
+                          onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                           className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                         >
                           <span className="sr-only">Open user menu</span>
@@ -188,7 +192,7 @@ const Navbar: React.FC<NavbarProps> = ({
                           </div>
                         </button>
                       </div>
-                      {isMenuOpen && (
+                      {isUserMenuOpen && (
                         <div
                           ref={userMenuDropdownRef}
                           className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 z-10"
@@ -196,13 +200,13 @@ const Navbar: React.FC<NavbarProps> = ({
                           <Link
                             to="/profile"
                             className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                            onClick={() => setIsMenuOpen(false)}
+                            onClick={() => setIsUserMenuOpen(false)}
                           >
                             Your Profile
                           </Link>
                           <button
                             onClick={() => {
-                              setIsMenuOpen(false);
+                              setIsUserMenuOpen(false);
                               handleSignOut();
                             }}
                             className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
@@ -218,7 +222,7 @@ const Navbar: React.FC<NavbarProps> = ({
                     <Link
                       to="/pricing#pricing-section"
                       className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium mr-2"
-                      onClick={() => setIsMenuOpen(false)}
+                      onClick={() => setIsMobileMenuOpen(false)}
                     >
                       Pricing
                     </Link>
@@ -234,7 +238,7 @@ const Navbar: React.FC<NavbarProps> = ({
           {/* Mobile menu button */}
           <div className="flex items-center sm:hidden">
             <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
             >
               <span className="sr-only">Open main menu</span>
@@ -245,20 +249,20 @@ const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Mobile menu */}
-      {isMenuOpen && (
+      {isMobileMenuOpen && (
         <div className="sm:hidden">
           <div className="pt-2 pb-3 space-y-1">
             <Link
               to="/"
               className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => setIsMobileMenuOpen(false)}
             >
               Home
             </Link>
             <Link
               to="/calculator"
               className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-              onClick={() => setIsMenuOpen(false)}
+              onClick={() => setIsMobileMenuOpen(false)}
             >
               Calculator
             </Link>
@@ -267,7 +271,7 @@ const Navbar: React.FC<NavbarProps> = ({
                 <Link
                   to="/dashboard"
                   className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Dashboard
                 </Link>
@@ -275,7 +279,7 @@ const Navbar: React.FC<NavbarProps> = ({
                   <Link
                     to="/admin"
                     className="block px-3 py-2 rounded-md text-base font-medium text-purple-700 hover:text-purple-900 hover:bg-gray-50"
-                    onClick={() => setIsMenuOpen(false)}
+                    onClick={() => setIsMobileMenuOpen(false)}
                   >
                     Admin
                   </Link>
@@ -286,7 +290,7 @@ const Navbar: React.FC<NavbarProps> = ({
               <Link
                 to="/pricing#pricing-section"
                 className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-                onClick={() => setIsMenuOpen(false)}
+                onClick={() => setIsMobileMenuOpen(false)}
               >
                 Pricing
               </Link>
@@ -313,13 +317,13 @@ const Navbar: React.FC<NavbarProps> = ({
                 <Link
                   to="/profile"
                   className="block px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={() => setIsMobileMenuOpen(false)}
                 >
                   Your Profile
                 </Link>
                 <button
                   onClick={() => {
-                    setIsMenuOpen(false);
+                    setIsMobileMenuOpen(false);
                     handleSignOut();
                   }}
                   className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
@@ -331,8 +335,12 @@ const Navbar: React.FC<NavbarProps> = ({
           ) : (
             <div className="pt-4 pb-3 border-t border-gray-200">
               <div className="flex justify-center">
-                <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
-                  <Button variant="primary">Sign In</Button>
+                <Link
+                  to="/auth"
+                  className="w-full px-4 py-2 rounded bg-primary-600 text-white font-medium hover:bg-primary-700 focus:outline-none text-center"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Sign In
                 </Link>
               </div>
             </div>
