@@ -3,7 +3,7 @@ name: Deploy React Site to Apache Server
 on:
   push:
     branches:
-      - main  # Triggers deployment on push to main branch
+      - main # Triggers deployment on push to main branch
 
 jobs:
   deploy:

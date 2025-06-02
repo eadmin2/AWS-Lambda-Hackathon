@@ -1,9 +1,14 @@
-import React from 'react';
-import PageLayout from '../components/layout/PageLayout';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
-import Button from '../components/ui/Button';
-import { Mail, Phone, MessageSquare } from 'lucide-react';
-import { useForm } from 'react-hook-form';
+import React from "react";
+import PageLayout from "../components/layout/PageLayout";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "../components/ui/Card";
+import Button from "../components/ui/Button";
+import { Mail, Phone, MessageSquare } from "lucide-react";
+import { useForm } from "react-hook-form";
 
 interface ContactFormData {
   name: string;
@@ -17,16 +22,16 @@ const ContactPage: React.FC = () => {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-    reset
+    reset,
   } = useForm<ContactFormData>();
 
   const onSubmit = async (data: ContactFormData) => {
     try {
       // In a real app, you would send this to your backend
-      console.log('Form submitted:', data);
+      console.log("Form submitted:", data);
       reset();
     } catch (error) {
-      console.error('Error submitting form:', error);
+      console.error("Error submitting form:", error);
     }
   };
 
@@ -37,7 +42,8 @@ const ContactPage: React.FC = () => {
           <MessageSquare className="h-12 w-12 text-primary-600 mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-gray-900">Contact Us</h1>
           <p className="mt-4 text-lg text-gray-600">
-            Have questions? We're here to help veterans navigate their disability claims.
+            Have questions? We're here to help veterans navigate their
+            disability claims.
           </p>
         </div>
 
@@ -74,68 +80,88 @@ const ContactPage: React.FC = () => {
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Name
                 </label>
                 <input
                   type="text"
                   id="name"
                   className="mt-1 input"
-                  {...register('name', { required: 'Name is required' })}
+                  {...register("name", { required: "Name is required" })}
                 />
                 {errors.name && (
-                  <p className="mt-1 text-sm text-error-500">{errors.name.message}</p>
+                  <p className="mt-1 text-sm text-error-500">
+                    {errors.name.message}
+                  </p>
                 )}
               </div>
 
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Email
                 </label>
                 <input
                   type="email"
                   id="email"
                   className="mt-1 input"
-                  {...register('email', {
-                    required: 'Email is required',
+                  {...register("email", {
+                    required: "Email is required",
                     pattern: {
                       value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                      message: 'Invalid email address'
-                    }
+                      message: "Invalid email address",
+                    },
                   })}
                 />
                 {errors.email && (
-                  <p className="mt-1 text-sm text-error-500">{errors.email.message}</p>
+                  <p className="mt-1 text-sm text-error-500">
+                    {errors.email.message}
+                  </p>
                 )}
               </div>
 
               <div>
-                <label htmlFor="subject" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="subject"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Subject
                 </label>
                 <input
                   type="text"
                   id="subject"
                   className="mt-1 input"
-                  {...register('subject', { required: 'Subject is required' })}
+                  {...register("subject", { required: "Subject is required" })}
                 />
                 {errors.subject && (
-                  <p className="mt-1 text-sm text-error-500">{errors.subject.message}</p>
+                  <p className="mt-1 text-sm text-error-500">
+                    {errors.subject.message}
+                  </p>
                 )}
               </div>
 
               <div>
-                <label htmlFor="message" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="message"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Message
                 </label>
                 <textarea
                   id="message"
                   rows={4}
                   className="mt-1 input"
-                  {...register('message', { required: 'Message is required' })}
+                  {...register("message", { required: "Message is required" })}
                 />
                 {errors.message && (
-                  <p className="mt-1 text-sm text-error-500">{errors.message.message}</p>
+                  <p className="mt-1 text-sm text-error-500">
+                    {errors.message.message}
+                  </p>
                 )}
               </div>
 

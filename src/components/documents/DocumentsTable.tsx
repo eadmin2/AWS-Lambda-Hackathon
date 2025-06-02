@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -8,11 +8,21 @@ import {
   flexRender,
   ColumnDef,
   SortingState,
-} from '@tanstack/react-table';
-import { FileText, FileImage, File, Download, Trash2, Search, Pencil, X, Check } from 'lucide-react';
-import Button from '../ui/Button';
-import Modal from '../ui/Modal';
-import DocumentViewer from './DocumentViewer';
+} from "@tanstack/react-table";
+import {
+  FileText,
+  FileImage,
+  File,
+  Download,
+  Trash2,
+  Search,
+  Pencil,
+  X,
+  Check,
+} from "lucide-react";
+import Button from "../ui/Button";
+import Modal from "../ui/Modal";
+import DocumentViewer from "./DocumentViewer";
 
 export interface DocumentRow {
   id: string;
@@ -30,50 +40,59 @@ interface DocumentsTableProps {
 }
 
 function getFileIcon(fileName: string) {
-  const ext = fileName.split('.').pop()?.toLowerCase();
-  if (['jpg', 'jpeg', 'png', 'gif', 'tiff', 'tif'].includes(ext || '')) return <FileImage className="h-5 w-5 text-primary-500" />;
-  if (ext === 'pdf') return <FileText className="h-5 w-5 text-red-500" />;
+  const ext = fileName.split(".").pop()?.toLowerCase();
+  if (["jpg", "jpeg", "png", "gif", "tiff", "tif"].includes(ext || ""))
+    return <FileImage className="h-5 w-5 text-primary-500" />;
+  if (ext === "pdf") return <FileText className="h-5 w-5 text-red-500" />;
   return <File className="h-5 w-5 text-gray-400" />;
 }
 
-const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDownload, onDelete, onRename }) => {
-  const [globalFilter, setGlobalFilter] = useState('');
+const DocumentsTable: React.FC<DocumentsTableProps> = ({
+  documents,
+  onView,
+  onDownload,
+  onDelete,
+  onRename,
+}) => {
+  const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState<SortingState>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState('');
-  const [selectedDocument, setSelectedDocument] = useState<DocumentRow | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const [selectedDocument, setSelectedDocument] = useState<DocumentRow | null>(
+    null,
+  );
 
   const handleStartEdit = (row: DocumentRow) => {
-    console.log('Starting edit for:', row.id, row.file_name);
-    const base = row.file_name.replace(/\.[^.]+$/, '');
+    console.log("Starting edit for:", row.id, row.file_name);
+    const base = row.file_name.replace(/\.[^.]+$/, "");
     setEditingId(row.id);
     setEditingName(base);
   };
 
   const handleSaveEdit = async (row: DocumentRow) => {
-    console.log('Saving edit for:', row.id, 'New name:', editingName);
+    console.log("Saving edit for:", row.id, "New name:", editingName);
     if (editingName.trim() && onRename) {
       try {
         await onRename(row, editingName.trim());
         setEditingId(null);
-        setEditingName('');
+        setEditingName("");
       } catch (error) {
-        console.error('Error renaming file:', error);
+        console.error("Error renaming file:", error);
         // Keep editing mode active on error
       }
     }
   };
 
   const handleCancelEdit = () => {
-    console.log('Canceling edit');
+    console.log("Canceling edit");
     setEditingId(null);
-    setEditingName('');
+    setEditingName("");
   };
 
   const handleKeyPress = (e: React.KeyboardEvent, row: DocumentRow) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleSaveEdit(row);
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       handleCancelEdit();
     }
   };
@@ -81,13 +100,13 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDo
   const columns = useMemo<ColumnDef<DocumentRow, any>[]>(
     () => [
       {
-        accessorKey: 'file_name',
-        header: 'File Name',
-        cell: info => {
+        accessorKey: "file_name",
+        header: "File Name",
+        cell: (info) => {
           const row = info.row.original;
-          const ext = row.file_name.split('.').pop();
+          const ext = row.file_name.split(".").pop();
           const isEditing = editingId === row.id;
-          
+
           return (
             <div className="flex items-center gap-2">
               {getFileIcon(row.file_name)}
@@ -96,8 +115,12 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDo
                   <input
                     className="input w-32"
                     value={editingName}
-                    onChange={e => setEditingName(e.target.value.replace(/[^a-zA-Z0-9-_ ]/g, ''))}
-                    onKeyDown={e => handleKeyPress(e, row)}
+                    onChange={(e) =>
+                      setEditingName(
+                        e.target.value.replace(/[^a-zA-Z0-9-_ ]/g, ""),
+                      )
+                    }
+                    onKeyDown={(e) => handleKeyPress(e, row)}
                     autoFocus
                   />
                   <span className="text-xs text-gray-500">.{ext}</span>
@@ -118,7 +141,9 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDo
                 </>
               ) : (
                 <>
-                  <span className="truncate max-w-xs" title={row.file_name}>{row.file_name}</span>
+                  <span className="truncate max-w-xs" title={row.file_name}>
+                    {row.file_name}
+                  </span>
                   <button
                     className="ml-1 text-gray-400 hover:text-gray-600"
                     onClick={() => handleStartEdit(row)}
@@ -133,22 +158,37 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDo
         },
       },
       {
-        accessorKey: 'uploaded_at',
-        header: 'Uploaded',
-        cell: info => new Date(info.getValue()).toLocaleString(),
+        accessorKey: "uploaded_at",
+        header: "Uploaded",
+        cell: (info) => new Date(info.getValue()).toLocaleString(),
       },
       {
-        id: 'actions',
-        header: '',
+        id: "actions",
+        header: "",
         cell: ({ row }) => (
           <div className="flex gap-2 justify-end">
-            <Button size="sm" variant="ghost" onClick={() => setSelectedDocument(row.original)} title="View">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedDocument(row.original)}
+              title="View"
+            >
               <FileText className="h-4 w-4" />
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => onDownload?.(row.original)} title="Download">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => onDownload?.(row.original)}
+              title="Download"
+            >
               <Download className="h-4 w-4" />
             </Button>
-            <Button size="sm" variant="danger" onClick={() => onDelete?.(row.original)} title="Delete">
+            <Button
+              size="sm"
+              variant="danger"
+              onClick={() => onDelete?.(row.original)}
+              title="Delete"
+            >
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
@@ -156,7 +196,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDo
         enableSorting: false,
       },
     ],
-    [onView, onDownload, onDelete, onRename, editingId, editingName]
+    [onView, onDownload, onDelete, onRename, editingId, editingName],
   );
 
   const table = useReactTable({
@@ -176,7 +216,10 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDo
 
   return (
     <div className="w-full">
-      <Modal isOpen={!!selectedDocument} onClose={() => setSelectedDocument(null)}>
+      <Modal
+        isOpen={!!selectedDocument}
+        onClose={() => setSelectedDocument(null)}
+      >
         {selectedDocument && <DocumentViewer document={selectedDocument} />}
       </Modal>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
@@ -186,17 +229,28 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDo
             className="input pl-10 w-full"
             placeholder="Search documents..."
             value={globalFilter}
-            onChange={e => setGlobalFilter(e.target.value)}
+            onChange={(e) => setGlobalFilter(e.target.value)}
           />
         </div>
         <div className="flex items-center gap-2 mt-2 md:mt-0">
           <span className="text-sm text-gray-600">
-            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+            Page {table.getState().pagination.pageIndex + 1} of{" "}
+            {table.getPageCount()}
           </span>
-          <Button size="sm" variant="secondary" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
             Previous
           </Button>
-          <Button size="sm" variant="secondary" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
             Next
           </Button>
         </div>
@@ -204,17 +258,24 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDo
       <div className="overflow-x-auto rounded-lg border bg-white">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
-            {table.getHeaderGroups().map(headerGroup => (
+            {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
-                {headerGroup.headers.map(header => (
+                {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
                     className="px-4 py-3 text-left text-xs font-semibold text-gray-700 select-none cursor-pointer"
-                    onClick={header.column.getCanSort() ? header.column.getToggleSortingHandler() : undefined}
+                    onClick={
+                      header.column.getCanSort()
+                        ? header.column.getToggleSortingHandler()
+                        : undefined
+                    }
                   >
-                    {flexRender(header.column.columnDef.header, header.getContext())}
-                    {header.column.getIsSorted() === 'asc' && <span> ▲</span>}
-                    {header.column.getIsSorted() === 'desc' && <span> ▼</span>}
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext(),
+                    )}
+                    {header.column.getIsSorted() === "asc" && <span> ▲</span>}
+                    {header.column.getIsSorted() === "desc" && <span> ▼</span>}
                   </th>
                 ))}
               </tr>
@@ -223,16 +284,22 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDo
           <tbody className="divide-y divide-gray-100">
             {table.getRowModel().rows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="text-center py-8 text-gray-400">
+                <td
+                  colSpan={columns.length}
+                  className="text-center py-8 text-gray-400"
+                >
                   No documents found.
                 </td>
               </tr>
             ) : (
-              table.getRowModel().rows.map(row => (
+              table.getRowModel().rows.map((row) => (
                 <tr key={row.id} className="hover:bg-gray-50">
-                  {row.getVisibleCells().map(cell => (
+                  {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="px-4 py-3 text-sm">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
                     </td>
                   ))}
                 </tr>
@@ -243,18 +310,23 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDo
       </div>
       <div className="flex items-center justify-between mt-4">
         <div className="text-sm text-gray-600">
-          Showing {table.getRowModel().rows.length} of {documents.length} documents
+          Showing {table.getRowModel().rows.length} of {documents.length}{" "}
+          documents
         </div>
         <div>
-          <label htmlFor="rows-per-page" className="mr-2 text-sm text-gray-600">Rows per page:</label>
+          <label htmlFor="rows-per-page" className="mr-2 text-sm text-gray-600">
+            Rows per page:
+          </label>
           <select
             id="rows-per-page"
             className="input w-20"
             value={table.getState().pagination.pageSize}
-            onChange={e => table.setPageSize(Number(e.target.value))}
+            onChange={(e) => table.setPageSize(Number(e.target.value))}
           >
-            {[5, 10, 20, 50, 100].map(size => (
-              <option key={size} value={size}>{size}</option>
+            {[5, 10, 20, 50, 100].map((size) => (
+              <option key={size} value={size}>
+                {size}
+              </option>
             ))}
           </select>
         </div>

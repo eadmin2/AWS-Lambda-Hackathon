@@ -1,8 +1,17 @@
-import React from 'react';
-import { CreditCard, Calendar, Shield } from 'lucide-react';
-import Button from '../ui/Button';
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../ui/Card';
-import { createUploadCheckoutSession, createSubscriptionCheckoutSession } from '../../lib/stripe';
+import React from "react";
+import { CreditCard, Calendar, Shield } from "lucide-react";
+import Button from "../ui/Button";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from "../ui/Card";
+import {
+  createUploadCheckoutSession,
+  createSubscriptionCheckoutSession,
+} from "../../lib/stripe";
 
 interface PaymentOptionsProps {
   userId: string;
@@ -10,15 +19,17 @@ interface PaymentOptionsProps {
 }
 
 const PaymentOptions: React.FC<PaymentOptionsProps> = ({ userId, onError }) => {
-  const [isLoading, setIsLoading] = React.useState<'single' | 'subscription' | null>(null);
+  const [isLoading, setIsLoading] = React.useState<
+    "single" | "subscription" | null
+  >(null);
 
   const handleSingleUpload = async () => {
     try {
-      setIsLoading('single');
+      setIsLoading("single");
       await createUploadCheckoutSession(userId);
     } catch (error) {
-      console.error('Error creating checkout session:', error);
-      onError('Failed to process payment. Please try again.');
+      console.error("Error creating checkout session:", error);
+      onError("Failed to process payment. Please try again.");
     } finally {
       setIsLoading(null);
     }
@@ -26,11 +37,11 @@ const PaymentOptions: React.FC<PaymentOptionsProps> = ({ userId, onError }) => {
 
   const handleSubscription = async () => {
     try {
-      setIsLoading('subscription');
+      setIsLoading("subscription");
       await createSubscriptionCheckoutSession(userId);
     } catch (error) {
-      console.error('Error creating subscription:', error);
-      onError('Failed to process subscription. Please try again.');
+      console.error("Error creating subscription:", error);
+      onError("Failed to process subscription. Please try again.");
     } finally {
       setIsLoading(null);
     }
@@ -53,11 +64,15 @@ const PaymentOptions: React.FC<PaymentOptionsProps> = ({ userId, onError }) => {
           <ul className="space-y-2">
             <li className="flex items-start">
               <span className="text-green-500 mr-2">✓</span>
-              <span className="text-sm">Upload and analyze 1 medical document</span>
+              <span className="text-sm">
+                Upload and analyze 1 medical document
+              </span>
             </li>
             <li className="flex items-start">
               <span className="text-green-500 mr-2">✓</span>
-              <span className="text-sm">AI-powered condition identification</span>
+              <span className="text-sm">
+                AI-powered condition identification
+              </span>
             </li>
             <li className="flex items-start">
               <span className="text-green-500 mr-2">✓</span>
@@ -73,7 +88,7 @@ const PaymentOptions: React.FC<PaymentOptionsProps> = ({ userId, onError }) => {
           <Button
             className="w-full"
             onClick={handleSingleUpload}
-            isLoading={isLoading === 'single'}
+            isLoading={isLoading === "single"}
           >
             Purchase Single Upload
           </Button>
@@ -101,7 +116,9 @@ const PaymentOptions: React.FC<PaymentOptionsProps> = ({ userId, onError }) => {
             </li>
             <li className="flex items-start">
               <span className="text-green-500 mr-2">✓</span>
-              <span className="text-sm">AI-powered condition identification</span>
+              <span className="text-sm">
+                AI-powered condition identification
+              </span>
             </li>
             <li className="flex items-start">
               <span className="text-green-500 mr-2">✓</span>
@@ -125,7 +142,7 @@ const PaymentOptions: React.FC<PaymentOptionsProps> = ({ userId, onError }) => {
           <Button
             className="w-full"
             onClick={handleSubscription}
-            isLoading={isLoading === 'subscription'}
+            isLoading={isLoading === "subscription"}
           >
             Start Monthly Subscription
           </Button>
@@ -136,10 +153,13 @@ const PaymentOptions: React.FC<PaymentOptionsProps> = ({ userId, onError }) => {
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 flex items-start">
           <Shield className="h-5 w-5 text-primary-500 mr-3 flex-shrink-0 mt-0.5" />
           <div>
-            <h4 className="text-sm font-medium text-gray-900">Secure Payment Processing</h4>
+            <h4 className="text-sm font-medium text-gray-900">
+              Secure Payment Processing
+            </h4>
             <p className="mt-1 text-xs text-gray-500">
-              Your payment information is securely processed by Stripe. We never store your credit card details.
-              For subscription plans, you can cancel at any time from your account settings.
+              Your payment information is securely processed by Stripe. We never
+              store your credit card details. For subscription plans, you can
+              cancel at any time from your account settings.
             </p>
           </div>
         </div>

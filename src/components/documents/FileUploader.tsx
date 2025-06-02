@@ -1,10 +1,17 @@
-import React, { useState, useCallback } from 'react';
-import { useDropzone } from 'react-dropzone';
-import { Upload, X, FileText, AlertCircle, FileImage, File } from 'lucide-react';
-import Button from '../ui/Button';
-import { supabase } from '../../lib/supabase';
-import { isValidFileType, isValidFileSize } from '../../lib/utils';
-import { uploadDocument } from '../../lib/supabase';
+import React, { useState, useCallback } from "react";
+import { useDropzone } from "react-dropzone";
+import {
+  Upload,
+  X,
+  FileText,
+  AlertCircle,
+  FileImage,
+  File,
+} from "lucide-react";
+import Button from "../ui/Button";
+import { supabase } from "../../lib/supabase";
+import { isValidFileType, isValidFileSize } from "../../lib/utils";
+import { uploadDocument } from "../../lib/supabase";
 
 interface FileUploaderProps {
   userId: string;
@@ -17,7 +24,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   userId,
   onUploadComplete,
   onUploadError,
-  canUpload
+  canUpload,
 }) => {
   const [files, setFiles] = useState<{ file: File; name: string }[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -26,47 +33,52 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const newFiles = acceptedFiles
-      .filter(selectedFile => {
+      .filter((selectedFile) => {
         if (!isValidFileType(selectedFile)) {
-          setError('Invalid file type. Please upload a PDF, JPEG, PNG, or TIFF file.');
+          setError(
+            "Invalid file type. Please upload a PDF, JPEG, PNG, or TIFF file.",
+          );
           return false;
         }
         if (!isValidFileSize(selectedFile)) {
-          setError('File is too large. Maximum size is 10MB.');
+          setError("File is too large. Maximum size is 10MB.");
           return false;
         }
         return true;
       })
-      .map(selectedFile => ({
+      .map((selectedFile) => ({
         file: selectedFile,
-        name: selectedFile.name.replace(/\.[^.]+$/, ''), // filename without extension
+        name: selectedFile.name.replace(/\.[^.]+$/, ""), // filename without extension
       }));
-    setFiles(prev => [...prev, ...newFiles]);
+    setFiles((prev) => [...prev, ...newFiles]);
     setError(null);
   }, []);
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
     accept: {
-      'application/pdf': ['.pdf'],
-      'image/jpeg': ['.jpg', '.jpeg'],
-      'image/png': ['.png'],
-      'image/tiff': ['.tiff', '.tif'],
-      'application/msword': ['.doc'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-      'text/plain': ['.txt'],
+      "application/pdf": [".pdf"],
+      "image/jpeg": [".jpg", ".jpeg"],
+      "image/png": [".png"],
+      "image/tiff": [".tiff", ".tif"],
+      "application/msword": [".doc"],
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+        [".docx"],
+      "text/plain": [".txt"],
     },
     maxFiles: 20,
     disabled: uploading || !canUpload,
   });
 
   const handleRemoveFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
+    setFiles((prev) => prev.filter((_, i) => i !== index));
     setError(null);
   };
 
   const handleFileNameChange = (index: number, newName: string) => {
-    setFiles(prev => prev.map((f, i) => i === index ? { ...f, name: newName } : f));
+    setFiles((prev) =>
+      prev.map((f, i) => (i === index ? { ...f, name: newName } : f)),
+    );
   };
 
   const handleUpload = async () => {
@@ -76,14 +88,17 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     try {
       for (let i = 0; i < files.length; i++) {
         const { file, name } = files[i];
-        const ext = file.name.split('.').pop();
+        const ext = file.name.split(".").pop();
         const finalName = `${name}.${ext}`;
         // Upload directly to Supabase Storage
-        const uploadResult = await uploadDocument(new window.File([file], finalName, { type: file.type }), userId);
+        const uploadResult = await uploadDocument(
+          new window.File([file], finalName, { type: file.type }),
+          userId,
+        );
         const { url: fileUrl } = uploadResult;
         // Insert document record in database
         const { data: documentData, error: documentError } = await supabase
-          .from('documents')
+          .from("documents")
           .insert([
             {
               user_id: userId,
@@ -98,9 +113,9 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         onUploadComplete(documentData.id);
       }
     } catch (error) {
-      console.error('Error uploading document:', error);
-      setError('Failed to upload document. Please try again.');
-      onUploadError('Failed to upload document. Please try again.');
+      console.error("Error uploading document:", error);
+      setError("Failed to upload document. Please try again.");
+      onUploadError("Failed to upload document. Please try again.");
     } finally {
       setUploading(false);
       setFiles([]);
@@ -109,10 +124,12 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 
   // Add getFileIcon helper for file icons
   function getFileIcon(fileName: string) {
-    const ext = fileName.split('.').pop()?.toLowerCase();
-    if (["jpg", "jpeg", "png", "gif", "tiff", "tif"].includes(ext || "")) return <FileImage className="h-5 w-5 text-primary-500" />;
+    const ext = fileName.split(".").pop()?.toLowerCase();
+    if (["jpg", "jpeg", "png", "gif", "tiff", "tif"].includes(ext || ""))
+      return <FileImage className="h-5 w-5 text-primary-500" />;
     if (ext === "pdf") return <FileText className="h-5 w-5 text-red-500" />;
-    if (["doc", "docx"].includes(ext || "")) return <FileText className="h-5 w-5 text-blue-500" />;
+    if (["doc", "docx"].includes(ext || ""))
+      return <FileText className="h-5 w-5 text-blue-500" />;
     if (ext === "txt") return <FileText className="h-5 w-5 text-gray-500" />;
     return <File className="h-5 w-5 text-gray-400" />;
   }
@@ -124,28 +141,28 @@ const FileUploader: React.FC<FileUploaderProps> = ({
           {...getRootProps()}
           className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center transition-colors ${
             isDragActive
-              ? 'border-primary-500 bg-primary-50'
-              : 'border-gray-300 hover:border-primary-400'
-          } ${!canUpload ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              ? "border-primary-500 bg-primary-50"
+              : "border-gray-300 hover:border-primary-400"
+          } ${!canUpload ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
         >
           <input {...getInputProps()} />
-          
+
           <Upload
             className={`h-12 w-12 mb-4 ${
-              isDragActive ? 'text-primary-500' : 'text-gray-400'
+              isDragActive ? "text-primary-500" : "text-gray-400"
             }`}
           />
-          
+
           <p className="text-sm font-medium text-gray-700 mb-1">
             {isDragActive
-              ? 'Drop your file here...'
-              : 'Drag & drop your medical document here'}
+              ? "Drop your file here..."
+              : "Drag & drop your medical document here"}
           </p>
-          
+
           <p className="text-xs text-gray-500 mb-4">
             Supported formats: PDF, JPEG, PNG, TIFF (max 10MB)
           </p>
-          
+
           {canUpload ? (
             <Button
               variant="secondary"
@@ -170,14 +187,22 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         <div className="border rounded-lg p-4 bg-white">
           <div className="space-y-4">
             {files.map((f, idx) => {
-              const ext = f.file.name.split('.').pop();
+              const ext = f.file.name.split(".").pop();
               return (
-                <div key={idx} className="flex items-center gap-3 border-b pb-2 last:border-b-0">
+                <div
+                  key={idx}
+                  className="flex items-center gap-3 border-b pb-2 last:border-b-0"
+                >
                   {getFileIcon(f.file.name)}
                   <input
                     className="input w-40"
                     value={f.name}
-                    onChange={e => handleFileNameChange(idx, e.target.value.replace(/[^a-zA-Z0-9-_ ]/g, ''))}
+                    onChange={(e) =>
+                      handleFileNameChange(
+                        idx,
+                        e.target.value.replace(/[^a-zA-Z0-9-_ ]/g, ""),
+                      )
+                    }
                     disabled={uploading}
                   />
                   <span className="text-xs text-gray-500">.{ext}</span>
@@ -210,7 +235,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
               disabled={uploading}
               leftIcon={<Upload className="h-4 w-4" />}
             >
-              Upload {files.length > 1 ? `${files.length} Files` : 'File'}
+              Upload {files.length > 1 ? `${files.length} Files` : "File"}
             </Button>
           </div>
           {uploading && (
@@ -221,7 +246,9 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                   style={{ width: `${uploadProgress}%` }}
                 ></div>
               </div>
-              <p className="text-sm text-gray-600 mt-2">Uploading... {uploadProgress}%</p>
+              <p className="text-sm text-gray-600 mt-2">
+                Uploading... {uploadProgress}%
+              </p>
             </div>
           )}
           {error && (

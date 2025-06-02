@@ -1,7 +1,7 @@
-import React from 'react';
-import Navbar from './Navbar';
-import Footer from './Footer';
-import CookieConsentBanner from '../CookieConsentBanner';
+import React from "react";
+import Navbar from "./Navbar";
+import Footer from "./Footer";
+import CookieConsentBanner from "../CookieConsentBanner";
 
 interface PageLayoutProps {
   children: React.ReactNode;
@@ -11,7 +11,13 @@ interface PageLayoutProps {
   onBellOpenChange?: (open: boolean) => void;
 }
 
-const PageLayout: React.FC<PageLayoutProps> = ({ children, notifications, onDismissNotification, bellOpen, onBellOpenChange }) => {
+const PageLayout: React.FC<PageLayoutProps> = ({
+  children,
+  notifications,
+  onDismissNotification,
+  bellOpen,
+  onBellOpenChange,
+}) => {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar

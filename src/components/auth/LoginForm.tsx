@@ -1,8 +1,8 @@
-import React from 'react';
-import { useForm } from 'react-hook-form';
-import { supabase } from '../../lib/supabase';
-import Button from '../ui/Button';
-import { Mail, Lock, AlertCircle } from 'lucide-react';
+import React from "react";
+import { useForm } from "react-hook-form";
+import { supabase } from "../../lib/supabase";
+import Button from "../ui/Button";
+import { Mail, Lock, AlertCircle } from "lucide-react";
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -32,9 +32,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
         onSuccess();
       }
     } catch (_error) {
-      setError('root', {
-        type: 'manual',
-        message: 'An unexpected error occurred. Please try again.',
+      setError("root", {
+        type: "manual",
+        message: "An unexpected error occurred. Please try again.",
       });
     }
   };
@@ -49,7 +49,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       )}
 
       <div className="space-y-1">
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="email"
+          className="block text-sm font-medium text-gray-700"
+        >
           Email
         </label>
         <div className="relative">
@@ -59,13 +62,13 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
           <input
             id="email"
             type="email"
-            className={`input pl-10 ${errors.email ? 'border-error-500 focus:border-error-500 focus:ring-error-500' : ''}`}
+            className={`input pl-10 ${errors.email ? "border-error-500 focus:border-error-500 focus:ring-error-500" : ""}`}
             placeholder="veteran@example.com"
-            {...register('email', {
-              required: 'Email is required',
+            {...register("email", {
+              required: "Email is required",
               pattern: {
                 value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                message: 'Invalid email address',
+                message: "Invalid email address",
               },
             })}
           />
@@ -76,7 +79,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="password"
+          className="block text-sm font-medium text-gray-700"
+        >
           Password
         </label>
         <div className="relative">
@@ -86,19 +92,21 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
           <input
             id="password"
             type="password"
-            className={`input pl-10 ${errors.password ? 'border-error-500 focus:border-error-500 focus:ring-error-500' : ''}`}
+            className={`input pl-10 ${errors.password ? "border-error-500 focus:border-error-500 focus:ring-error-500" : ""}`}
             placeholder="••••••••"
-            {...register('password', {
-              required: 'Password is required',
+            {...register("password", {
+              required: "Password is required",
               minLength: {
                 value: 6,
-                message: 'Password must be at least 6 characters',
+                message: "Password must be at least 6 characters",
               },
             })}
           />
         </div>
         {errors.password && (
-          <p className="text-error-500 text-xs mt-1">{errors.password.message}</p>
+          <p className="text-error-500 text-xs mt-1">
+            {errors.password.message}
+          </p>
         )}
       </div>
 
@@ -110,23 +118,25 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
             type="checkbox"
             className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
           />
-          <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+          <label
+            htmlFor="remember-me"
+            className="ml-2 block text-sm text-gray-700"
+          >
             Remember me
           </label>
         </div>
 
         <div className="text-sm">
-          <a href="#" className="font-medium text-primary-600 hover:text-primary-500">
+          <a
+            href="#"
+            className="font-medium text-primary-600 hover:text-primary-500"
+          >
             Forgot your password?
           </a>
         </div>
       </div>
 
-      <Button
-        type="submit"
-        className="w-full"
-        isLoading={isSubmitting}
-      >
+      <Button type="submit" className="w-full" isLoading={isSubmitting}>
         Sign in
       </Button>
     </form>

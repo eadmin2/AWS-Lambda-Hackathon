@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios from "axios";
 
 // Types for Picaos API
 export type PicaosCondition = {
@@ -29,14 +29,14 @@ export type PicaosRequest = {
 // Function to analyze a medical document using Picaos AI
 export async function analyzeMedicalDocument(
   fileUrl: string,
-  userId?: string
+  userId?: string,
 ): Promise<PicaosAnalysisResult> {
   // Replace with your actual Picaos API endpoint and API key
   const picaosApiUrl = import.meta.env.VITE_PICAOS_API_URL;
   const picaosApiKey = import.meta.env.VITE_PICAOS_API_KEY;
 
   if (!picaosApiUrl || !picaosApiKey) {
-    throw new Error('Missing Picaos API environment variables');
+    throw new Error("Missing Picaos API environment variables");
   }
 
   try {
@@ -48,16 +48,16 @@ export async function analyzeMedicalDocument(
       } as PicaosRequest,
       {
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${picaosApiKey}`,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${picaosApiKey}`,
         },
-      }
+      },
     );
 
     return response.data as PicaosAnalysisResult;
   } catch (error) {
-    console.error('Error analyzing document with Picaos:', error);
-    throw new Error('Failed to analyze document. Please try again later.');
+    console.error("Error analyzing document with Picaos:", error);
+    throw new Error("Failed to analyze document. Please try again later.");
   }
 }
 
@@ -69,17 +69,17 @@ export function calculateCombinedRating(ratings: number[]): number {
 
   // Sort ratings in descending order
   const sortedRatings = [...ratings].sort((a, b) => b - a);
-  
+
   // Calculate combined rating
   let combinedValue = sortedRatings[0];
-  
+
   for (let i = 1; i < sortedRatings.length; i++) {
     const rating = sortedRatings[i];
     const remainingCapacity = 100 - combinedValue;
     const additionalValue = (remainingCapacity * rating) / 100;
     combinedValue += additionalValue;
   }
-  
+
   // Round to nearest 10
   return Math.round(combinedValue / 10) * 10;
 }

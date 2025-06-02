@@ -1,8 +1,8 @@
-import React from 'react';
-import { useForm } from 'react-hook-form';
-import { supabase } from '../../lib/supabase';
-import Button from '../ui/Button';
-import { Mail, Lock, User, AlertCircle } from 'lucide-react';
+import React from "react";
+import { useForm } from "react-hook-form";
+import { supabase } from "../../lib/supabase";
+import Button from "../ui/Button";
+import { Mail, Lock, User, AlertCircle } from "lucide-react";
 
 interface RegisterFormProps {
   onSuccess?: () => void;
@@ -24,7 +24,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
     setError,
   } = useForm<RegisterFormData>();
 
-  const password = watch('password');
+  const password = watch("password");
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
@@ -40,34 +40,38 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
       });
 
       if (authError) {
-        if (authError.code === 'user_already_exists') {
-          setError('root', {
-            type: 'manual',
-            message: 'A user with this email already exists. Please log in or use a different email.',
+        if (authError.code === "user_already_exists") {
+          setError("root", {
+            type: "manual",
+            message:
+              "A user with this email already exists. Please log in or use a different email.",
           });
           return;
         }
-        setError('root', {
-          type: 'manual',
-          message: authError.message || 'An unexpected error occurred. Please try again.',
+        setError("root", {
+          type: "manual",
+          message:
+            authError.message ||
+            "An unexpected error occurred. Please try again.",
         });
         return;
       }
 
       if (authData.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert([
+        const { error: profileError } = await supabase.from("profiles").upsert(
+          [
             {
               id: authData.user.id,
               email: data.email,
               full_name: data.fullName,
-              role: 'veteran',
+              role: "veteran",
             },
-          ], { onConflict: 'id' });
+          ],
+          { onConflict: "id" },
+        );
 
         if (profileError) {
-          console.error('Error creating profile:', profileError);
+          console.error("Error creating profile:", profileError);
         }
       }
 
@@ -75,9 +79,9 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
         onSuccess();
       }
     } catch (_error) {
-      setError('root', {
-        type: 'manual',
-        message: 'An unexpected error occurred. Please try again.',
+      setError("root", {
+        type: "manual",
+        message: "An unexpected error occurred. Please try again.",
       });
     }
   };
@@ -92,7 +96,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
       )}
 
       <div className="space-y-1">
-        <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="fullName"
+          className="block text-sm font-medium text-gray-700"
+        >
           Full Name
         </label>
         <div className="relative">
@@ -102,20 +109,25 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
           <input
             id="fullName"
             type="text"
-            className={`input pl-10 ${errors.fullName ? 'border-error-500 focus:border-error-500 focus:ring-error-500' : ''}`}
+            className={`input pl-10 ${errors.fullName ? "border-error-500 focus:border-error-500 focus:ring-error-500" : ""}`}
             placeholder="John Doe"
-            {...register('fullName', {
-              required: 'Full name is required',
+            {...register("fullName", {
+              required: "Full name is required",
             })}
           />
         </div>
         {errors.fullName && (
-          <p className="text-error-500 text-xs mt-1">{errors.fullName.message}</p>
+          <p className="text-error-500 text-xs mt-1">
+            {errors.fullName.message}
+          </p>
         )}
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="email"
+          className="block text-sm font-medium text-gray-700"
+        >
           Email
         </label>
         <div className="relative">
@@ -125,13 +137,13 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
           <input
             id="email"
             type="email"
-            className={`input pl-10 ${errors.email ? 'border-error-500 focus:border-error-500 focus:ring-error-500' : ''}`}
+            className={`input pl-10 ${errors.email ? "border-error-500 focus:border-error-500 focus:ring-error-500" : ""}`}
             placeholder="veteran@example.com"
-            {...register('email', {
-              required: 'Email is required',
+            {...register("email", {
+              required: "Email is required",
               pattern: {
                 value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                message: 'Invalid email address',
+                message: "Invalid email address",
               },
             })}
           />
@@ -142,7 +154,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="password"
+          className="block text-sm font-medium text-gray-700"
+        >
           Password
         </label>
         <div className="relative">
@@ -152,24 +167,29 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
           <input
             id="password"
             type="password"
-            className={`input pl-10 ${errors.password ? 'border-error-500 focus:border-error-500 focus:ring-error-500' : ''}`}
+            className={`input pl-10 ${errors.password ? "border-error-500 focus:border-error-500 focus:ring-error-500" : ""}`}
             placeholder="••••••••"
-            {...register('password', {
-              required: 'Password is required',
+            {...register("password", {
+              required: "Password is required",
               minLength: {
                 value: 8,
-                message: 'Password must be at least 8 characters',
+                message: "Password must be at least 8 characters",
               },
             })}
           />
         </div>
         {errors.password && (
-          <p className="text-error-500 text-xs mt-1">{errors.password.message}</p>
+          <p className="text-error-500 text-xs mt-1">
+            {errors.password.message}
+          </p>
         )}
       </div>
 
       <div className="space-y-1">
-        <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="confirmPassword"
+          className="block text-sm font-medium text-gray-700"
+        >
           Confirm Password
         </label>
         <div className="relative">
@@ -179,25 +199,23 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
           <input
             id="confirmPassword"
             type="password"
-            className={`input pl-10 ${errors.confirmPassword ? 'border-error-500 focus:border-error-500 focus:ring-error-500' : ''}`}
+            className={`input pl-10 ${errors.confirmPassword ? "border-error-500 focus:border-error-500 focus:ring-error-500" : ""}`}
             placeholder="••••••••"
-            {...register('confirmPassword', {
-              required: 'Please confirm your password',
+            {...register("confirmPassword", {
+              required: "Please confirm your password",
               validate: (value) =>
-                value === password || 'The passwords do not match',
+                value === password || "The passwords do not match",
             })}
           />
         </div>
         {errors.confirmPassword && (
-          <p className="text-error-500 text-xs mt-1">{errors.confirmPassword.message}</p>
+          <p className="text-error-500 text-xs mt-1">
+            {errors.confirmPassword.message}
+          </p>
         )}
       </div>
 
-      <Button
-        type="submit"
-        className="w-full"
-        isLoading={isSubmitting}
-      >
+      <Button type="submit" className="w-full" isLoading={isSubmitting}>
         Create Account
       </Button>
     </form>

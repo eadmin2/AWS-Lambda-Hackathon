@@ -1,8 +1,8 @@
-import React, { useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
-import Button from '../ui/Button';
-import { FileText, Menu, Bell } from 'lucide-react';
+import React, { useRef, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
+import Button from "../ui/Button";
+import { FileText, Menu, Bell } from "lucide-react";
 
 interface NavbarProps {
   notifications?: any[];
@@ -11,7 +11,12 @@ interface NavbarProps {
   onBellOpenChange?: (open: boolean) => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ notifications = [], onDismissNotification, bellOpen, onBellOpenChange }) => {
+const Navbar: React.FC<NavbarProps> = ({
+  notifications = [],
+  onDismissNotification,
+  bellOpen,
+  onBellOpenChange,
+}) => {
   const { user, profile, signOut, isLoading } = useAuth();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
@@ -22,7 +27,7 @@ const Navbar: React.FC<NavbarProps> = ({ notifications = [], onDismissNotificati
 
   const handleSignOut = async () => {
     await signOut();
-    navigate('/');
+    navigate("/");
   };
 
   useEffect(() => {
@@ -37,8 +42,8 @@ const Navbar: React.FC<NavbarProps> = ({ notifications = [], onDismissNotificati
         onBellOpenChange && onBellOpenChange(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [bellOpen, onBellOpenChange]);
 
   useEffect(() => {
@@ -53,8 +58,8 @@ const Navbar: React.FC<NavbarProps> = ({ notifications = [], onDismissNotificati
         setIsMenuOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isMenuOpen]);
 
   return (
@@ -64,7 +69,9 @@ const Navbar: React.FC<NavbarProps> = ({ notifications = [], onDismissNotificati
           <div className="flex">
             <Link to="/" className="flex-shrink-0 flex items-center">
               <FileText className="h-8 w-8 text-primary-600" />
-              <span className="ml-2 text-xl font-bold text-gray-900">VA Rating Assistant</span>
+              <span className="ml-2 text-xl font-bold text-gray-900">
+                VA Rating Assistant
+              </span>
             </Link>
           </div>
 
@@ -81,7 +88,7 @@ const Navbar: React.FC<NavbarProps> = ({ notifications = [], onDismissNotificati
                     >
                       Dashboard
                     </Link>
-                    {profile?.role === 'admin' && (
+                    {profile?.role === "admin" && (
                       <>
                         <Link
                           to="/admin"
@@ -94,7 +101,9 @@ const Navbar: React.FC<NavbarProps> = ({ notifications = [], onDismissNotificati
                           <button
                             ref={bellRef}
                             className="relative p-1 rounded-full hover:bg-gray-100 focus:outline-none"
-                            onClick={() => onBellOpenChange && onBellOpenChange(!bellOpen)}
+                            onClick={() =>
+                              onBellOpenChange && onBellOpenChange(!bellOpen)
+                            }
                             aria-label="Notifications"
                           >
                             <Bell className="h-5 w-5 text-gray-700" />
@@ -105,23 +114,42 @@ const Navbar: React.FC<NavbarProps> = ({ notifications = [], onDismissNotificati
                             )}
                           </button>
                           {bellOpen && (
-                            <div ref={dropdownRef} className="absolute right-0 mt-4 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                              <div className="p-4 border-b font-semibold text-gray-800">Notifications</div>
+                            <div
+                              ref={dropdownRef}
+                              className="absolute right-0 mt-4 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                            >
+                              <div className="p-4 border-b font-semibold text-gray-800">
+                                Notifications
+                              </div>
                               <ul className="max-h-80 overflow-y-auto divide-y divide-gray-100">
                                 {notifications.length === 0 && (
-                                  <li className="p-4 text-gray-500 text-sm">No notifications</li>
+                                  <li className="p-4 text-gray-500 text-sm">
+                                    No notifications
+                                  </li>
                                 )}
                                 {notifications.map((notif, idx) => (
-                                  <li key={idx} className="p-4 text-sm flex justify-between items-start gap-2">
+                                  <li
+                                    key={idx}
+                                    className="p-4 text-sm flex justify-between items-start gap-2"
+                                  >
                                     <div>
-                                      <div className="font-medium text-gray-900">{notif.type}</div>
-                                      <div className="text-gray-700">{notif.user}</div>
-                                      <div className="text-xs text-gray-500 mt-1">{notif.date ? notif.date : ''}</div>
+                                      <div className="font-medium text-gray-900">
+                                        {notif.type}
+                                      </div>
+                                      <div className="text-gray-700">
+                                        {notif.user}
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-1">
+                                        {notif.date ? notif.date : ""}
+                                      </div>
                                     </div>
                                     <button
                                       className="ml-2 text-gray-400 hover:text-red-500 text-xs"
                                       aria-label="Dismiss notification"
-                                      onClick={() => onDismissNotification && onDismissNotification(idx)}
+                                      onClick={() =>
+                                        onDismissNotification &&
+                                        onDismissNotification(idx)
+                                      }
                                     >
                                       ×
                                     </button>
@@ -142,7 +170,7 @@ const Navbar: React.FC<NavbarProps> = ({ notifications = [], onDismissNotificati
                         >
                           <span className="sr-only">Open user menu</span>
                           <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-800 font-medium">
-                            {user.email?.charAt(0).toUpperCase() || 'U'}
+                            {user.email?.charAt(0).toUpperCase() || "U"}
                           </div>
                         </button>
                       </div>
@@ -215,7 +243,7 @@ const Navbar: React.FC<NavbarProps> = ({ notifications = [], onDismissNotificati
                 >
                   Dashboard
                 </Link>
-                {profile?.role === 'admin' && (
+                {profile?.role === "admin" && (
                   <Link
                     to="/admin"
                     className="block px-3 py-2 rounded-md text-base font-medium text-purple-700 hover:text-purple-900 hover:bg-gray-50"
@@ -241,12 +269,12 @@ const Navbar: React.FC<NavbarProps> = ({ notifications = [], onDismissNotificati
               <div className="flex items-center px-4">
                 <div className="flex-shrink-0">
                   <div className="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center text-primary-800 font-medium">
-                    {user.email?.charAt(0).toUpperCase() || 'U'}
+                    {user.email?.charAt(0).toUpperCase() || "U"}
                   </div>
                 </div>
                 <div className="ml-3">
                   <div className="text-base font-medium text-gray-800">
-                    {user.user_metadata?.full_name || 'User'}
+                    {user.user_metadata?.full_name || "User"}
                   </div>
                   <div className="text-sm font-medium text-gray-500">
                     {user.email}

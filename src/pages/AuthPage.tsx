@@ -1,23 +1,23 @@
-import React from 'react';
-import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { FileText } from 'lucide-react';
-import PageLayout from '../components/layout/PageLayout';
-import AuthTabs from '../components/auth/AuthTabs';
-import { useAuth } from '../contexts/AuthContext';
+import React from "react";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { FileText } from "lucide-react";
+import PageLayout from "../components/layout/PageLayout";
+import AuthTabs from "../components/auth/AuthTabs";
+import { useAuth } from "../contexts/AuthContext";
 
 const AuthPage: React.FC = () => {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  const next = searchParams.get('next');
-  const type = searchParams.get('type');
+  const next = searchParams.get("next");
+  const type = searchParams.get("type");
 
   const handleAuthSuccess = () => {
-    if (next === 'checkout' && type) {
+    if (next === "checkout" && type) {
       navigate(`/checkout?type=${type}`);
     } else {
-      navigate('/dashboard');
+      navigate("/dashboard");
     }
   };
 
@@ -36,7 +36,8 @@ const AuthPage: React.FC = () => {
               Welcome to VA Rating Assistant
             </h1>
             <p className="mt-2 text-sm text-gray-600">
-              Sign in to your account or create a new one to access your dashboard.
+              Sign in to your account or create a new one to access your
+              dashboard.
             </p>
           </div>
 
@@ -46,12 +47,18 @@ const AuthPage: React.FC = () => {
 
           <div className="text-center text-sm text-gray-500">
             <p>
-              By signing up, you agree to our{' '}
-              <a href="/terms" className="font-medium text-primary-600 hover:text-primary-500">
+              By signing up, you agree to our{" "}
+              <a
+                href="/terms"
+                className="font-medium text-primary-600 hover:text-primary-500"
+              >
                 Terms of Service
-              </a>{' '}
-              and{' '}
-              <a href="/privacy" className="font-medium text-primary-600 hover:text-primary-500">
+              </a>{" "}
+              and{" "}
+              <a
+                href="/privacy"
+                className="font-medium text-primary-600 hover:text-primary-500"
+              >
                 Privacy Policy
               </a>
               .

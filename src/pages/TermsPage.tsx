@@ -1,6 +1,6 @@
-import React from 'react';
-import PageLayout from '../components/layout/PageLayout';
-import { FileText } from 'lucide-react';
+import React from "react";
+import PageLayout from "../components/layout/PageLayout";
+import { FileText } from "lucide-react";
 
 const TermsPage: React.FC = () => {
   return (
@@ -17,14 +17,17 @@ const TermsPage: React.FC = () => {
           <section>
             <h2>1. Agreement to Terms</h2>
             <p>
-              By accessing or using our service, you agree to be bound by these Terms of Service. If you disagree with any part of the terms, you may not access the service.
+              By accessing or using our service, you agree to be bound by these
+              Terms of Service. If you disagree with any part of the terms, you
+              may not access the service.
             </p>
           </section>
 
           <section>
             <h2>2. Description of Service</h2>
             <p>
-              We provide an AI-powered service that analyzes medical documents to estimate VA disability ratings. Our service includes:
+              We provide an AI-powered service that analyzes medical documents
+              to estimate VA disability ratings. Our service includes:
             </p>
             <ul>
               <li>Document upload and storage</li>
@@ -70,21 +73,31 @@ const TermsPage: React.FC = () => {
           <section>
             <h2>6. Intellectual Property</h2>
             <p>
-              All content, features, and functionality of our service are owned by us and protected by copyright, trademark, and other intellectual property laws. You may not reproduce, distribute, modify, or create derivative works of our service without explicit permission.
+              All content, features, and functionality of our service are owned
+              by us and protected by copyright, trademark, and other
+              intellectual property laws. You may not reproduce, distribute,
+              modify, or create derivative works of our service without explicit
+              permission.
             </p>
           </section>
 
           <section>
             <h2>7. Limitation of Liability</h2>
             <p>
-              We provide estimates based on available information but do not guarantee specific VA disability ratings. We are not liable for decisions made based on our estimates or for any consequential damages arising from the use of our service.
+              We provide estimates based on available information but do not
+              guarantee specific VA disability ratings. We are not liable for
+              decisions made based on our estimates or for any consequential
+              damages arising from the use of our service.
             </p>
           </section>
 
           <section>
             <h2>8. Changes to Terms</h2>
             <p>
-              We reserve the right to modify these terms at any time. We will notify users of any material changes via email or through our service. Continued use of the service after changes constitutes acceptance of the new terms.
+              We reserve the right to modify these terms at any time. We will
+              notify users of any material changes via email or through our
+              service. Continued use of the service after changes constitutes
+              acceptance of the new terms.
             </p>
           </section>
 
@@ -94,7 +107,15 @@ const TermsPage: React.FC = () => {
               For questions about these Terms of Service, please contact us at:
             </p>
             <ul>
-              <li>Email: <a href="mailto:support@fastwebcreations.com" className="text-primary-600 underline">support@fastwebcreations.com</a></li>
+              <li>
+                Email:{" "}
+                <a
+                  href="mailto:support@fastwebcreations.com"
+                  className="text-primary-600 underline"
+                >
+                  support@fastwebcreations.com
+                </a>
+              </li>
               <li>Address: 522 W Riverside Ave STE N Spokane, WA 99201-0580</li>
             </ul>
           </section>

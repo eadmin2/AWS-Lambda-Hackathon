@@ -1,6 +1,6 @@
-import React from 'react';
-import PageLayout from '../components/layout/PageLayout';
-import { Shield } from 'lucide-react';
+import React from "react";
+import PageLayout from "../components/layout/PageLayout";
+import { Shield } from "lucide-react";
 
 const PrivacyPage: React.FC = () => {
   return (
@@ -17,7 +17,16 @@ const PrivacyPage: React.FC = () => {
           <section>
             <h2>1. Who We Are</h2>
             <p>
-              VA Rating Assistant ("we", "us", "our") provides a platform to help users estimate VA disability ratings and manage related documents. For privacy matters, contact: <a href="mailto:support@fastwebcreations.com" className="text-primary-600 underline">support@fastwebcreations.com</a> or 522 W Riverside Ave STE N Spokane, WA 99201-0580.
+              VA Rating Assistant ("we", "us", "our") provides a platform to
+              help users estimate VA disability ratings and manage related
+              documents. For privacy matters, contact:{" "}
+              <a
+                href="mailto:support@fastwebcreations.com"
+                className="text-primary-600 underline"
+              >
+                support@fastwebcreations.com
+              </a>{" "}
+              or 522 W Riverside Ave STE N Spokane, WA 99201-0580.
             </p>
           </section>
 
@@ -51,17 +60,27 @@ const PrivacyPage: React.FC = () => {
           <section>
             <h2>4. Special Category Data</h2>
             <p>
-              Some uploaded documents may contain health information. This data is encrypted, only accessed for service purposes, and never sold or shared with third parties.
+              Some uploaded documents may contain health information. This data
+              is encrypted, only accessed for service purposes, and never sold
+              or shared with third parties.
             </p>
           </section>
 
           <section>
             <h2>5. How We Store and Protect Your Data</h2>
             <ul>
-              <li>Data is stored securely in Supabase (database and encrypted S3 storage).</li>
-              <li>Health records and sensitive documents are encrypted at rest.</li>
+              <li>
+                Data is stored securely in Supabase (database and encrypted S3
+                storage).
+              </li>
+              <li>
+                Health records and sensitive documents are encrypted at rest.
+              </li>
               <li>Access is restricted to authorized users and admins.</li>
-              <li>We implement technical and organizational measures to protect your data.</li>
+              <li>
+                We implement technical and organizational measures to protect
+                your data.
+              </li>
             </ul>
           </section>
 
@@ -69,19 +88,34 @@ const PrivacyPage: React.FC = () => {
             <h2>6. Third-Party Processors</h2>
             <p>We use trusted third parties to process your data:</p>
             <ul>
-              <li><strong>Stripe</strong> (payments, billing info)</li>
-              <li><strong>Supabase</strong> (database, authentication, storage)</li>
-              <li><strong>Analytics provider</strong> (if used; e.g., Google Analytics)</li>
+              <li>
+                <strong>Stripe</strong> (payments, billing info)
+              </li>
+              <li>
+                <strong>Supabase</strong> (database, authentication, storage)
+              </li>
+              <li>
+                <strong>Analytics provider</strong> (if used; e.g., Google
+                Analytics)
+              </li>
             </ul>
-            <p>These providers are contractually required to protect your data and comply with GDPR.</p>
+            <p>
+              These providers are contractually required to protect your data
+              and comply with GDPR.
+            </p>
           </section>
 
           <section>
             <h2>7. Data Retention &amp; Deletion</h2>
             <ul>
-              <li>You can delete your account and uploaded documents at any time.</li>
+              <li>
+                You can delete your account and uploaded documents at any time.
+              </li>
               <li>Payment and billing data is retained per Stripe's policy.</li>
-              <li>Support tickets and admin logs are retained as needed for support and audit purposes.</li>
+              <li>
+                Support tickets and admin logs are retained as needed for
+                support and audit purposes.
+              </li>
               <li>Data is deleted or anonymized when no longer required.</li>
             </ul>
           </section>
@@ -98,27 +132,45 @@ const PrivacyPage: React.FC = () => {
               <li>Withdraw consent at any time (where applicable)</li>
               <li>Lodge a complaint with a supervisory authority</li>
             </ul>
-            <p>To exercise your rights, contact us at <a href="mailto:support@fastwebcreations.com" className="text-primary-600 underline">support@fastwebcreations.com</a> or 522 W Riverside Ave STE N Spokane, WA 99201-0580.</p>
+            <p>
+              To exercise your rights, contact us at{" "}
+              <a
+                href="mailto:support@fastwebcreations.com"
+                className="text-primary-600 underline"
+              >
+                support@fastwebcreations.com
+              </a>{" "}
+              or 522 W Riverside Ave STE N Spokane, WA 99201-0580.
+            </p>
           </section>
 
           <section>
             <h2>9. International Transfers</h2>
             <p>
-              Your data may be processed outside the EEA. We ensure appropriate safeguards are in place (e.g., Standard Contractual Clauses).
+              Your data may be processed outside the EEA. We ensure appropriate
+              safeguards are in place (e.g., Standard Contractual Clauses).
             </p>
           </section>
 
           <section>
             <h2>10. Changes to This Policy</h2>
             <p>
-              We may update this policy. Changes will be posted on this page with a new "last updated" date.
+              We may update this policy. Changes will be posted on this page
+              with a new "last updated" date.
             </p>
           </section>
 
           <section>
             <h2>11. Contact</h2>
             <p>
-              For privacy questions or requests, contact: <a href="mailto:support@fastwebcreations.com" className="text-primary-600 underline">support@fastwebcreations.com</a> or 522 W Riverside Ave STE N Spokane, WA 99201-0580.
+              For privacy questions or requests, contact:{" "}
+              <a
+                href="mailto:support@fastwebcreations.com"
+                className="text-primary-600 underline"
+              >
+                support@fastwebcreations.com
+              </a>{" "}
+              or 522 W Riverside Ave STE N Spokane, WA 99201-0580.
             </p>
           </section>
         </div>
