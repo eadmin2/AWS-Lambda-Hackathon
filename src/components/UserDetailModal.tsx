@@ -67,7 +67,8 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({ isOpen, onClose, user
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="User Details">
+    <Modal isOpen={isOpen} onClose={onClose} ariaLabelledBy="user-detail-modal-title">
+      <h2 id="user-detail-modal-title" className="text-lg font-semibold mb-4">User Details</h2>
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700">Email</label>

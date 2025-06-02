@@ -11,6 +11,8 @@ import {
 } from '@tanstack/react-table';
 import { FileText, FileImage, File, Download, Trash2, Search, Pencil, X, Check } from 'lucide-react';
 import Button from '../ui/Button';
+import Modal from '../ui/Modal';
+import DocumentViewer from './DocumentViewer';
 
 export interface DocumentRow {
   id: string;
@@ -39,6 +41,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDo
   const [sorting, setSorting] = useState<SortingState>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [selectedDocument, setSelectedDocument] = useState<DocumentRow | null>(null);
 
   const handleStartEdit = (row: DocumentRow) => {
     console.log('Starting edit for:', row.id, row.file_name);
@@ -139,7 +142,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDo
         header: '',
         cell: ({ row }) => (
           <div className="flex gap-2 justify-end">
-            <Button size="sm" variant="ghost" onClick={() => onView?.(row.original)} title="View">
+            <Button size="sm" variant="ghost" onClick={() => setSelectedDocument(row.original)} title="View">
               <FileText className="h-4 w-4" />
             </Button>
             <Button size="sm" variant="ghost" onClick={() => onDownload?.(row.original)} title="Download">
@@ -153,7 +156,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDo
         enableSorting: false,
       },
     ],
-    [onView, onDownload, onDelete, onRename, editingId, editingName] // Added missing dependencies
+    [onView, onDownload, onDelete, onRename, editingId, editingName]
   );
 
   const table = useReactTable({
@@ -173,6 +176,9 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, onView, onDo
 
   return (
     <div className="w-full">
+      <Modal isOpen={!!selectedDocument} onClose={() => setSelectedDocument(null)}>
+        {selectedDocument && <DocumentViewer document={selectedDocument} />}
+      </Modal>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
         <div className="relative w-full md:w-72">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
