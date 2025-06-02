@@ -155,6 +155,12 @@ const CalculatorPage: React.FC = () => {
   const removeDisability = (idx: number) => {
     setDisabilities(disabilities.filter((_, i) => i !== idx));
   };
+  // Clear all inputs
+  const clearAll = () => {
+    setDisabilities([]);
+    setDependents(initialDependents);
+    setSelectedExtremity("other");
+  };
 
   // Calculate combined rating and payment (with bilateral factor)
   const combinedRounded = calculateCombinedRatingWithBilateral(disabilities);
@@ -182,9 +188,19 @@ const CalculatorPage: React.FC = () => {
           {/* Left: Inputs */}
           <div>
             <div className="mb-6 p-6 bg-white rounded shadow">
-              <h2 className="text-xl font-bold mb-4 text-primary-900">
-                1. Enter Your Disability Ratings
-              </h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-primary-900">
+                  1. Enter Your Disability Ratings
+                </h2>
+                <button
+                  className="px-3 py-1 rounded bg-gray-200 text-gray-700 border border-gray-300 font-medium hover:bg-gray-300 focus:outline-none"
+                  onClick={clearAll}
+                  type="button"
+                  aria-label="Clear all inputs"
+                >
+                  Clear
+                </button>
+              </div>
               <div className="mb-2 flex flex-wrap gap-2">
                 {extremities.map((ext) => (
                   <button
