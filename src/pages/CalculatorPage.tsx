@@ -366,8 +366,14 @@ const CalculatorPage: React.FC = () => {
                     Calculations
                   </button>
                   {showModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-                      <div className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6 relative">
+                    <div
+                      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
+                      onClick={() => setShowModal(false)}
+                    >
+                      <div
+                        className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6 relative"
+                        onClick={e => e.stopPropagation()}
+                      >
                         <button
                           className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-2xl font-bold"
                           onClick={() => setShowModal(false)}
@@ -378,9 +384,51 @@ const CalculatorPage: React.FC = () => {
                         <h2 className="text-xl font-bold mb-4 text-primary-900">Calculation Breakdown</h2>
                         <ul className="text-sm text-gray-700 list-disc pl-5">
                           {paymentBreakdownArr.map((line, i) => (
-                            <li key={i}>{line}</li>
+                            <li key={i} className="mb-2">
+                              <div className="font-semibold">{line}</div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                {(() => {
+                                  if (line.startsWith("Base:")) {
+                                    return `This is the base monthly rate for your combined rating and dependent scenario, directly from the VA table.`;
+                                  }
+                                  if (line.includes("additional child(ren) under 18")) {
+                                    return `Each additional child under 18 adds a fixed amount (from the VA table) to your base. Formula: (number of additional children under 18) × (rate per child under 18).`;
+                                  }
+                                  if (line.includes("child(ren) 18-24")) {
+                                    return `Each dependent child age 18-24 in school adds a fixed amount (from the VA table) to your base. Formula: (number of children 18-24) × (rate per child 18-24).`;
+                                  }
+                                  if (line.includes("spouse Aid & Attendance")) {
+                                    return `If your spouse requires Aid & Attendance, an extra amount is added to your base. This is a fixed value from the VA table.`;
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            </li>
                           ))}
                         </ul>
+                        <div className="mt-4 text-xs text-gray-600">
+                          <strong>How we calculate:</strong><br />
+                          <ul className="list-disc pl-5">
+                            <li>We start with the base rate for your combined rating and dependents.</li>
+                            <li>We add extra amounts for each additional child and for a spouse needing Aid & Attendance, using the official VA rates.</li>
+                            <li>All rates are from the 2025 VA compensation tables.</li>
+                          </ul>
+                        </div>
+                        <div className="mt-4 text-xs text-blue-700">
+                          <strong>References & Learn More:</strong>
+                          <ul className="list-disc pl-5">
+                            <li>
+                              <a href="https://www.va.gov/disability/compensation-rates/veteran-rates/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-900">
+                                2025 VA Disability Compensation Rates
+                              </a>
+                            </li>
+                            <li>
+                              <a href="https://www.va.gov/disability/about-disability-ratings/#combined-ratings" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-900">
+                                VA Combined Ratings Table & Math
+                              </a>
+                            </li>
+                          </ul>
+                        </div>
                       </div>
                     </div>
                   )}

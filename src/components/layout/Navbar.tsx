@@ -77,6 +77,20 @@ const Navbar: React.FC<NavbarProps> = ({
 
           {/* Desktop menu */}
           <div className="hidden sm:ml-6 sm:flex sm:items-center">
+            <Link
+              to="/"
+              className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Home
+            </Link>
+            <Link
+              to="/calculator"
+              className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Calculator
+            </Link>
             {!isLoading && (
               <>
                 {user ? (
@@ -234,6 +248,20 @@ const Navbar: React.FC<NavbarProps> = ({
       {isMenuOpen && (
         <div className="sm:hidden">
           <div className="pt-2 pb-3 space-y-1">
+            <Link
+              to="/"
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Home
+            </Link>
+            <Link
+              to="/calculator"
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Calculator
+            </Link>
             {user && (
               <>
                 <Link
