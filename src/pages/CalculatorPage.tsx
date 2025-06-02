@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useVA2025Data } from "../lib/useVA2025Data";
 import PageLayout from "../components/layout/PageLayout";
-import type { VA2025Payload } from "../lib/useVA2025Data";
 import { calculateCompensation } from "../lib/calculateCompensation";
 
 // Bilateral factor logic: if there are two or more disabilities affecting paired extremities (arms or legs),
@@ -86,6 +85,7 @@ const CalculatorPage: React.FC = () => {
   const [disabilities, setDisabilities] = useState<DisabilityEntry[]>([]);
   const [selectedExtremity, setSelectedExtremity] = useState<string>("other");
   const [dependents, setDependents] = useState<Dependents>(initialDependents);
+  const [showModal, setShowModal] = useState(false);
 
   // Add disability
   const addDisability = (percent: number) => {
@@ -123,6 +123,7 @@ const CalculatorPage: React.FC = () => {
     paymentBreakdownArr = result.breakdown;
   }
   const paymentBreakdown = paymentBreakdownArr.join(" ");
+  const annualPayment = payment * 12;
 
   return (
     <>
@@ -347,10 +348,42 @@ const CalculatorPage: React.FC = () => {
                         maximumFractionDigits: 2,
                       })}
                     </div>
+                    <div className="text-green-700 text-sm mb-1">
+                      Estimated Annual Payment: $
+                      {annualPayment.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </div>
                     <div className="text-gray-700 text-sm">
                       (2025 COLA rates, effective Dec 1, 2024)
                     </div>
                   </div>
+                  <button
+                    className="mb-4 px-4 py-2 bg-primary-700 text-white rounded hover:bg-primary-800 focus:outline-none"
+                    onClick={() => setShowModal(true)}
+                  >
+                    Calculations
+                  </button>
+                  {showModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                      <div className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6 relative">
+                        <button
+                          className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-2xl font-bold"
+                          onClick={() => setShowModal(false)}
+                          aria-label="Close calculations modal"
+                        >
+                          &times;
+                        </button>
+                        <h2 className="text-xl font-bold mb-4 text-primary-900">Calculation Breakdown</h2>
+                        <ul className="text-sm text-gray-700 list-disc pl-5">
+                          {paymentBreakdownArr.map((line, i) => (
+                            <li key={i}>{line}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
                   <div className="mb-4">
                     <h3 className="font-medium mb-2">Breakdown:</h3>
                     <ul className="text-sm text-gray-700 list-disc pl-5">
