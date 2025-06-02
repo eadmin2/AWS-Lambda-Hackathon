@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useVA2025Data } from "../lib/useVA2025Data";
 import PageLayout from "../components/layout/PageLayout";
 import type { VA2025Payload } from "../lib/useVA2025Data";
+import { calculateCompensation } from "../lib/calculateCompensation";
 
 // Bilateral factor logic: if there are two or more disabilities affecting paired extremities (arms or legs),
 // apply the bilateral factor (combine those first, then add the rest)
@@ -54,64 +55,6 @@ function calculateCombinedRatingWithBilateral(
   const healthy = sortedRatings.reduce((hp, r) => hp * (1 - r / 100), 1);
   const combinedRaw = 100 * (1 - healthy);
   return Math.min(100, Math.round(combinedRaw / 10) * 10);
-}
-
-// New compensation calculation using only scraped data
-export function calculateCompensation(
-  rating: number,
-  hasSpouse: boolean,
-  spouseAA: boolean,
-  childU18: number,
-  childO18: number,
-  parentCount: number,
-  vaData: VA2025Payload, // Add this parameter
-): { total: number; breakdown: string[] } {
-  if (!vaData) return { total: 0, breakdown: ["Loading VA data..."] };
-  // Use flat rates for 10% and 20%
-  if (rating === 10 || rating === 20) {
-    return {
-      total: vaData.flatRates[rating],
-      breakdown: [`Flat rate for ${rating}%`],
-    };
-  }
-  // For 30%+, use the scraped base rates
-  const hasKids = childU18 + childO18 > 0;
-  const baseTable = hasKids ? vaData.baseOneChild : vaData.baseNoChild;
-  // Calculate scenario index based on dependents
-  let scenarioIndex = 0;
-  if (hasSpouse) {
-    scenarioIndex = 1 + parentCount; // spouse + 0-2 parents
-  } else {
-    scenarioIndex = 0; // veteran alone
-  }
-  const base =
-    baseTable[rating as keyof typeof baseTable]?.[scenarioIndex] || 0;
-  // Add extra amounts using scraped data
-  const adds = vaData.addAmounts[rating as keyof typeof vaData.addAmounts];
-  if (!adds) {
-    return { total: base, breakdown: [`Base rate for ${rating}%`] };
-  }
-  // Calculate additional amounts
-  const paidKids = hasKids ? 1 : 0;
-  const extraU18 = Math.max(0, childU18 - paidKids) * adds.u18;
-  const extraO18 = childO18 * adds.o18;
-  const spAA = hasSpouse && spouseAA ? adds.spouseAA : 0;
-  const breakdown = [
-    `Base: $${base.toFixed(2)}`,
-    ...(extraU18
-      ? [
-          `+ $${extraU18.toFixed(2)} for ${childU18 - paidKids} additional child(ren) under 18`,
-        ]
-      : []),
-    ...(extraO18
-      ? [`+ $${extraO18.toFixed(2)} for ${childO18} child(ren) 18-24`]
-      : []),
-    ...(spAA ? [`+ $${spAA.toFixed(2)} for spouse Aid & Attendance`] : []),
-  ];
-  return {
-    total: +(base + extraU18 + extraO18 + spAA).toFixed(2),
-    breakdown,
-  };
 }
 
 const disabilityPercents = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
