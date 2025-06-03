@@ -325,7 +325,7 @@ const AdminDashboard = () => {
   }, [user, profile]);
 
   // Redirect if not admin or not allowed
-  if (!isLoading && (!user || !profile || profile.admin_level === "readonly")) {
+  if (!isLoading && (!user || !profile || profile.role !== "admin")) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -671,7 +671,6 @@ const AdminDashboard = () => {
                             isLoading={
                               userModalLoading && selectedUser?.id === user.id
                             }
-                            disabled={profile?.admin_level === "readonly"}
                           >
                             View
                           </Button>
@@ -679,11 +678,10 @@ const AdminDashboard = () => {
                             variant="secondary"
                             size="sm"
                             onClick={() => handleToggleRole(user)}
-                            disabled={profile?.admin_level === "readonly"}
                           >
                             Toggle Role
                           </Button>
-                          {profile?.admin_level === "super_admin" &&
+                          {profile?.role === "admin" &&
                             user.id !== profile.id && (
                               <Button
                                 variant="danger"
@@ -952,10 +950,7 @@ const AdminDashboard = () => {
         onSave={handleSaveUser}
         loading={userModalLoading}
         onUpdateCredits={handleUpdateCredits}
-        canEditCredits={
-          profile?.admin_level === "admin" ||
-          profile?.admin_level === "super_admin"
-        }
+        canEditCredits={profile?.role === "admin"}
       />
     </PageLayout>
   );
