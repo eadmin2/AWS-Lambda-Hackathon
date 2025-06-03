@@ -1,4 +1,7 @@
 // @ts-ignore: Deno runtime and remote module imports are valid in Supabase Edge Functions
+// Suppress TS error for Deno global in Edge Functions
+declare const Deno: any;
+// @ts-ignore: Deno remote imports are valid in Supabase Edge Functions
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 // @ts-ignore: Deno runtime and remote module imports are valid in Supabase Edge Functions
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
