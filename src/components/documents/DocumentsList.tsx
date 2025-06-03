@@ -37,7 +37,7 @@ const DocumentsList: React.FC<DocumentsListProps> = ({
 
   // Close dropdown when clicking outside
   React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (_event: MouseEvent) => {
       if (activeDropdown) {
         setActiveDropdown(null);
       }
@@ -121,14 +121,20 @@ const DocumentsList: React.FC<DocumentsListProps> = ({
                       <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
                         <button
                           className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                          onClick={() => handleView(document)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleView(document);
+                          }}
                         >
                           <Eye className="h-4 w-4" />
                           View
                         </button>
                         <button
                           className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                          onClick={() => handleDownload(document)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownload(document);
+                          }}
                         >
                           <Download className="h-4 w-4" />
                           Download

@@ -177,7 +177,10 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
           <div className="relative flex-shrink-0">
             <button
               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full"
-              onClick={() => setActiveDropdown(showDropdown ? null : document.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActiveDropdown(showDropdown ? null : document.id);
+              }}
             >
               <MoreVertical className="h-4 w-4" />
             </button>
@@ -186,7 +189,8 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
               <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
                 <button
                   className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setSelectedDocument(document);
                     setActiveDropdown(null);
                   }}
@@ -196,7 +200,8 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
                 </button>
                 <button
                   className="w-full px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     onDownload?.(document);
                     setActiveDropdown(null);
                   }}
@@ -206,7 +211,8 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
                 </button>
                 <button
                   className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 border-t border-gray-100"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     onDelete?.(document);
                     setActiveDropdown(null);
                   }}
@@ -341,7 +347,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
 
   // Close dropdown when clicking outside
   React.useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (_event: MouseEvent) => {
       if (activeDropdown) {
         setActiveDropdown(null);
       }
