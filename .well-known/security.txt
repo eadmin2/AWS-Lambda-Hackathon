@@ -1,0 +1,6 @@
+# Our security policy for VA Disability Rating Assistant
+Contact: mailto:support@varatingassistant.com
+Expires: 2025-12-31T23:59:59.000Z
+Acknowledgements: https://varatingassistant.com/security-acknowledgements.html
+Policy: https://varatingassistant.com/privacy.html
+Preferred-Languages: en 
