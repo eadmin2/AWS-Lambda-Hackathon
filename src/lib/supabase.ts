@@ -59,7 +59,6 @@ export type Profile = {
   full_name: string | null;
   created_at: string;
   role: "veteran" | "admin";
-  admin_level: "super_admin" | "admin" | "support" | "readonly";
 };
 
 export type Document = {
@@ -97,7 +96,6 @@ export async function getProfile(user: User): Promise<Profile> {
         email: user.email!,
         full_name: user.user_metadata.full_name || null,
         role: "veteran" as const,
-        admin_level: "readonly" as const,
       };
 
       try {

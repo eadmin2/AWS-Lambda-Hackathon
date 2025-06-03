@@ -40,10 +40,10 @@ serve(async (req) => {
   // Check if the user is a super admin
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("admin_level")
+    .select("role")
     .eq("id", user.id)
     .single();
-  if (profileError || !profile || profile.admin_level !== "super_admin") {
+  if (profileError || !profile || profile.role !== "admin") {
     return new Response(JSON.stringify({ error: "Not authorized" }), {
       status: 403,
     });
