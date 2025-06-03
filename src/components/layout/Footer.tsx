@@ -54,12 +54,12 @@ const Footer: React.FC = () => {
             </h3>
             <ul className="mt-4 space-y-4">
               <li>
-                <Link
-                  to="/how-it-works"
+                <a
+                  href="#how-it-works"
                   className="text-base text-gray-600 hover:text-gray-900"
                 >
                   How It Works
-                </Link>
+                </a>
               </li>
               <li>
                 <a

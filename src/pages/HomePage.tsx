@@ -30,7 +30,7 @@ const HomePage: React.FC = () => {
                     View Pricing
                   </Button>
                 </Link>
-                <Link to="/how-it-works">
+                <a href="#how-it-works">
                   <Button
                     variant="secondary"
                     size="lg"
@@ -38,7 +38,7 @@ const HomePage: React.FC = () => {
                   >
                     How It Works
                   </Button>
-                </Link>
+                </a>
                 <Link to="/calculator">
                   <Button
                     variant="secondary"
@@ -134,7 +134,7 @@ const HomePage: React.FC = () => {
       </section>
 
       {/* Features section */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-white" id="how-it-works">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
