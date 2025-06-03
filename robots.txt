@@ -1,0 +1,10 @@
+# robots.txt for VA Rating Assistant
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /account/
+Disallow: /dashboard/
+
+# Sitemap
+Sitemap: https://varatingassistant.com/sitemap.xml 

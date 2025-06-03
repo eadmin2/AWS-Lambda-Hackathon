@@ -9,7 +9,48 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // Create a single supabase client for interacting with your database
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// with enhanced security options
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    storageKey: 'va-rating-assistant-auth',
+    // Storage options for secure cookies
+    storage: {
+      getItem: (key) => {
+        try {
+          return localStorage.getItem(key);
+        } catch (error) {
+          console.error('Error accessing localStorage', error);
+          return null;
+        }
+      },
+      setItem: (key, value) => {
+        try {
+          localStorage.setItem(key, value);
+          // In production, also set a secure cookie
+          if (import.meta.env.PROD) {
+            document.cookie = `${key}=${value}; Secure; SameSite=Strict; path=/`;
+          }
+        } catch (error) {
+          console.error('Error setting storage item', error);
+        }
+      },
+      removeItem: (key) => {
+        try {
+          localStorage.removeItem(key);
+          // Also remove the cookie if in production
+          if (import.meta.env.PROD) {
+            document.cookie = `${key}=; Secure; SameSite=Strict; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT`;
+          }
+        } catch (error) {
+          console.error('Error removing storage item', error);
+        }
+      }
+    }
+  }
+});
 
 // Database types based on the schema
 export type Profile = {
@@ -110,17 +151,31 @@ export async function getUserDocuments(userId: string) {
 // Storage helper functions
 export async function uploadDocument(file: File, userId: string) {
   try {
-    // Use predictable file name for easier rename/delete
-    const fileExt = file.name.split(".").pop();
-    const baseName = file.name.replace(/\.[^.]+$/, "");
-    const fileName = `${userId}/${baseName}.${fileExt}`;
+    // Validate file type and size for security
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/tiff', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error(`Unsupported file type: ${file.type}. Please upload PDF, JPEG, PNG, TIFF or Word documents only.`);
+    }
+    
+    if (file.size > maxSize) {
+      throw new Error(`File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB. Maximum size is 10MB.`);
+    }
+    
+    // Sanitize file name for security
+    const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
+    const baseName = file.name.replace(/\.[^.]+$/, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "_"); // Remove special characters
+    const fileName = `${userId}/${baseName}_${Date.now()}.${fileExt}`;
 
-    // Upload file to Supabase Storage
+    // Upload file to Supabase Storage with content type validation
     const { data, error } = await supabase.storage
       .from("documents")
       .upload(fileName, file, {
         cacheControl: "3600",
         upsert: false,
+        contentType: file.type, // Explicitly set content type
       });
 
     if (error) throw error;
