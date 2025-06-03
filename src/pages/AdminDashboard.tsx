@@ -153,17 +153,6 @@ const AdminDashboard = () => {
     });
   };
 
-  // Force refresh the user session to get updated JWT
-  const refreshUserSession = async () => {
-    const { data, error } = await supabase.auth.refreshSession();
-    if (error) console.error('Error refreshing session:', error);
-    else console.log('Session refreshed with new metadata');
-  };
-
-  useEffect(() => {
-    refreshUserSession();
-  }, []);
-
   useEffect(() => {
     if (!user || profile?.role !== "admin") return;
 
@@ -319,6 +308,14 @@ const AdminDashboard = () => {
     if (stored) {
       setIsImpersonating(true);
     }
+
+    // Check what's in the JWT
+    const checkJwt = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('User metadata:', user?.user_metadata);
+      console.log('Role in JWT:', user?.user_metadata?.role);
+    };
+    checkJwt();
   }, [user, profile]);
 
   // Fetch activity logs
