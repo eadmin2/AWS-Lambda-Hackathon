@@ -109,8 +109,6 @@ function renderLogDetails(details: any) {
   return typeof parsed === "string" ? parsed : JSON.stringify(parsed);
 }
 
-const IMPERSONATION_KEY = "admin_impersonation_session";
-
 const AdminDashboard = () => {
   const { user, profile, isLoading } = useAuth();
   const [stats, setStats] = useState({
@@ -140,18 +138,6 @@ const AdminDashboard = () => {
   // Notifications state
   const [notifications, setNotifications] = useState<any[]>([]);
   const [bellOpen, setBellOpen] = useState(false);
-
-  // Impersonation state
-  const [isImpersonating, setIsImpersonating] = useState(false);
-
-  // Handler to dismiss a notification
-  const handleDismissNotification = (idx: number) => {
-    setNotifications((prev) => {
-      const newNotifs = prev.filter((_, i) => i !== idx);
-      if (newNotifs.length === 0) setBellOpen(false);
-      return newNotifs;
-    });
-  };
 
   useEffect(() => {
     if (!user || profile?.role !== "admin") return;
@@ -302,12 +288,6 @@ const AdminDashboard = () => {
       setNotifications(notifs);
     };
     fetchNotifications();
-
-    // Check if we're in impersonation mode on load
-    const stored = localStorage.getItem(IMPERSONATION_KEY);
-    if (stored) {
-      setIsImpersonating(true);
-    }
   }, [user, profile]);
 
   // Fetch activity logs
@@ -448,69 +428,13 @@ const AdminDashboard = () => {
     setActivityLogs(data || []);
   };
 
-  // Impersonate user handler
-  const handleImpersonate = async (userId: string) => {
-    // Store current session
-    const currentSession = await supabase.auth.getSession();
-    localStorage.setItem(
-      IMPERSONATION_KEY,
-      JSON.stringify({
-        session: currentSession.data.session,
-        impersonatedUserId: userId,
-      }),
-    );
-    // Call Edge Function
-    const resp = await fetch("/functions/v1/impersonate-user", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${currentSession.data.session?.access_token}`,
-      },
-      body: JSON.stringify({ user_id: userId }),
-    });
-    const data = await resp.json();
-    if (data.session && data.session.access_token) {
-      await supabase.auth.setSession({
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
-      });
-      setIsImpersonating(true);
-      window.location.reload(); // reload to update context
-    } else {
-      alert(data.error || "Failed to impersonate user");
-    }
-  };
-
-  // Return to admin handler
-  const handleReturnToAdmin = async () => {
-    const stored = localStorage.getItem(IMPERSONATION_KEY);
-    if (stored) {
-      const { session } = JSON.parse(stored);
-      await supabase.auth.setSession(session);
-      localStorage.removeItem(IMPERSONATION_KEY);
-      setIsImpersonating(false);
-      window.location.reload();
-    }
-  };
-
   return (
     <PageLayout
       notifications={notifications}
-      onDismissNotification={handleDismissNotification}
+      onDismissNotification={() => setNotifications([])}
       bellOpen={bellOpen}
       onBellOpenChange={setBellOpen}
     >
-      {isImpersonating && (
-        <div className="bg-yellow-100 border-b border-yellow-300 text-yellow-900 px-4 py-2 flex items-center justify-between">
-          <span>
-            <b>Impersonation Mode:</b> You are viewing the dashboard as another
-            user.
-          </span>
-          <Button variant="danger" size="sm" onClick={handleReturnToAdmin}>
-            Return to Admin
-          </Button>
-        </div>
-      )}
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         {/* DEBUG: Show current session info for troubleshooting */}
         {profile?.role === "admin" && (
@@ -690,16 +614,6 @@ const AdminDashboard = () => {
                           >
                             Toggle Role
                           </Button>
-                          {profile?.role === "admin" &&
-                            user.id !== profile.id && (
-                              <Button
-                                variant="danger"
-                                size="sm"
-                                onClick={() => handleImpersonate(user.id)}
-                              >
-                                Impersonate
-                              </Button>
-                            )}
                         </td>
                       </tr>
                     ))}
@@ -835,13 +749,7 @@ const AdminDashboard = () => {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => window.open(doc.file_url, "_blank")}
-                          >
-                            View
-                          </Button>
+                          {/* Remove the View button from the Actions column */}
                         </td>
                       </tr>
                     ))}
