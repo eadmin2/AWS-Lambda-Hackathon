@@ -308,14 +308,6 @@ const AdminDashboard = () => {
     if (stored) {
       setIsImpersonating(true);
     }
-
-    // Check what's in the JWT
-    const checkJwt = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log('User metadata:', user?.user_metadata);
-      console.log('Role in JWT:', user?.user_metadata?.role);
-    };
-    checkJwt();
   }, [user, profile]);
 
   // Fetch activity logs
