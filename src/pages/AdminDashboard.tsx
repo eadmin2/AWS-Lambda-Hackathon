@@ -436,15 +436,6 @@ const AdminDashboard = () => {
       onBellOpenChange={setBellOpen}
     >
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        {/* DEBUG: Show current session info for troubleshooting */}
-        {profile?.role === "admin" && (
-          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-xs text-gray-700">
-            <b>Debug Info:</b> <br />
-            <span>User ID: {user?.id}</span> <br />
-            <span>Email: {user?.email}</span> <br />
-            <span>Role: {profile?.role}</span> <br />
-          </div>
-        )}
         <div className="px-4 py-6 sm:px-0">
           <h1 className="text-2xl font-bold text-gray-900 mb-6">
             Admin Dashboard
