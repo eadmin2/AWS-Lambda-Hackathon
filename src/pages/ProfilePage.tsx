@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { User, Mail, Key, AlertCircle, Save } from "lucide-react";
+import { User, Mail, AlertCircle, Save } from "lucide-react";
 import PageLayout from "../components/layout/PageLayout";
 import Button from "../components/ui/Button";
 import {
@@ -213,44 +213,6 @@ const ProfilePage: React.FC = () => {
                       </Button>
                     </CardFooter>
                   </form>
-                </Card>
-
-                <Card className="mt-6">
-                  <CardHeader>
-                    <CardTitle>Change Password</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-500 mb-4">
-                      To change your password, click the button below to receive
-                      a password reset email.
-                    </p>
-                    <Button
-                      variant="secondary"
-                      leftIcon={<Key className="h-4 w-4" />}
-                      onClick={async () => {
-                        if (!user?.email) return;
-
-                        try {
-                          const { error } =
-                            await supabase.auth.resetPasswordForEmail(
-                              user.email,
-                            );
-                          if (error) throw error;
-
-                          setUpdateSuccess(true);
-                          setUpdateError(null);
-                        } catch (error) {
-                          console.error("Error sending password reset:", error);
-                          setUpdateError(
-                            "Failed to send password reset email. Please try again.",
-                          );
-                          setUpdateSuccess(false);
-                        }
-                      }}
-                    >
-                      Send Password Reset Email
-                    </Button>
-                  </CardContent>
                 </Card>
               </div>
 

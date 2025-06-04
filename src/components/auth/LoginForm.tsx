@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { supabase } from "../../lib/supabase";
 import Button from "../ui/Button";
-import { Mail, Lock, AlertCircle } from "lucide-react";
+import { Mail, AlertCircle } from "lucide-react";
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -10,7 +10,6 @@ interface LoginFormProps {
 
 interface LoginFormData {
   email: string;
-  password: string;
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
@@ -19,18 +18,26 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     handleSubmit,
     formState: { errors, isSubmitting },
     setError,
+    reset,
   } = useForm<LoginFormData>();
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const onSubmit = async (data: LoginFormData) => {
+    setSuccessMessage(null);
     try {
-      await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithOtp({
         email: data.email,
-        password: data.password,
       });
-
-      if (onSuccess) {
-        onSuccess();
+      if (error) {
+        setError("root", {
+          type: "manual",
+          message: error.message || "Login failed. Please try again.",
+        });
+        return;
       }
+      setSuccessMessage("Check your email for a login link or one-time passcode (OTP). Follow the instructions to log in.");
+      reset();
+      if (onSuccess) onSuccess();
     } catch (_error) {
       setError("root", {
         type: "manual",
@@ -47,7 +54,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
           <p className="text-error-700 text-sm">{errors.root.message}</p>
         </div>
       )}
-
+      {successMessage && (
+        <div className="bg-success-100 p-3 rounded-md flex items-start">
+          <p className="text-success-700 text-sm">{successMessage}</p>
+        </div>
+      )}
       <div className="space-y-1">
         <label
           htmlFor="email"
@@ -77,67 +88,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
           <p className="text-error-500 text-xs mt-1">{errors.email.message}</p>
         )}
       </div>
-
-      <div className="space-y-1">
-        <label
-          htmlFor="password"
-          className="block text-sm font-medium text-gray-700"
-        >
-          Password
-        </label>
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Lock className="h-5 w-5 text-gray-400" />
-          </div>
-          <input
-            id="password"
-            type="password"
-            className={`input pl-10 ${errors.password ? "border-error-500 focus:border-error-500 focus:ring-error-500" : ""}`}
-            placeholder="••••••••"
-            {...register("password", {
-              required: "Password is required",
-              minLength: {
-                value: 6,
-                message: "Password must be at least 6 characters",
-              },
-            })}
-          />
-        </div>
-        {errors.password && (
-          <p className="text-error-500 text-xs mt-1">
-            {errors.password.message}
-          </p>
-        )}
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center">
-          <input
-            id="remember-me"
-            name="remember-me"
-            type="checkbox"
-            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-          />
-          <label
-            htmlFor="remember-me"
-            className="ml-2 block text-sm text-gray-700"
-          >
-            Remember me
-          </label>
-        </div>
-
-        <div className="text-sm">
-          <a
-            href="#"
-            className="font-medium text-primary-600 hover:text-primary-500"
-          >
-            Forgot your password?
-          </a>
-        </div>
-      </div>
-
       <Button type="submit" className="w-full" isLoading={isSubmitting}>
-        Sign in
+        Send Login Link / OTP
       </Button>
     </form>
   );

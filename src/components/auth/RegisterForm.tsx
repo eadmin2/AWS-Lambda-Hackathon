@@ -1,8 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
-import { supabase } from "../../lib/supabase";
 import Button from "../ui/Button";
-import { Mail, Lock, User, AlertCircle } from "lucide-react";
+import { Mail, User, AlertCircle } from "lucide-react";
 
 interface RegisterFormProps {
   onSuccess?: () => void;
@@ -11,73 +10,40 @@ interface RegisterFormProps {
 interface RegisterFormData {
   fullName: string;
   email: string;
-  password: string;
-  confirmPassword: string;
 }
 
 const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors, isSubmitting },
     setError,
+    reset,
   } = useForm<RegisterFormData>();
-
-  const password = watch("password");
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const onSubmit = async (data: RegisterFormData) => {
+    setSuccessMessage(null);
     try {
-      // Sign up with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          data: {
-            full_name: data.fullName,
-          },
-        },
+      const res = await fetch("/functions/v1/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: data.email,
+          fullName: data.fullName,
+        }),
       });
-
-      if (authError) {
-        if (authError.code === "user_already_exists") {
-          setError("root", {
-            type: "manual",
-            message:
-              "A user with this email already exists. Please log in or use a different email.",
-          });
-          return;
-        }
+      const result = await res.json();
+      if (!res.ok) {
         setError("root", {
           type: "manual",
-          message:
-            authError.message ||
-            "An unexpected error occurred. Please try again.",
+          message: result.error || "Registration failed. Please try again.",
         });
         return;
       }
-
-      if (authData.user) {
-        const { error: profileError } = await supabase.from("profiles").upsert(
-          [
-            {
-              id: authData.user.id,
-              email: data.email,
-              full_name: data.fullName,
-              role: "veteran",
-            },
-          ],
-          { onConflict: "id" },
-        );
-
-        if (profileError) {
-          console.error("Error creating profile:", profileError);
-        }
-      }
-
-      if (onSuccess) {
-        onSuccess();
-      }
+      setSuccessMessage(result.message || "Registration successful! Check your email for a login link or OTP.");
+      reset();
+      if (onSuccess) onSuccess();
     } catch (_error) {
       setError("root", {
         type: "manual",
@@ -94,7 +60,11 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
           <p className="text-error-700 text-sm">{errors.root.message}</p>
         </div>
       )}
-
+      {successMessage && (
+        <div className="bg-success-100 p-3 rounded-md flex items-start">
+          <p className="text-success-700 text-sm">{successMessage}</p>
+        </div>
+      )}
       <div className="space-y-1">
         <label
           htmlFor="fullName"
@@ -122,7 +92,6 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
           </p>
         )}
       </div>
-
       <div className="space-y-1">
         <label
           htmlFor="email"
@@ -152,71 +121,8 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
           <p className="text-error-500 text-xs mt-1">{errors.email.message}</p>
         )}
       </div>
-
-      <div className="space-y-1">
-        <label
-          htmlFor="password"
-          className="block text-sm font-medium text-gray-700"
-        >
-          Password
-        </label>
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Lock className="h-5 w-5 text-gray-400" />
-          </div>
-          <input
-            id="password"
-            type="password"
-            className={`input pl-10 ${errors.password ? "border-error-500 focus:border-error-500 focus:ring-error-500" : ""}`}
-            placeholder="••••••••"
-            {...register("password", {
-              required: "Password is required",
-              minLength: {
-                value: 8,
-                message: "Password must be at least 8 characters",
-              },
-            })}
-          />
-        </div>
-        {errors.password && (
-          <p className="text-error-500 text-xs mt-1">
-            {errors.password.message}
-          </p>
-        )}
-      </div>
-
-      <div className="space-y-1">
-        <label
-          htmlFor="confirmPassword"
-          className="block text-sm font-medium text-gray-700"
-        >
-          Confirm Password
-        </label>
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Lock className="h-5 w-5 text-gray-400" />
-          </div>
-          <input
-            id="confirmPassword"
-            type="password"
-            className={`input pl-10 ${errors.confirmPassword ? "border-error-500 focus:border-error-500 focus:ring-error-500" : ""}`}
-            placeholder="••••••••"
-            {...register("confirmPassword", {
-              required: "Please confirm your password",
-              validate: (value) =>
-                value === password || "The passwords do not match",
-            })}
-          />
-        </div>
-        {errors.confirmPassword && (
-          <p className="text-error-500 text-xs mt-1">
-            {errors.confirmPassword.message}
-          </p>
-        )}
-      </div>
-
       <Button type="submit" className="w-full" isLoading={isSubmitting}>
-        Create Account
+        Register
       </Button>
     </form>
   );
