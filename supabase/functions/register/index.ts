@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
     email,
     options: {
       data: { full_name: fullName },
-      emailRedirectTo: Deno.env.get("EMAIL_REDIRECT_TO") || undefined,
+      emailRedirectTo: Deno.env.get("EMAIL_REDIRECT_TO") || "https://varatingassistant.com/dashboard",
     },
   });
 
