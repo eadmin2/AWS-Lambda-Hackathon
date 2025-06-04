@@ -179,3 +179,5 @@ export async function getUserDisabilityEstimates(userId: string) {
   if (error) throw error;
   return data as DisabilityEstimate[];
 }
+
+export { supabaseAnonKey };

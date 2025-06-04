@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import Button from "../ui/Button";
 import { Mail, User, AlertCircle } from "lucide-react";
+import { supabaseAnonKey } from "../../lib/supabase";
 
 interface RegisterFormProps {
   onSuccess?: () => void;
@@ -25,14 +26,15 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
   const onSubmit = async (data: RegisterFormData) => {
     setSuccessMessage(null);
     try {
-      // Determine the correct Edge Function URL
-      let registerUrl = "/functions/v1/register";
-      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
-        registerUrl = "http://localhost:54321/functions/v1/register";
-      }
+      // Always use the production Edge Function URL
+      const registerUrl = "https://algojcmqstokyghijcyc.functions.supabase.co/register";
       const res = await fetch(registerUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": supabaseAnonKey,
+          "Authorization": `Bearer ${supabaseAnonKey}`,
+        },
         body: JSON.stringify({
           email: data.email,
           fullName: data.fullName,
