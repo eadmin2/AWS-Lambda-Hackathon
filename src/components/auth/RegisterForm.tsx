@@ -25,7 +25,12 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
   const onSubmit = async (data: RegisterFormData) => {
     setSuccessMessage(null);
     try {
-      const res = await fetch("/functions/v1/register", {
+      // Determine the correct Edge Function URL
+      let registerUrl = "/functions/v1/register";
+      if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+        registerUrl = "http://localhost:54321/functions/v1/register";
+      }
+      const res = await fetch(registerUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
