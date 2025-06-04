@@ -9,46 +9,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // Create a single supabase client for interacting with your database
-// with enhanced security options
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    storageKey: 'va-rating-assistant-auth',
-    // Storage options for secure cookies
-    storage: {
-      getItem: (key) => {
-        try {
-          return localStorage.getItem(key);
-        } catch (error) {
-          console.error('Error accessing localStorage', error);
-          return null;
-        }
-      },
-      setItem: (key, value) => {
-        try {
-          localStorage.setItem(key, value);
-          // In production, also set a secure cookie
-          if (import.meta.env.PROD) {
-            document.cookie = `${key}=${value}; Secure; SameSite=Strict; path=/`;
-          }
-        } catch (error) {
-          console.error('Error setting storage item', error);
-        }
-      },
-      removeItem: (key) => {
-        try {
-          localStorage.removeItem(key);
-          // Also remove the cookie if in production
-          if (import.meta.env.PROD) {
-            document.cookie = `${key}=; Secure; SameSite=Strict; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT`;
-          }
-        } catch (error) {
-          console.error('Error removing storage item', error);
-        }
-      }
-    }
   }
 });
 
