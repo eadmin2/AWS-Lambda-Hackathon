@@ -16,7 +16,7 @@ export function useVA2025Data() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/va2025.php")
+    fetch("/va2025.json")
       .then((res) => {
         if (!res.ok) throw new Error("Failed to load VA 2025 data");
         return res.json();
