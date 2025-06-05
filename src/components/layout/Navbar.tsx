@@ -19,11 +19,11 @@ const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const { user, profile, signOut, isLoading } = useAuth();
   const navigate = useNavigate();
-  
+
   // Separate state variables for different menus
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
-  
+
   const bellRef = useRef<HTMLButtonElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const userMenuButtonRef = useRef<HTMLButtonElement>(null);

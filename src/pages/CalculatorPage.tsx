@@ -172,7 +172,9 @@ const CalculatorPage: React.FC = () => {
               <div className="mb-4">
                 <h3 className="font-medium mb-2">Your Disabilities:</h3>
                 {disabilities.length === 0 && (
-                  <div className="text-gray-500">No disabilities added yet.</div>
+                  <div className="text-gray-500">
+                    No disabilities added yet.
+                  </div>
                 )}
                 <ul className="space-y-2">
                   {disabilities.map((d, i) => (
@@ -182,7 +184,11 @@ const CalculatorPage: React.FC = () => {
                     >
                       <span className="font-mono">{d.percent}%</span>
                       <span className="text-xs text-gray-600">
-                        ({extremities.find((e) => e.value === d.extremity)?.label}
+                        (
+                        {
+                          extremities.find((e) => e.value === d.extremity)
+                            ?.label
+                        }
                         )
                       </span>
                       <button
@@ -203,7 +209,8 @@ const CalculatorPage: React.FC = () => {
                 use a combined ratings formula that starts with your highest
                 rating and works downward using your remaining capacity. If you
                 have disabilities affecting both arms or both legs, a bilateral
-                factor is applied (10% extra before combining with other ratings).
+                factor is applied (10% extra before combining with other
+                ratings).
               </div>
             </div>
             <div className="p-6 bg-white rounded shadow">
@@ -313,8 +320,8 @@ const CalculatorPage: React.FC = () => {
                     Enter your disability ratings to see results
                   </div>
                   <div className="text-sm">
-                    Your results will appear here once you've entered at least one
-                    rating
+                    Your results will appear here once you've entered at least
+                    one rating
                   </div>
                 </div>
               ) : !data ? (
@@ -372,7 +379,7 @@ const CalculatorPage: React.FC = () => {
                     >
                       <div
                         className="bg-white rounded-lg shadow-lg max-w-lg w-full p-6 relative"
-                        onClick={e => e.stopPropagation()}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         <button
                           className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-2xl font-bold"
@@ -381,7 +388,9 @@ const CalculatorPage: React.FC = () => {
                         >
                           &times;
                         </button>
-                        <h2 className="text-xl font-bold mb-4 text-primary-900">Calculation Breakdown</h2>
+                        <h2 className="text-xl font-bold mb-4 text-primary-900">
+                          Calculation Breakdown
+                        </h2>
                         <ul className="text-sm text-gray-700 list-disc pl-5">
                           {paymentBreakdownArr.map((line, i) => (
                             <li key={i} className="mb-2">
@@ -391,13 +400,19 @@ const CalculatorPage: React.FC = () => {
                                   if (line.startsWith("Base:")) {
                                     return `This is the base monthly rate for your combined rating and dependent scenario, directly from the VA table.`;
                                   }
-                                  if (line.includes("additional child(ren) under 18")) {
+                                  if (
+                                    line.includes(
+                                      "additional child(ren) under 18",
+                                    )
+                                  ) {
                                     return `Each additional child under 18 adds a fixed amount (from the VA table) to your base. Formula: (number of additional children under 18) × (rate per child under 18).`;
                                   }
                                   if (line.includes("child(ren) 18-24")) {
                                     return `Each dependent child age 18-24 in school adds a fixed amount (from the VA table) to your base. Formula: (number of children 18-24) × (rate per child 18-24).`;
                                   }
-                                  if (line.includes("spouse Aid & Attendance")) {
+                                  if (
+                                    line.includes("spouse Aid & Attendance")
+                                  ) {
                                     return `If your spouse requires Aid & Attendance, an extra amount is added to your base. This is a fixed value from the VA table.`;
                                   }
                                   return null;
@@ -407,23 +422,44 @@ const CalculatorPage: React.FC = () => {
                           ))}
                         </ul>
                         <div className="mt-4 text-xs text-gray-600">
-                          <strong>How we calculate:</strong><br />
+                          <strong>How we calculate:</strong>
+                          <br />
                           <ul className="list-disc pl-5">
-                            <li>We start with the base rate for your combined rating and dependents.</li>
-                            <li>We add extra amounts for each additional child and for a spouse needing Aid & Attendance, using the official VA rates.</li>
-                            <li>All rates are from the 2025 VA compensation tables.</li>
+                            <li>
+                              We start with the base rate for your combined
+                              rating and dependents.
+                            </li>
+                            <li>
+                              We add extra amounts for each additional child and
+                              for a spouse needing Aid & Attendance, using the
+                              official VA rates.
+                            </li>
+                            <li>
+                              All rates are from the 2025 VA compensation
+                              tables.
+                            </li>
                           </ul>
                         </div>
                         <div className="mt-4 text-xs text-blue-700">
                           <strong>References & Learn More:</strong>
                           <ul className="list-disc pl-5">
                             <li>
-                              <a href="https://www.va.gov/disability/compensation-rates/veteran-rates/" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-900">
+                              <a
+                                href="https://www.va.gov/disability/compensation-rates/veteran-rates/"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="underline hover:text-blue-900"
+                              >
                                 2025 VA Disability Compensation Rates
                               </a>
                             </li>
                             <li>
-                              <a href="https://www.va.gov/disability/about-disability-ratings/#combined-ratings" target="_blank" rel="noopener noreferrer" className="underline hover:text-blue-900">
+                              <a
+                                href="https://www.va.gov/disability/about-disability-ratings/#combined-ratings"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="underline hover:text-blue-900"
+                              >
                                 VA Combined Ratings Table & Math
                               </a>
                             </li>
@@ -466,7 +502,15 @@ const CalculatorPage: React.FC = () => {
           </div>
         </div>
         <div className="text-xs text-gray-500 mt-8 max-w-3xl mx-auto text-center px-4">
-          This calculator provides an estimated VA disability rating and compensation amount for informational purposes only. Actual VA decisions may differ, because many factors—medical evidence, effective-date rules, special monthly compensation, offsets, and more—affect final ratings and payments. This tool is not affiliated with the U.S. Department of Veterans Affairs. For official guidance or help filing a claim, please contact an accredited Veterans Service Officer (e.g., your local DAV office). The figures shown here reflect the VA compensation tables effective December 1 2024 (2025 rate year).
+          This calculator provides an estimated VA disability rating and
+          compensation amount for informational purposes only. Actual VA
+          decisions may differ, because many factors—medical evidence,
+          effective-date rules, special monthly compensation, offsets, and
+          more—affect final ratings and payments. This tool is not affiliated
+          with the U.S. Department of Veterans Affairs. For official guidance or
+          help filing a claim, please contact an accredited Veterans Service
+          Officer (e.g., your local DAV office). The figures shown here reflect
+          the VA compensation tables effective December 1 2024 (2025 rate year).
         </div>
       </PageLayout>
     </>

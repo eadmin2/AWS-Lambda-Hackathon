@@ -82,7 +82,10 @@ const CookieConsentBanner: React.FC = () => {
             </span>
           </div>
           <p className="text-gray-700 text-sm md:text-base">
-            We only use cookies and local storage that are strictly necessary for the website to function (such as authentication and your cookie consent choice). We do not use analytics, marketing, or tracking cookies. See our {" "}
+            We only use cookies and local storage that are strictly necessary
+            for the website to function (such as authentication and your cookie
+            consent choice). We do not use analytics, marketing, or tracking
+            cookies. See our{" "}
             <Link
               to="/privacy"
               className="underline text-primary-600 hover:text-primary-700"

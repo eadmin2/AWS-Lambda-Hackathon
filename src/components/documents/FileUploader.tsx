@@ -137,11 +137,11 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 
   // Format file size for display
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   return (
@@ -239,7 +239,9 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                         disabled={uploading}
                         placeholder="File name"
                       />
-                      <span className="text-xs text-gray-500 whitespace-nowrap">.{ext}</span>
+                      <span className="text-xs text-gray-500 whitespace-nowrap">
+                        .{ext}
+                      </span>
                     </div>
                   </div>
 

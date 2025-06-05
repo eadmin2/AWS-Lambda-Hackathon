@@ -35,7 +35,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
         });
         return;
       }
-      setSuccessMessage("Check your email for a login link or one-time passcode (OTP). Follow the instructions to log in.");
+      setSuccessMessage(
+        "Check your email for a login link or one-time passcode (OTP). Follow the instructions to log in.",
+      );
       reset();
       if (onSuccess) onSuccess();
     } catch (_error) {

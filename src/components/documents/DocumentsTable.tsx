@@ -105,11 +105,11 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
     const now = new Date();
     const diffTime = Math.abs(now.getTime() - date.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 1) return "Today";
     if (diffDays === 2) return "Yesterday";
     if (diffDays <= 7) return `${diffDays - 1} days ago`;
-    
+
     return date.toLocaleDateString();
   };
 
@@ -138,7 +138,9 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
                     onKeyDown={(e) => handleKeyPress(e, document)}
                     autoFocus
                   />
-                  <span className="text-xs text-gray-500 whitespace-nowrap">.{ext}</span>
+                  <span className="text-xs text-gray-500 whitespace-nowrap">
+                    .{ext}
+                  </span>
                   <button
                     className="text-green-600 hover:text-green-800 p-1"
                     onClick={() => handleSaveEdit(document)}
@@ -173,7 +175,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
               </p>
             </div>
           </div>
-          
+
           <div className="relative flex-shrink-0">
             <button
               className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full"
@@ -184,7 +186,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
             >
               <MoreVertical className="h-4 w-4" />
             </button>
-            
+
             {showDropdown && (
               <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
                 <button
@@ -353,8 +355,8 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
       }
     };
 
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
   }, [activeDropdown]);
 
   return (
@@ -365,7 +367,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
       >
         {selectedDocument && <DocumentViewer document={selectedDocument} />}
       </Modal>
-      
+
       {/* Search and Controls */}
       <div className="flex flex-col gap-4 mb-4">
         <div className="relative">
@@ -377,7 +379,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
             onChange={(e) => setGlobalFilter(e.target.value)}
           />
         </div>
-        
+
         {/* Mobile Pagination Controls */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <span className="text-sm text-gray-600">
@@ -482,7 +484,10 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
           documents
         </div>
         <div className="flex items-center gap-2">
-          <label htmlFor="rows-per-page" className="text-sm text-gray-600 whitespace-nowrap">
+          <label
+            htmlFor="rows-per-page"
+            className="text-sm text-gray-600 whitespace-nowrap"
+          >
             Rows per page:
           </label>
           <select

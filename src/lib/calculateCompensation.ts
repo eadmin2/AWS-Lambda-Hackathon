@@ -5,7 +5,7 @@ export function calculateCompensation(
   childU18: number,
   childO18: number,
   parentCount: number,
-  vaData: any // Use VA2025Payload if available
+  vaData: any, // Use VA2025Payload if available
 ): { total: number; breakdown: string[] } {
   if (!vaData) return { total: 0, breakdown: ["Loading VA data..."] };
   if (rating === 10 || rating === 20) {
@@ -34,7 +34,9 @@ export function calculateCompensation(
   const breakdown = [
     `Base: $${base.toFixed(2)}`,
     ...(extraU18
-      ? [`+ $${extraU18.toFixed(2)} for ${childU18 - paidKids} additional child(ren) under 18`]
+      ? [
+          `+ $${extraU18.toFixed(2)} for ${childU18 - paidKids} additional child(ren) under 18`,
+        ]
       : []),
     ...(extraO18
       ? [`+ $${extraO18.toFixed(2)} for ${childO18} child(ren) 18-24`]
@@ -45,4 +47,4 @@ export function calculateCompensation(
     total: +(base + extraU18 + extraO18 + spAA).toFixed(2),
     breakdown,
   };
-} 
+}

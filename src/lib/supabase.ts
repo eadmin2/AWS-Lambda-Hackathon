@@ -14,7 +14,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-  }
+  },
 });
 
 // Database types based on the schema
@@ -115,20 +115,32 @@ export async function getUserDocuments(userId: string) {
 export async function uploadDocument(file: File, userId: string) {
   try {
     // Validate file type and size for security
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/tiff', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const allowedTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "image/tiff",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
     const maxSize = 10 * 1024 * 1024; // 10MB
-    
+
     if (!allowedTypes.includes(file.type)) {
-      throw new Error(`Unsupported file type: ${file.type}. Please upload PDF, JPEG, PNG, TIFF or Word documents only.`);
+      throw new Error(
+        `Unsupported file type: ${file.type}. Please upload PDF, JPEG, PNG, TIFF or Word documents only.`,
+      );
     }
-    
+
     if (file.size > maxSize) {
-      throw new Error(`File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB. Maximum size is 10MB.`);
+      throw new Error(
+        `File too large: ${(file.size / 1024 / 1024).toFixed(2)}MB. Maximum size is 10MB.`,
+      );
     }
-    
+
     // Sanitize file name for security
     const fileExt = file.name.split(".").pop()?.toLowerCase() || "";
-    const baseName = file.name.replace(/\.[^.]+$/, "")
+    const baseName = file.name
+      .replace(/\.[^.]+$/, "")
       .replace(/[^a-zA-Z0-9_-]/g, "_"); // Remove special characters
     const fileName = `${userId}/${baseName}_${Date.now()}.${fileExt}`;
 

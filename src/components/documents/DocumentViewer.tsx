@@ -40,9 +40,9 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ document }) => {
         const { data, error } = await supabase.storage
           .from("documents")
           .createSignedUrl(filePath.replace(/^documents\//, ""), 60 * 5); // 5 minutes
-        
+
         if (error) throw error;
-        
+
         if (data?.signedUrl) {
           setSignedUrl(data.signedUrl);
         } else {
@@ -72,7 +72,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ document }) => {
 
   const handleDownload = () => {
     if (signedUrl) {
-      const link = window.document.createElement('a');
+      const link = window.document.createElement("a");
       link.href = signedUrl;
       link.download = document.file_name;
       window.document.body.appendChild(link);
@@ -142,7 +142,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ document }) => {
             src={signedUrl}
             alt={document.file_name}
             className="max-w-full h-auto max-h-[60vh] sm:max-h-[70vh] rounded shadow object-contain"
-            style={{ maxWidth: '100%', height: 'auto' }}
+            style={{ maxWidth: "100%", height: "auto" }}
           />
         </div>
       </div>
@@ -158,16 +158,19 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ document }) => {
             src={signedUrl}
             title={document.file_name}
             className="w-full h-[60vh] sm:h-[70vh] rounded shadow border"
-            style={{ minHeight: '400px' }}
+            style={{ minHeight: "400px" }}
           />
           {/* Mobile fallback for PDF viewing issues */}
           <div className="block sm:hidden mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
             <div className="flex items-center gap-2 text-blue-700">
               <FileText className="h-4 w-4" />
-              <span className="text-sm font-medium">Having trouble viewing?</span>
+              <span className="text-sm font-medium">
+                Having trouble viewing?
+              </span>
             </div>
             <p className="text-xs text-blue-600 mt-1">
-              If the PDF doesn't display properly on mobile, try downloading it instead.
+              If the PDF doesn't display properly on mobile, try downloading it
+              instead.
             </p>
           </div>
         </div>
@@ -208,11 +211,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ document }) => {
           <p className="text-xs text-gray-500 mb-4">
             This file type cannot be previewed in the browser.
           </p>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={handleDownload}
-          >
+          <Button variant="primary" size="sm" onClick={handleDownload}>
             <Download className="h-4 w-4 mr-2" />
             Download to view
           </Button>

@@ -27,13 +27,14 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
     setSuccessMessage(null);
     try {
       // Always use the production Edge Function URL
-      const registerUrl = "https://algojcmqstokyghijcyc.functions.supabase.co/register";
+      const registerUrl =
+        "https://algojcmqstokyghijcyc.functions.supabase.co/register";
       const res = await fetch(registerUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "apikey": supabaseAnonKey,
-          "Authorization": `Bearer ${supabaseAnonKey}`,
+          apikey: supabaseAnonKey,
+          Authorization: `Bearer ${supabaseAnonKey}`,
         },
         body: JSON.stringify({
           email: data.email,
@@ -48,7 +49,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
         });
         return;
       }
-      setSuccessMessage(result.message || "Registration successful! Check your email for a login link or OTP.");
+      setSuccessMessage(
+        result.message ||
+          "Registration successful! Check your email for a login link or OTP.",
+      );
       reset();
       if (onSuccess) onSuccess();
     } catch (_error) {

@@ -8,7 +8,10 @@ Deno.serve(async (req) => {
   }
 
   if (req.method !== "POST") {
-    return new Response("Method Not Allowed", { status: 405, headers: corsHeaders });
+    return new Response("Method Not Allowed", {
+      status: 405,
+      headers: corsHeaders,
+    });
   }
 
   let body;
@@ -21,8 +24,13 @@ Deno.serve(async (req) => {
   const { from, to, subject, tags, ...optionalFields } = body;
   if (!from || !to || !subject || !tags) {
     return new Response(
-      JSON.stringify({ error: "Missing required fields: from, to, subject, tags" }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        error: "Missing required fields: from, to, subject, tags",
+      }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   }
 
@@ -32,8 +40,13 @@ Deno.serve(async (req) => {
 
   if (!PICA_SECRET_KEY || !PICA_RESEND_CONNECTION_KEY) {
     return new Response(
-      JSON.stringify({ error: "Missing Pica API keys in environment variables" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        error: "Missing Pica API keys in environment variables",
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   }
 
@@ -71,7 +84,10 @@ Deno.serve(async (req) => {
   } catch (err) {
     return new Response(
       JSON.stringify({ error: "Failed to send email", details: err.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   }
-}); 
+});

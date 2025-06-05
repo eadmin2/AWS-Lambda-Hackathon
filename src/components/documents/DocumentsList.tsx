@@ -1,6 +1,12 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { FileText, Download, Eye, AlertCircle, MoreVertical } from "lucide-react";
+import {
+  FileText,
+  Download,
+  Eye,
+  AlertCircle,
+  MoreVertical,
+} from "lucide-react";
 import { formatDate } from "../../lib/utils";
 import { Document, DisabilityEstimate } from "../../lib/supabase";
 import Button from "../ui/Button";
@@ -43,8 +49,9 @@ const DocumentsList: React.FC<DocumentsListProps> = ({
       }
     };
 
-    window.document.addEventListener('click', handleClickOutside);
-    return () => window.document.removeEventListener('click', handleClickOutside);
+    window.document.addEventListener("click", handleClickOutside);
+    return () =>
+      window.document.removeEventListener("click", handleClickOutside);
   }, [activeDropdown]);
 
   if (isLoading) {
@@ -104,7 +111,7 @@ const DocumentsList: React.FC<DocumentsListProps> = ({
                       </p>
                     </div>
                   </div>
-                  
+
                   {/* Mobile Dropdown Menu */}
                   <div className="relative flex-shrink-0">
                     <button
@@ -116,7 +123,7 @@ const DocumentsList: React.FC<DocumentsListProps> = ({
                     >
                       <MoreVertical className="h-4 w-4" />
                     </button>
-                    
+
                     {showDropdown && (
                       <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 min-w-[120px]">
                         <button
