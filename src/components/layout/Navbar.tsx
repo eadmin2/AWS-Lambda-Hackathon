@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import Button from "../ui/Button";
-import { FileText, Menu, Bell } from "lucide-react";
+import { Menu, Bell } from "lucide-react";
 
 interface NavbarProps {
   notifications?: any[];
@@ -72,7 +72,6 @@ const Navbar: React.FC<NavbarProps> = ({
         <div className="flex justify-between h-16">
           <div className="flex">
             <Link to="/" className="flex-shrink-0 flex items-center">
-              <FileText className="h-8 w-8 text-primary-600" />
               <span className="ml-2 text-xl font-bold text-gray-900">
                 VA Rating Assistant
               </span>
