@@ -131,7 +131,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
             body: {
               fileName: finalName,
               userId: userId,
-              contentType: file.type,
+              fileType: file.type,
             },
           }
         );
