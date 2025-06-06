@@ -63,3 +63,13 @@
     @apply bg-white rounded-lg border border-gray-200 shadow-sm p-6;
   }
 }
+
+/* Bolt.new badge spin effect */
+@keyframes bolt-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.bolt-badge-spin:hover {
+  animation: bolt-spin 0.7s linear 1;
+}
