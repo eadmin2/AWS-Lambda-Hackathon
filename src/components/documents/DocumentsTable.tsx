@@ -27,6 +27,7 @@ import DocumentViewer from "./DocumentViewer";
 
 export interface DocumentRow {
   id: string;
+  user_id: string;
   file_name: string;
   file_url: string;
   uploaded_at: string;

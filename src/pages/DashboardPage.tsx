@@ -125,39 +125,17 @@ const DashboardPage: React.FC = () => {
   const handleViewDocument = async (doc: DocumentRow) => {
     if (!user) return;
 
-    console.log("Viewing document:", doc.file_name);
-    console.log("Original URL:", doc.file_url);
-
-    // First try the original URL
-    if (doc.file_url && doc.file_url.includes("supabase.co")) {
-      try {
-        const response = await fetch(doc.file_url, { method: "HEAD" });
-        if (response.ok) {
-          window.open(doc.file_url, "_blank", "noopener,noreferrer");
-          return;
-        }
-      } catch (error) {
-        console.log("Original URL failed, trying to generate new one");
-      }
-    }
-
-    // If original URL fails, generate a new signed URL
     try {
-      const { data, error } = await supabase.storage
-        .from("documents") // Replace 'documents' with your actual bucket name
-        .createSignedUrl(`${user.id}/${doc.file_name}`, 3600);
-
-      if (error) {
-        console.error("Error creating signed URL:", error);
-        setError(`Failed to view document: ${error.message}`);
-        return;
-      }
-
-      if (data?.signedUrl) {
-        window.open(data.signedUrl, "_blank", "noopener,noreferrer");
-      } else {
-        setError("Failed to generate document view URL.");
-      }
+      // The file key is userId/file_name or extract from file_url
+      let fileKey = doc.file_url.split(`/${doc.user_id}/`).pop();
+      if (!fileKey) fileKey = doc.file_name;
+      const res = await fetch(
+        `/get-s3-url?key=${encodeURIComponent(doc.user_id + "/" + fileKey)}&userId=${encodeURIComponent(user.id)}`,
+      );
+      const data = await res.json();
+      if (!res.ok || !data.url)
+        throw new Error(data.error || "Failed to get signed URL");
+      window.open(data.url, "_blank", "noopener,noreferrer");
     } catch (error) {
       console.error("Error viewing document:", error);
       setError("Failed to view document. Please try again.");

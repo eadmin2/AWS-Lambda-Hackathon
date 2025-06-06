@@ -5,7 +5,12 @@ import {
   GetDocumentAnalysisCommand,
 } from "@aws-sdk/client-textract";
 import { v4 as uuidv4 } from "uuid";
-import { S3Client, HeadObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  HeadObjectCommand,
+  GetObjectCommand,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const REGION = "us-east-2";
 const textractClient = new TextractClient({ region: REGION });
@@ -733,8 +738,76 @@ const handleTextractCompletion = async (awsJobId) => {
   }
 };
 
-// Placeholder API handler (add your existing API functions here)
+// --- Secure S3 Pre-Signed URL Endpoint ---
+// This endpoint generates a pre-signed S3 URL for a given file key if the user is authorized.
+// To use: call /get-s3-url?key={fileKey}&userId={userId} (GET or POST)
+async function handleGetS3Url(event, requestId) {
+  try {
+    let key, userId;
+    if (event.httpMethod === "POST" && event.body) {
+      const body = JSON.parse(event.body);
+      key = body.key;
+      userId = body.userId;
+    } else if (event.queryStringParameters) {
+      key = event.queryStringParameters.key;
+      userId = event.queryStringParameters.userId;
+    }
+    if (!key || !userId) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: "Missing key or userId", requestId }),
+      };
+    }
+
+    // Check that the user is authorized to access this file
+    // (Look up the document in Supabase and verify userId matches)
+    const { data: doc, error } = await supabase
+      .from("documents")
+      .select("user_id, file_name")
+      .eq("user_id", userId)
+      .like("file_url", `%/${key}`)
+      .maybeSingle();
+    if (error || !doc) {
+      return {
+        statusCode: 403,
+        body: JSON.stringify({
+          error: "Unauthorized or file not found",
+          requestId,
+        }),
+      };
+    }
+
+    // Generate a pre-signed URL for the file
+    const command = new GetObjectCommand({
+      Bucket: AWS_S3_BUCKET,
+      Key: key,
+    });
+    const url = await getSignedUrl(s3Client, command, { expiresIn: 60 * 5 }); // 5 min
+    return {
+      statusCode: 200,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    };
+  } catch (err) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        error: "Failed to generate signed URL",
+        requestId,
+      }),
+    };
+  }
+}
+
+// Update API Gateway handler to route /get-s3-url requests
 const handleApiRequest = async (event, requestId) => {
+  // Route for secure S3 pre-signed URL
+  if (
+    (event.path && event.path.endsWith("/get-s3-url")) ||
+    (event.rawPath && event.rawPath.endsWith("/get-s3-url"))
+  ) {
+    return await handleGetS3Url(event, requestId);
+  }
   return {
     statusCode: 200,
     headers: {

@@ -8,39 +8,59 @@ interface DocumentViewerProps {
     file_name: string;
     file_url: string;
     uploaded_at: string;
+    user_id?: string;
   };
 }
 
 const DocumentViewer: React.FC<DocumentViewerProps> = ({ document }) => {
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [textContent, setTextContent] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const fileType = getFileType(document.file_name);
 
+  // Assume userId is available from context or props (replace with your actual userId source)
+  const userId = document.user_id || (window as any).userId;
+
   useEffect(() => {
-    setIsLoading(true);
-    setError(null);
-    if (fileType === "text") {
-      fetch(document.file_url)
-        .then((res) => res.text())
-        .then(setTextContent)
-        .catch(() => {
-          setTextContent("Failed to load text file.");
-          setError("Failed to load text content");
-        })
-        .finally(() => setIsLoading(false));
-    } else {
-      setIsLoading(false);
+    async function fetchSignedUrl() {
+      setIsLoading(true);
+      setError(null);
+      try {
+        // The file key is userId/file_name or extract from file_url
+        let fileKey = document.file_url.split(`/${document.user_id}/`).pop();
+        if (!fileKey) fileKey = document.file_name;
+        const res = await fetch(
+          `/get-s3-url?key=${encodeURIComponent(document.user_id + "/" + fileKey)}&userId=${encodeURIComponent(userId)}`,
+        );
+        const data = await res.json();
+        if (!res.ok || !data.url)
+          throw new Error(data.error || "Failed to get signed URL");
+        setSignedUrl(data.url);
+        if (fileType === "text") {
+          const textRes = await fetch(data.url);
+          setTextContent(await textRes.text());
+        }
+      } catch (err) {
+        setError("Failed to load document");
+        setSignedUrl(null);
+      } finally {
+        setIsLoading(false);
+      }
     }
-  }, [document.file_url, fileType]);
+    fetchSignedUrl();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [document.file_url, document.file_name, document.user_id, fileType]);
 
   const handleDownload = () => {
-    const link = window.document.createElement("a");
-    link.href = document.file_url;
-    link.download = document.file_name;
-    window.document.body.appendChild(link);
-    link.click();
-    window.document.body.removeChild(link);
+    if (signedUrl) {
+      const link = window.document.createElement("a");
+      link.href = signedUrl;
+      link.download = document.file_name;
+      window.document.body.appendChild(link);
+      link.click();
+      window.document.body.removeChild(link);
+    }
   };
 
   if (isLoading) {
@@ -52,14 +72,19 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ document }) => {
     );
   }
 
-  if (error) {
+  if (error || !signedUrl) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[200px] p-4">
         <AlertCircle className="h-8 w-8 text-red-500 mb-4" />
         <div className="text-sm text-gray-600 mb-4 text-center">
           {error || "Failed to load document"}
         </div>
-        <Button variant="primary" size="sm" onClick={handleDownload}>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={handleDownload}
+          disabled={!signedUrl}
+        >
           <Download className="h-4 w-4 mr-2" />
           Download File
         </Button>
@@ -83,6 +108,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ document }) => {
         size="sm"
         onClick={handleDownload}
         className="flex-shrink-0"
+        disabled={!signedUrl}
       >
         <Download className="h-4 w-4 mr-2" />
         Download
@@ -99,13 +125,13 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ document }) => {
         </pre>
       ) : fileType === "image" ? (
         <img
-          src={document.file_url}
+          src={signedUrl}
           alt={document.file_name}
           className="max-w-full max-h-[70vh] mx-auto rounded shadow"
         />
       ) : fileType === "pdf" ? (
         <iframe
-          src={document.file_url}
+          src={signedUrl}
           title={document.file_name}
           className="w-full min-h-[60vh] rounded shadow"
         />
@@ -117,6 +143,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ document }) => {
             size="sm"
             onClick={handleDownload}
             className="mt-4"
+            disabled={!signedUrl}
           >
             <Download className="h-4 w-4 mr-2" />
             Download File
