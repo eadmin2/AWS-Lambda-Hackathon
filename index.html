@@ -17,6 +17,7 @@
     />
     <meta name="author" content="VA Disability Rating Assistant Team" />
     <meta name="robots" content="index, follow" />
+    
     <!-- Open Graph Meta Tags -->
     <meta property="og:title" content="VA Disability Rating Assistant" />
     <meta
@@ -29,6 +30,7 @@
       property="og:image"
       content="https://varatingassistant.com/og-image.png"
     />
+    
     <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="VA Disability Rating Assistant" />
@@ -40,8 +42,10 @@
       name="twitter:image"
       content="https://varatingassistant.com/twitter-image.png"
     />
+    
     <!-- Security meta tags -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="DENY" />
     <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
     <meta
       http-equiv="Referrer-Policy"
@@ -51,10 +55,33 @@
       http-equiv="Permissions-Policy"
       content="geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), speaker=(), vibrate=(), fullscreen=(self), sync-xhr=()"
     />
-    <!-- CSP fallback for browsers that don't support .htaccess headers -->
+    
+    <!-- IMPROVED CSP - More Secure -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://api.varatingassistant.com https://algojcmqstokyghijcyc.supabase.co wss://*.supabase.co https://my-receipts-app-bucket.s3.us-east-2.amazonaws.com; base-uri 'self'; form-action 'self'"
+      content="
+        default-src 'self';
+        script-src 'self';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: https://varatingassistant.com https://*.amazonaws.com;
+        font-src 'self' data:;
+        connect-src 'self' 
+          https://api.varatingassistant.com 
+          https://algojcmqstokyghijcyc.supabase.co 
+          https://*.supabase.co 
+          wss://*.supabase.co 
+          https://my-receipts-app-bucket.s3.us-east-2.amazonaws.com
+          https://*.amazonaws.com;
+        media-src 'self';
+        object-src 'none';
+        frame-src 'none';
+        worker-src 'self';
+        manifest-src 'self';
+        base-uri 'self';
+        form-action 'self';
+        upgrade-insecure-requests;
+        block-all-mixed-content;
+      "
     />
   </head>
   <body>
