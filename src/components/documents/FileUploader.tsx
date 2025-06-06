@@ -13,6 +13,10 @@ import Button from "../ui/Button";
 import { supabase } from "../../lib/supabase";
 import { isValidFileType, isValidFileSize } from "../../lib/utils";
 
+// AWS Constants
+const AWS_S3_BUCKET = 'my-receipts-app-bucket';
+const AWS_REGION = 'us-east-2';
+
 interface FileUploaderProps {
   userId: string;
   onUploadComplete: (documentId: string) => void;
@@ -140,9 +144,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
           throw new Error(`Failed to get upload URL: ${urlError?.message || 'Unknown error'}`);
         }
 
-        // Use the correct property names from the backend response
-        const presignedUrl = urlData.url;
-        const fileUrl = `https://${process.env.NEXT_PUBLIC_S3_BUCKET}.s3.${process.env.NEXT_PUBLIC_S3_REGION}.amazonaws.com/${userId}/${finalName}`;
+        const { url: presignedUrl, key } = urlData;
+        const fileUrl = `https://${AWS_S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${key}`;
 
         // Step 2: Upload file directly to S3
         await uploadFileToS3(file, presignedUrl);
