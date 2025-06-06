@@ -44,22 +44,12 @@
       content="https://varatingassistant.com/twitter-image.png"
     />
     
-    <!-- Security Headers -->
-    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
-    <meta http-equiv="X-Frame-Options" content="DENY" />
-    <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
-    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+    <!-- Note: Security headers like X-Frame-Options are set via Apache .htaccess -->
     
-    <!-- Permissions Policy -->
-    <meta
-      http-equiv="Permissions-Policy"
-      content="accelerometer=(), autoplay=(), camera=(), cross-origin-isolated=(), display-capture=(), encrypted-media=(), fullscreen=(), geolocation=(), gyroscope=(), keyboard-map=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(), usb=(), web-share=(), xr-spatial-tracking=()"
-    />
-    
-    <!-- Content Security Policy - React/Vite Optimized -->
+    <!-- Content Security Policy - Production optimized for React -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://varatingassistant.com https://*.amazonaws.com; font-src 'self' data:; connect-src 'self' https://algojcmqstokyghijcyc.supabase.co https://*.supabase.co wss://*.supabase.co https://my-receipts-app-bucket.s3.us-east-2.amazonaws.com https://*.amazonaws.com https://api.stripe.com; media-src 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests; block-all-mixed-content;"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://varatingassistant.com https://*.amazonaws.com; font-src 'self' data:; connect-src 'self' https://algojcmqstokyghijcyc.supabase.co https://*.supabase.co wss://*.supabase.co https://my-receipts-app-bucket.s3.us-east-2.amazonaws.com https://*.amazonaws.com https://api.stripe.com; media-src 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests; block-all-mixed-content;"
     />
     
     <!-- Preload critical resources -->
