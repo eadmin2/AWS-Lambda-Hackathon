@@ -16,11 +16,21 @@ const s3 = new S3Client({
   },
 });
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
 serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
   try {
     const { userId, fileName, fileType } = await req.json();
     if (!userId || !fileName || !fileType) {
-      return new Response(JSON.stringify({ error: "Missing params" }), { status: 400 });
+      return new Response(JSON.stringify({ error: "Missing params" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
     const key = `${userId}/${fileName}`;
     const command = new PutObjectCommand({
@@ -29,8 +39,8 @@ serve(async (req) => {
       ContentType: fileType,
     });
     const url = await getSignedUrl(s3, command, { expiresIn: 60 * 5 }); // 5 min
-    return new Response(JSON.stringify({ url, key }), { headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ url, key }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
-    return new Response(JSON.stringify({ error: e.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 }); 

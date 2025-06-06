@@ -126,7 +126,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 
         // Step 1: Get presigned URL from Supabase Edge Function
         const { data: urlData, error: urlError } = await supabase.functions.invoke(
-          'generate-upload-url',
+          'generate-presigned-url',
           {
             body: {
               fileName: finalName,
