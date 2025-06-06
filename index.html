@@ -2,11 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>
-      VA Disability Rating Assistant | Secure VA Benefits & Document Management
-    </title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    
+    <!-- Primary Meta Tags -->
+    <title>VA Disability Rating Assistant | Secure VA Benefits & Document Management</title>
     <meta
       name="description"
       content="VA Disability Rating Assistant: Secure document upload and VA disability rating estimation for U.S. veterans. Instantly calculate your combined VA disability rating and manage your benefit documents online."
@@ -18,73 +18,68 @@
     <meta name="author" content="VA Disability Rating Assistant Team" />
     <meta name="robots" content="index, follow" />
     
-    <!-- Open Graph Meta Tags -->
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://varatingassistant.com" />
     <meta property="og:title" content="VA Disability Rating Assistant" />
     <meta
       property="og:description"
       content="Secure document upload and VA disability rating estimation for U.S. veterans. Instantly calculate your combined VA disability rating and manage your benefit documents online."
     />
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://varatingassistant.com" />
     <meta
       property="og:image"
       content="https://varatingassistant.com/og-image.png"
     />
     
-    <!-- Twitter Card Meta Tags -->
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://varatingassistant.com" />
     <meta name="twitter:title" content="VA Disability Rating Assistant" />
     <meta
       name="twitter:description"
-      content="Secure document upload and VA disability rating estimation for U.S. veterans. Instantly calculate your combined VA disability rating and manage your benefit documents online."
+      content="Secure document upload and VA disability rating estimation for U.S. veterans."
     />
     <meta
       name="twitter:image"
       content="https://varatingassistant.com/twitter-image.png"
     />
     
-    <!-- Security meta tags -->
+    <!-- Security Headers -->
     <meta http-equiv="X-Content-Type-Options" content="nosniff" />
     <meta http-equiv="X-Frame-Options" content="DENY" />
     <meta http-equiv="X-XSS-Protection" content="1; mode=block" />
-    <meta
-      http-equiv="Referrer-Policy"
-      content="strict-origin-when-cross-origin"
-    />
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+    
+    <!-- Permissions Policy -->
     <meta
       http-equiv="Permissions-Policy"
-      content="geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), speaker=(), vibrate=(), fullscreen=(self), sync-xhr=()"
+      content="accelerometer=(), autoplay=(), camera=(), cross-origin-isolated=(), display-capture=(), encrypted-media=(), fullscreen=(), geolocation=(), gyroscope=(), keyboard-map=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(), usb=(), web-share=(), xr-spatial-tracking=()"
     />
     
-    <!-- IMPROVED CSP - More Secure -->
+    <!-- Content Security Policy - React/Vite Optimized -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="
-        default-src 'self';
-        script-src 'self';
-        style-src 'self' 'unsafe-inline';
-        img-src 'self' data: https://varatingassistant.com https://*.amazonaws.com;
-        font-src 'self' data:;
-        connect-src 'self' 
-          https://api.varatingassistant.com 
-          https://algojcmqstokyghijcyc.supabase.co 
-          https://*.supabase.co 
-          wss://*.supabase.co 
-          https://my-receipts-app-bucket.s3.us-east-2.amazonaws.com
-          https://*.amazonaws.com;
-        media-src 'self';
-        object-src 'none';
-        frame-src 'none';
-        worker-src 'self';
-        manifest-src 'self';
-        base-uri 'self';
-        form-action 'self';
-        upgrade-insecure-requests;
-        block-all-mixed-content;
-      "
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://varatingassistant.com https://*.amazonaws.com; font-src 'self' data:; connect-src 'self' https://algojcmqstokyghijcyc.supabase.co https://*.supabase.co wss://*.supabase.co https://my-receipts-app-bucket.s3.us-east-2.amazonaws.com https://*.amazonaws.com https://api.stripe.com; media-src 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests; block-all-mixed-content;"
     />
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/src/main.tsx" as="script" />
+    
+    <!-- DNS Prefetch for external domains -->
+    <link rel="dns-prefetch" href="//algojcmqstokyghijcyc.supabase.co" />
+    <link rel="dns-prefetch" href="//my-receipts-app-bucket.s3.us-east-2.amazonaws.com" />
   </head>
   <body>
+    <noscript>
+      <div style="text-align: center; padding: 2rem; font-family: Arial, sans-serif;">
+        <h1>JavaScript Required</h1>
+        <p>
+          This application requires JavaScript to function properly. 
+          Please enable JavaScript in your browser settings and reload the page.
+        </p>
+      </div>
+    </noscript>
+    
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
