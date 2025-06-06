@@ -44,13 +44,9 @@
       content="https://varatingassistant.com/twitter-image.png"
     />
     
-    <!-- Note: Security headers like X-Frame-Options are set via Apache .htaccess -->
+    <!-- Note: All security headers including CSP are set via Apache .htaccess -->
     
-    <!-- Content Security Policy - Production optimized for React -->
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://varatingassistant.com https://*.amazonaws.com; font-src 'self' data:; connect-src 'self' https://algojcmqstokyghijcyc.supabase.co https://*.supabase.co wss://*.supabase.co https://my-receipts-app-bucket.s3.us-east-2.amazonaws.com https://*.amazonaws.com https://api.stripe.com; media-src 'self'; object-src 'none'; frame-src 'none'; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests; block-all-mixed-content;"
-    />
+    <!-- CSP is handled by Apache headers - see .htaccess file -->
     
     <!-- Preload critical resources -->
     <link rel="preload" href="/src/main.tsx" as="script" />
