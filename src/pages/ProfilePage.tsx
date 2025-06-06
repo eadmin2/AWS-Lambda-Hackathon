@@ -469,8 +469,13 @@ const ProfilePage: React.FC = () => {
                       To confirm, type{" "}
                       <span className="font-mono font-bold">DELETE</span> below.
                     </p>
+                    <label htmlFor="deleteConfirm" className="block text-sm font-medium text-gray-700 mb-1">
+                      Type DELETE to confirm
+                    </label>
                     <input
                       type="text"
+                      id="deleteConfirm"
+                      name="deleteConfirm"
                       className="input w-full mb-4"
                       placeholder="Type DELETE to confirm"
                       value={deleteConfirm}

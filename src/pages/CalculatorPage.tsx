@@ -221,6 +221,7 @@ const CalculatorPage: React.FC = () => {
                 <input
                   type="checkbox"
                   id="spouse"
+                  name="spouse"
                   checked={dependents.spouse}
                   onChange={(e) =>
                     setDependents((d) => ({ ...d, spouse: e.target.checked }))
@@ -234,6 +235,7 @@ const CalculatorPage: React.FC = () => {
                     <input
                       type="checkbox"
                       id="spouseAA"
+                      name="spouseAA"
                       checked={dependents.spouseAA}
                       onChange={(e) =>
                         setDependents((d) => ({
@@ -251,7 +253,7 @@ const CalculatorPage: React.FC = () => {
               </div>
               <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">
+                  <label className="block text-sm font-medium mb-1" htmlFor="childrenU18">
                     Children Under 18
                   </label>
                   <input
@@ -259,6 +261,8 @@ const CalculatorPage: React.FC = () => {
                     min={0}
                     max={10}
                     className="border rounded px-3 py-2 w-full"
+                    id="childrenU18"
+                    name="childrenU18"
                     value={dependents.childrenU18}
                     onChange={(e) =>
                       setDependents((d) => ({
@@ -269,7 +273,7 @@ const CalculatorPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">
+                  <label className="block text-sm font-medium mb-1" htmlFor="children18to24">
                     Children 18-24 (in school)
                   </label>
                   <input
@@ -277,6 +281,8 @@ const CalculatorPage: React.FC = () => {
                     min={0}
                     max={10}
                     className="border rounded px-3 py-2 w-full"
+                    id="children18to24"
+                    name="children18to24"
                     value={dependents.children18to24}
                     onChange={(e) =>
                       setDependents((d) => ({
@@ -287,7 +293,7 @@ const CalculatorPage: React.FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">
+                  <label className="block text-sm font-medium mb-1" htmlFor="parents">
                     Dependent Parents
                   </label>
                   <input
@@ -295,6 +301,8 @@ const CalculatorPage: React.FC = () => {
                     min={0}
                     max={2}
                     className="border rounded px-3 py-2 w-full"
+                    id="parents"
+                    name="parents"
                     value={dependents.parents}
                     onChange={(e) =>
                       setDependents((d) => ({
