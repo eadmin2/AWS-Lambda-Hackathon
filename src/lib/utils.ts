@@ -55,3 +55,16 @@ export function generateRandomString(length = 8): string {
 
   return result;
 }
+
+// Get file type from file name
+export function getFileType(
+  fileName: string,
+): "image" | "pdf" | "text" | "other" {
+  const ext = fileName.split(".").pop()?.toLowerCase();
+  if (!ext) return "other";
+  if (["jpg", "jpeg", "png", "gif", "tiff", "tif", "bmp", "webp"].includes(ext))
+    return "image";
+  if (ext === "pdf") return "pdf";
+  if (ext === "txt") return "text";
+  return "other";
+}

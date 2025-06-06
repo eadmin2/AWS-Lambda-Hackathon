@@ -59,14 +59,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 1. Move/rename the file in Supabase Storage
-    const { error: moveError } = await supabase.storage
-      .from("documents")
-      .move(old_file_name, new_file_name);
-    if (moveError) throw moveError;
+    // File renaming in Supabase Storage is deprecated. Use AWS S3 APIs for renaming files.
+    // const { error: moveError } = await supabase.storage
+    //   .from("documents")
+    //   .move(old_file_name, new_file_name);
+    // if (moveError) throw moveError;
 
     // 2. Update the file_name and file_url in the documents table
-    const publicUrl = `${supabaseUrl}/storage/v1/object/public/documents/${new_file_name}`;
+    const publicUrl = `https://my-receipts-app-bucket.s3.us-east-2.amazonaws.com/${new_file_name}`;
     const { error: updateError } = await supabase
       .from("documents")
       .update({

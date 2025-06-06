@@ -154,7 +154,9 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
             />
           </div>
           {errors.email && (
-            <p className="text-error-500 text-xs mt-1">{errors.email.message}</p>
+            <p className="text-error-500 text-xs mt-1">
+              {errors.email.message}
+            </p>
           )}
         </div>
         <div className="space-y-1">
@@ -179,7 +181,9 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
             })}
           />
           {errors.password && (
-            <p className="text-error-500 text-xs mt-1">{errors.password.message}</p>
+            <p className="text-error-500 text-xs mt-1">
+              {errors.password.message}
+            </p>
           )}
         </div>
         <Button type="submit" className="w-full" isLoading={isSubmitting}>

@@ -131,44 +131,27 @@ Deno.serve(async (req) => {
     // Delete the file from storage if it exists
     if (document.file_url) {
       try {
-        // Extract the file path from the URL
-        let filePath = "";
-
-        // Handle different URL formats
-        if (
-          document.file_url.includes("/storage/v1/object/public/documents/")
-        ) {
-          filePath = document.file_url.split(
-            "/storage/v1/object/public/documents/",
-          )[1];
-        } else if (
-          document.file_url.includes("/storage/v1/object/documents/")
-        ) {
-          filePath = document.file_url.split(
-            "/storage/v1/object/documents/",
-          )[1];
-        } else if (document.file_name) {
-          // If we have file_name, construct the path
-          filePath = `${user.id}/${document.file_name}`;
-        }
-
-        if (filePath) {
-          console.log("Attempting to delete file from storage:", filePath);
-
-          const { error: storageError } = await supabaseClient.storage
-            .from("documents")
-            .remove([filePath]);
-
-          if (storageError) {
-            console.error("Storage deletion error:", storageError);
-            // Continue with database deletion even if storage fails
-          } else {
-            console.log("File deleted from storage successfully");
-          }
-        }
+        // File deletion in Supabase Storage is deprecated. Use AWS S3 APIs for deleting files.
+        // let filePath = "";
+        // if (document.file_url.includes("/storage/v1/object/public/documents/")) {
+        //   filePath = document.file_url.split("/storage/v1/object/public/documents/")[1];
+        // } else if (document.file_url.includes("/storage/v1/object/documents/")) {
+        //   filePath = document.file_url.split("/storage/v1/object/documents/")[1];
+        // } else if (document.file_name) {
+        //   filePath = `${user.id}/${document.file_name}`;
+        // }
+        // if (filePath) {
+        //   const { error: storageError } = await supabaseClient.storage
+        //     .from("documents")
+        //     .remove([filePath]);
+        //   if (storageError) {
+        //     console.error("Storage deletion error:", storageError);
+        //   } else {
+        //     console.log("File deleted from storage successfully");
+        //   }
+        // }
       } catch (storageErr) {
         console.error("Error processing storage deletion:", storageErr);
-        // Continue with database deletion
       }
     }
 

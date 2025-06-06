@@ -79,18 +79,18 @@ Deno.serve(async (req) => {
     }
 
     // 3. Delete all user files from Supabase Storage (documents bucket)
-    // List all files in the 'documents' bucket under userId/
-    const { data: fileList, error: fileListError } = await supabase.storage
-      .from("documents")
-      .list(userId, { limit: 1000, offset: 0, search: "" });
-    if (fileListError) throw fileListError;
-    if (fileList && fileList.length > 0) {
-      const paths = fileList.map((f) => `${userId}/${f.name}`);
-      const { error: removeError } = await supabase.storage
-        .from("documents")
-        .remove(paths);
-      if (removeError) throw removeError;
-    }
+    // File deletion in Supabase Storage is deprecated. Use AWS S3 APIs for deleting files.
+    // const { data: fileList, error: fileListError } = await supabase.storage
+    //   .from("documents")
+    //   .list(userId, { limit: 1000, offset: 0, search: "" });
+    // if (fileListError) throw fileListError;
+    // if (fileList && fileList.length > 0) {
+    //   const paths = fileList.map((f) => `${userId}/${f.name}`);
+    //   const { error: removeError } = await supabase.storage
+    //     .from("documents")
+    //     .remove(paths);
+    //   if (removeError) throw removeError;
+    // }
 
     // 4. Delete all user data from database tables (in correct order)
     // Delete from disability_estimates

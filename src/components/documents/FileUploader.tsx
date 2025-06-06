@@ -14,8 +14,8 @@ import { supabase } from "../../lib/supabase";
 import { isValidFileType, isValidFileSize } from "../../lib/utils";
 
 // AWS Constants
-const AWS_S3_BUCKET = 'my-receipts-app-bucket';
-const AWS_REGION = 'us-east-2';
+const AWS_S3_BUCKET = "my-receipts-app-bucket";
+const AWS_REGION = "us-east-2";
 
 interface FileUploaderProps {
   userId: string;
@@ -86,11 +86,14 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   };
 
   // Function to upload file to S3 using presigned URL
-  const uploadFileToS3 = async (file: File, presignedUrl: string): Promise<void> => {
+  const uploadFileToS3 = async (
+    file: File,
+    presignedUrl: string,
+  ): Promise<void> => {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
-      
-      xhr.upload.addEventListener('progress', (event) => {
+
+      xhr.upload.addEventListener("progress", (event) => {
         if (event.lengthComputable) {
           // This will be per-file progress; you might want to aggregate for multiple files
           const percentComplete = (event.loaded / event.total) * 100;
@@ -98,7 +101,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         }
       });
 
-      xhr.addEventListener('load', () => {
+      xhr.addEventListener("load", () => {
         if (xhr.status === 200) {
           resolve();
         } else {
@@ -106,22 +109,22 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         }
       });
 
-      xhr.addEventListener('error', () => {
-        reject(new Error('Upload failed due to network error'));
+      xhr.addEventListener("error", () => {
+        reject(new Error("Upload failed due to network error"));
       });
 
-      xhr.open('PUT', presignedUrl);
-      xhr.setRequestHeader('Content-Type', file.type);
+      xhr.open("PUT", presignedUrl);
+      xhr.setRequestHeader("Content-Type", file.type);
       xhr.send(file);
     });
   };
 
   const handleUpload = async () => {
     if (!files.length || !userId || !canUpload) return;
-    
+
     setUploading(true);
     setUploadProgress(0);
-    
+
     try {
       for (let i = 0; i < files.length; i++) {
         const { file, name } = files[i];
@@ -129,19 +132,19 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         const finalName = `${name}.${ext}`;
 
         // Step 1: Get presigned URL from Supabase Edge Function
-        const { data: urlData, error: urlError } = await supabase.functions.invoke(
-          'generate-presigned-url',
-          {
+        const { data: urlData, error: urlError } =
+          await supabase.functions.invoke("generate-presigned-url", {
             body: {
               fileName: finalName,
               userId: userId,
               fileType: file.type,
             },
-          }
-        );
+          });
 
         if (urlError || !urlData) {
-          throw new Error(`Failed to get upload URL: ${urlError?.message || 'Unknown error'}`);
+          throw new Error(
+            `Failed to get upload URL: ${urlError?.message || "Unknown error"}`,
+          );
         }
 
         const { url: presignedUrl, key } = urlData;
@@ -159,9 +162,9 @@ const FileUploader: React.FC<FileUploaderProps> = ({
               file_name: finalName,
               document_name: name,
               file_url: fileUrl,
-              upload_status: 'uploaded',
-              processing_status: 'pending',
-              document_type: 'medical_record',
+              upload_status: "uploaded",
+              processing_status: "pending",
+              document_type: "medical_record",
               mime_type: file.type,
               file_size: file.size,
             },
@@ -175,7 +178,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 
         // Update overall progress
         setUploadProgress(Math.round(((i + 1) / files.length) * 100));
-        
+
         // Notify parent component
         onUploadComplete(documentData.id);
       }
@@ -183,10 +186,12 @@ const FileUploader: React.FC<FileUploaderProps> = ({
       // Clear files on successful upload
       setFiles([]);
       setError(null);
-      
     } catch (error) {
       console.error("Error uploading document:", error);
-      const errorMessage = error instanceof Error ? error.message : "Failed to upload document. Please try again.";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "Failed to upload document. Please try again.";
       setError(errorMessage);
       onUploadError(errorMessage);
     } finally {

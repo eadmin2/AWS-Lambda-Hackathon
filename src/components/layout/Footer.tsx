@@ -19,15 +19,30 @@ const Footer: React.FC = () => {
               document analysis.
             </p>
             <div className="mt-4 flex space-x-6">
-              <a href="https://www.facebook.com/varatingassistant/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-500">
+              <a
+                href="https://www.facebook.com/varatingassistant/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-gray-500"
+              >
                 <span className="sr-only">Facebook</span>
                 <Facebook className="h-6 w-6" aria-hidden="true" />
               </a>
-              <a href="https://www.linkedin.com/company/varatingassistant" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-500">
+              <a
+                href="https://www.linkedin.com/company/varatingassistant"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-gray-500"
+              >
                 <span className="sr-only">LinkedIn</span>
                 <Linkedin className="h-6 w-6" aria-hidden="true" />
               </a>
-              <a href="https://www.youtube.com/@VARatingAssistant" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-gray-500">
+              <a
+                href="https://www.youtube.com/@VARatingAssistant"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-400 hover:text-gray-500"
+              >
                 <span className="sr-only">YouTube</span>
                 <Youtube className="h-6 w-6" aria-hidden="true" />
               </a>
