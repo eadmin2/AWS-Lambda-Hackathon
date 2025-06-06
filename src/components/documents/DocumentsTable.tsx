@@ -379,6 +379,8 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
           <input
             className="input pl-10 w-full"
+            id="documents-search"
+            name="documents-search"
             placeholder="Search documents..."
             value={globalFilter}
             onChange={(e) => setGlobalFilter(e.target.value)}
