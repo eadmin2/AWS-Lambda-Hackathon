@@ -1,11 +1,11 @@
-const { createClient } = require('@supabase/supabase-js');
-const {
+import { createClient } from '@supabase/supabase-js';
+import {
   TextractClient,
   StartDocumentAnalysisCommand,
   GetDocumentAnalysisCommand,
-} = require("@aws-sdk/client-textract");
-const { v4: uuidv4 } = require("uuid");
-const { S3Client, HeadObjectCommand } = require("@aws-sdk/client-s3");
+} from "@aws-sdk/client-textract";
+import { v4 as uuidv4 } from "uuid";
+import { S3Client, HeadObjectCommand } from "@aws-sdk/client-s3";
 
 const REGION = "us-east-2";
 const textractClient = new TextractClient({ region: REGION });
@@ -283,14 +283,16 @@ const processTableBlock = (tableBlock, allBlocks) => {
 };
 
 // Main Lambda handler
-exports.handler = async (event) => {
+export const handler = async (event) => {
   const requestId = uuidv4();
   console.log("Request ID:", requestId);
   console.log("Event:", JSON.stringify(event, null, 2));
   
   try {
-    // Handle S3 trigger from AWS S3 bucket
-    if (event.Records && event.Records[0].eventName?.startsWith('s3:ObjectCreated')) {
+    // Handle S3 trigger from AWS S3 bucket - FIXED EVENT MATCHING
+    if (event.Records && 
+        event.Records[0].eventSource === 'aws:s3' && 
+        event.Records[0].eventName?.includes('ObjectCreated')) {
       return await handleS3Upload(event, requestId);
     }
     
