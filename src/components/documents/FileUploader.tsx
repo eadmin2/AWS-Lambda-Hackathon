@@ -12,7 +12,6 @@ import {
 import Button from "../ui/Button";
 import { supabase } from "../../lib/supabase";
 import { isValidFileType, isValidFileSize } from "../../lib/utils";
-import { uploadDocument } from "../../lib/supabase";
 
 interface FileUploaderProps {
   userId: string;
@@ -82,44 +81,112 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     );
   };
 
+  // Function to upload file to S3 using presigned URL
+  const uploadFileToS3 = async (file: File, presignedUrl: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          // This will be per-file progress; you might want to aggregate for multiple files
+          const percentComplete = (event.loaded / event.total) * 100;
+          setUploadProgress(Math.round(percentComplete));
+        }
+      });
+
+      xhr.addEventListener('load', () => {
+        if (xhr.status === 200) {
+          resolve();
+        } else {
+          reject(new Error(`Upload failed with status: ${xhr.status}`));
+        }
+      });
+
+      xhr.addEventListener('error', () => {
+        reject(new Error('Upload failed due to network error'));
+      });
+
+      xhr.open('PUT', presignedUrl);
+      xhr.setRequestHeader('Content-Type', file.type);
+      xhr.send(file);
+    });
+  };
+
   const handleUpload = async () => {
     if (!files.length || !userId || !canUpload) return;
+    
     setUploading(true);
     setUploadProgress(0);
+    
     try {
       for (let i = 0; i < files.length; i++) {
         const { file, name } = files[i];
         const ext = file.name.split(".").pop();
         const finalName = `${name}.${ext}`;
-        // Upload directly to Supabase Storage
-        const uploadResult = await uploadDocument(
-          new window.File([file], finalName, { type: file.type }),
-          userId,
+
+        // Step 1: Get presigned URL from Supabase Edge Function
+        const { data: urlData, error: urlError } = await supabase.functions.invoke(
+          'generate-upload-url',
+          {
+            body: {
+              fileName: finalName,
+              userId: userId,
+              contentType: file.type,
+            },
+          }
         );
-        const { url: fileUrl } = uploadResult;
-        // Insert document record in database
+
+        if (urlError || !urlData) {
+          throw new Error(`Failed to get upload URL: ${urlError?.message || 'Unknown error'}`);
+        }
+
+        const { presignedUrl, fileUrl } = urlData;
+
+        // Step 2: Upload file directly to S3
+        await uploadFileToS3(file, presignedUrl);
+
+        // Step 3: Create document record in Supabase database
         const { data: documentData, error: documentError } = await supabase
           .from("documents")
           .insert([
             {
               user_id: userId,
               file_name: finalName,
+              document_name: name,
               file_url: fileUrl,
+              upload_status: 'uploaded',
+              processing_status: 'pending',
+              document_type: 'medical_record',
+              mime_type: file.type,
+              file_size: file.size,
             },
           ])
           .select()
           .single();
-        if (documentError) throw documentError;
+
+        if (documentError) {
+          throw documentError;
+        }
+
+        // Update overall progress
         setUploadProgress(Math.round(((i + 1) / files.length) * 100));
+        
+        // Notify parent component
         onUploadComplete(documentData.id);
       }
+
+      // Clear files on successful upload
+      setFiles([]);
+      setError(null);
+      
     } catch (error) {
       console.error("Error uploading document:", error);
-      setError("Failed to upload document. Please try again.");
-      onUploadError("Failed to upload document. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Failed to upload document. Please try again.";
+      setError(errorMessage);
+      onUploadError(errorMessage);
     } finally {
       setUploading(false);
-      setFiles([]);
+      setUploadProgress(0);
     }
   };
 

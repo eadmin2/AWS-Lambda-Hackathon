@@ -7,10 +7,28 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+package-lock.json
+
+# Build outputs
 dist
 dist-ssr
 *.local
+
+# Environment variables & secrets
+.env
+.env.local
+.env.production
+.env.test
+
+# AWS-specific files
+.aws/
+aws-credentials.json
+
+# Lambda deployment artifacts
+*.zip
+lambda-code.zip
 
 # Editor directories and files
 .vscode/*
@@ -22,7 +40,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-.env
 
 # Server configuration
 .htaccess
@@ -33,3 +50,9 @@ dist-ssr
 
 # Build cache
 .cache/
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+.Trashes
+.Spotlight-V100
