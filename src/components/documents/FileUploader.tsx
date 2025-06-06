@@ -306,6 +306,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                     <div className="flex items-center gap-2">
                       <input
                         className="input flex-1 text-sm"
+                        id={`file-name-${idx}`}
+                        name={`file-name-${idx}`}
                         value={f.name}
                         onChange={(e) =>
                           handleFileNameChange(
@@ -332,6 +334,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                     </div>
                     <input
                       className="input w-40"
+                      id={`file-name-desktop-${idx}`}
+                      name={`file-name-desktop-${idx}`}
                       value={f.name}
                       onChange={(e) =>
                         handleFileNameChange(

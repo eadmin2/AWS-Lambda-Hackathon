@@ -130,6 +130,8 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
                 <div className="flex items-center gap-2 mb-1">
                   <input
                     className="input text-sm w-full max-w-[150px]"
+                    id={`edit-file-name-${document.id}`}
+                    name={`edit-file-name-${document.id}`}
                     value={editingName}
                     onChange={(e) =>
                       setEditingName(
@@ -248,6 +250,8 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
                 <>
                   <input
                     className="input w-32"
+                    id={`edit-file-name-${row.id}`}
+                    name={`edit-file-name-${row.id}`}
                     value={editingName}
                     onChange={(e) =>
                       setEditingName(
