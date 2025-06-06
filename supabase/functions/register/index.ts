@@ -1,10 +1,15 @@
 // @ts-ignore
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+// @ts-ignore: Deno types for local TS
+/// <reference types="deno" />
 import { corsHeaders } from "../_shared/cors.ts";
 
+// @ts-ignore
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+// @ts-ignore
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
+// @ts-ignore
 Deno.serve(async (req) => {
   try {
     if (req.method === "OPTIONS") {
@@ -28,27 +33,24 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { email, fullName } = body;
-    if (!email || !fullName) {
+    const { email, password, fullName } = body;
+    if (!email || !password || !fullName) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: email, fullName" }),
+        JSON.stringify({ error: "Missing required fields: email, password, fullName" }),
         { status: 400, headers: corsHeaders },
       );
     }
 
-    // Register user with Supabase Auth (passwordless)
+    // Register user with Supabase Auth (email/password)
+    // @ts-ignore: npm import only works in Deno Edge runtime
     const { createClient } = await import("npm:@supabase/supabase-js@2.39.3");
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Send OTP (magic link) to email
-    const { data, error } = await supabase.auth.signInWithOtp({
+    const { data, error } = await supabase.auth.admin.createUser({
       email,
-      options: {
-        data: { full_name: fullName },
-        emailRedirectTo:
-          Deno.env.get("EMAIL_REDIRECT_TO") ||
-          "https://varatingassistant.com/dashboard",
-      },
+      password,
+      email_confirm: false,
+      user_metadata: { full_name: fullName },
     });
 
     if (error) {
@@ -59,8 +61,9 @@ Deno.serve(async (req) => {
     }
 
     // Send welcome email via send-email Edge Function
+    // @ts-ignore
     const websiteUrl = Deno.env.get("WEBSITE_URL") || "https://yourwebsite.com";
-    let welcomeEmailWarning = null;
+    let welcomeEmailWarning: string | null = null;
     try {
       const welcomeEmailRes = await fetch(
         `${websiteUrl}/functions/v1/send-email`,
@@ -72,8 +75,8 @@ Deno.serve(async (req) => {
             to: email,
             subject: "Welcome to VA Rating Assistant!",
             tags: [{ name: "welcome", value: "true" }],
-            html: `<h1>Welcome, ${fullName}!</h1><p>Your username: <b>${email}</b></p><p>To get started, check your inbox for a one-time passcode (OTP) or magic link to log in. <br/>If you didn't receive it, you can request another from the login page.</p><p><a href='${websiteUrl}'>Go to VA Rating Assistant</a></p>`,
-            text: `Welcome, ${fullName}!\nYour username: ${email}\nTo get started, check your inbox for a one-time passcode (OTP) or magic link to log in. If you didn't receive it, you can request another from the login page.\n${websiteUrl}`,
+            html: `<h1>Welcome, ${fullName}!</h1><p>Your username: <b>${email}</b></p><p>You can now log in with your email and password at <a href='${websiteUrl}/auth'>${websiteUrl}/auth</a>.</p>`,
+            text: `Welcome, ${fullName}!\nYour username: ${email}\nYou can now log in with your email and password at ${websiteUrl}/auth`,
           }),
         },
       );
@@ -82,12 +85,14 @@ Deno.serve(async (req) => {
         welcomeEmailWarning =
           "User registered, but failed to send welcome email.";
         // Optionally log the error for debugging
+        // deno-lint-ignore no-console
         console.error("Welcome email error:", err);
       }
     } catch (err) {
       welcomeEmailWarning =
         "User registered, but failed to send welcome email.";
       // Optionally log the error for debugging
+      // deno-lint-ignore no-console
       console.error("Welcome email exception:", err);
     }
 
@@ -95,13 +100,14 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         message: welcomeEmailWarning
-          ? `Registration initiated. Check your email for a login link or OTP. (Warning: ${welcomeEmailWarning})`
-          : "Registration initiated. Check your email for a login link or OTP.",
+          ? `Registration successful, but failed to send welcome email. (Warning: ${welcomeEmailWarning})`
+          : "Registration successful! You can now log in with your email and password.",
       }),
       { status: 200, headers: corsHeaders },
     );
   } catch (err) {
     // Catch-all error handler
+    // deno-lint-ignore no-console
     console.error("Unexpected error in register function:", err);
     return new Response(
       JSON.stringify({
