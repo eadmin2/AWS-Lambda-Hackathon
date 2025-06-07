@@ -146,19 +146,21 @@ const DashboardPage: React.FC = () => {
     if (!user) return;
 
     try {
-      // Generate a fresh signed URL for downloading
-      const { data, error } = await supabase.storage
-        .from("documents") // Replace with your bucket name
-        .createSignedUrl(`${user.id}/${doc.file_name}`, 300); // 5 minutes
-
-      if (error || !data.signedUrl) {
+      // Generate a fresh signed S3 URL for downloading
+      let fileKey = doc.file_url.split(`/${doc.user_id}/`).pop();
+      if (!fileKey) fileKey = doc.file_name;
+      const res = await fetch(
+        `/get-s3-url?key=${encodeURIComponent(doc.user_id + "/" + fileKey)}&userId=${encodeURIComponent(user.id)}`
+      );
+      const data = await res.json();
+      if (!res.ok || !data.url) {
         setError("Failed to generate download URL.");
         return;
       }
 
       // Create download link
       const link = document.createElement("a");
-      link.href = data.signedUrl;
+      link.href = data.url;
       link.download = doc.file_name;
       link.target = "_blank";
       document.body.appendChild(link);
