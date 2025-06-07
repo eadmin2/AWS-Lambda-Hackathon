@@ -163,7 +163,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
               document_name: name,
               file_url: fileUrl,
               upload_status: "uploaded",
-              processing_status: "pending",
+              processing_status: "processing",
               document_type: "medical_record",
               mime_type: file.type,
               file_size: file.size,

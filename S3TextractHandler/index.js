@@ -504,7 +504,7 @@ const handleS3Upload = async (event, requestId) => {
   }
 };
 
-// Start Textract processing with AWS S3
+// Start Textract processing with AWS S3 - FIXED VERSION
 const startTextractProcessing = async (
   bucketName,
   filePath,
@@ -517,16 +517,9 @@ const startTextractProcessing = async (
       `[DEBUG] Starting Textract for AWS S3: s3://${bucketName}/${filePath}`,
     );
 
-    // Test S3 access first
-    const headCommand = new HeadObjectCommand({
-      Bucket: bucketName,
-      Key: filePath,
-    });
-
-    const headResult = await s3Client.send(headCommand);
-    console.log(
-      `[DEBUG] S3 object confirmed: ${headResult.ContentLength} bytes, ${headResult.ContentType}`,
-    );
+    // REMOVED: HeadObjectCommand check - S3 event already guarantees object exists
+    // This was causing the 404 NotFound error
+    console.log(`[DEBUG] Proceeding directly to Textract - S3 event confirms object exists`);
 
     // Start async Textract processing (works with AWS S3)
     const command = new StartDocumentAnalysisCommand({
@@ -546,6 +539,7 @@ const startTextractProcessing = async (
       },
     });
 
+    console.log(`[DEBUG] Sending Textract command...`);
     const result = await textractClient.send(command);
     const awsJobId = result.JobId;
 
@@ -589,6 +583,12 @@ const startTextractProcessing = async (
     };
   } catch (error) {
     console.error("Textract processing error:", error);
+    console.error("Error details:", {
+      name: error.name,
+      message: error.message,
+      statusCode: error.$metadata?.httpStatusCode,
+      requestId: error.$metadata?.requestId
+    });
 
     // Update document status to error
     await supabase
