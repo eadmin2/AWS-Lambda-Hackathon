@@ -26,18 +26,38 @@ const DocumentsList: React.FC<DocumentsListProps> = ({
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   // Handle download with proper document object reference
-  const handleDownload = (document: Document) => {
-    const link = window.document.createElement("a");
-    link.href = document.file_url;
-    link.download = document.file_name;
-    window.document.body.appendChild(link);
-    link.click();
-    window.document.body.removeChild(link);
+  const handleDownload = async (document: Document) => {
+    let fileKey = document.file_url.split(`/${document.user_id}/`).pop();
+    if (!fileKey) fileKey = document.file_name;
+    const res = await fetch(
+      `/get-s3-url?key=${encodeURIComponent(document.user_id + "/" + fileKey)}&userId=${encodeURIComponent(document.user_id)}`
+    );
+    const data = await res.json();
+    if (res.ok && data.url) {
+      const link = window.document.createElement("a");
+      link.href = data.url;
+      link.download = document.file_name;
+      window.document.body.appendChild(link);
+      link.click();
+      window.document.body.removeChild(link);
+    } else {
+      alert("Failed to get signed URL");
+    }
     setActiveDropdown(null);
   };
 
-  const handleView = (document: Document) => {
-    window.open(document.file_url, "_blank");
+  const handleView = async (document: Document) => {
+    let fileKey = document.file_url.split(`/${document.user_id}/`).pop();
+    if (!fileKey) fileKey = document.file_name;
+    const res = await fetch(
+      `/get-s3-url?key=${encodeURIComponent(document.user_id + "/" + fileKey)}&userId=${encodeURIComponent(document.user_id)}`
+    );
+    const data = await res.json();
+    if (res.ok && data.url) {
+      window.open(data.url, "_blank");
+    } else {
+      alert("Failed to get signed URL");
+    }
     setActiveDropdown(null);
   };
 
