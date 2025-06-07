@@ -131,27 +131,42 @@ Deno.serve(async (req) => {
     // Delete the file from storage if it exists
     if (document.file_url) {
       try {
-        // File deletion in Supabase Storage is deprecated. Use AWS S3 APIs for deleting files.
-        // let filePath = "";
-        // if (document.file_url.includes("/storage/v1/object/public/documents/")) {
-        //   filePath = document.file_url.split("/storage/v1/object/public/documents/")[1];
-        // } else if (document.file_url.includes("/storage/v1/object/documents/")) {
-        //   filePath = document.file_url.split("/storage/v1/object/documents/")[1];
-        // } else if (document.file_name) {
-        //   filePath = `${user.id}/${document.file_name}`;
-        // }
-        // if (filePath) {
-        //   const { error: storageError } = await supabaseClient.storage
-        //     .from("documents")
-        //     .remove([filePath]);
-        //   if (storageError) {
-        //     console.error("Storage deletion error:", storageError);
-        //   } else {
-        //     console.log("File deleted from storage successfully");
-        //   }
-        // }
+        // Delete from AWS S3 via backend endpoint
+        const s3Key = `${user.id}/${document.file_name}`;
+        const s3DeleteRes = await fetch(
+          Deno.env.get("S3_DELETE_ENDPOINT"),
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": Deno.env.get("S3_DELETE_API_KEY"),
+            },
+            body: JSON.stringify({
+              bucket: "my-receipts-app-bucket",
+              key: s3Key,
+            }),
+          },
+        );
+        if (!s3DeleteRes.ok) {
+          const err = await s3DeleteRes.json().catch(() => ({}));
+          console.error("S3 deletion error:", err.error || s3DeleteRes.statusText);
+          return new Response(
+            JSON.stringify({ error: err.error || "Failed to delete file from S3" }),
+            {
+              status: 500,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            },
+          );
+        }
       } catch (storageErr) {
-        console.error("Error processing storage deletion:", storageErr);
+        console.error("Error processing S3 deletion:", storageErr);
+        return new Response(
+          JSON.stringify({ error: "Error deleting file from S3" }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
     }
 

@@ -302,10 +302,26 @@ const processTableBlock = (tableBlock, allBlocks) => {
 export const handler = async (event) => {
   const requestId = uuidv4();
   console.log("Request ID:", requestId);
+  
+  // DEBUG: Check environment variables
+  console.log("=== ENVIRONMENT CHECK ===");
+  console.log("SUPABASE_URL exists:", !!process.env.SUPABASE_URL);
+  console.log("SUPABASE_SERVICE_ROLE_KEY exists:", !!process.env.SUPABASE_SERVICE_ROLE_KEY);
+  console.log("Supabase client configured:", !!supabase);
+  
+  // Check if Supabase is working
+  try {
+    const { data, error } = await supabase.from("documents").select("count").limit(1);
+    console.log("Supabase connection test:", error ? "FAILED" : "SUCCESS");
+    if (error) console.error("Supabase error:", error);
+  } catch (dbError) {
+    console.error("Supabase connection failed:", dbError);
+  }
+  
   console.log("Event:", JSON.stringify(event, null, 2));
 
   try {
-    // Handle S3 trigger from AWS S3 bucket - FIXED EVENT MATCHING
+    // Handle S3 trigger from AWS S3 bucket
     if (
       event.Records &&
       event.Records[0].eventSource === "aws:s3" &&
@@ -315,7 +331,15 @@ export const handler = async (event) => {
     }
 
     // Handle Textract job completion (SNS notification)
-    if (event.Records && event.Records[0].EventSource === "aws:sns") {
+    if (event.Records && 
+        (event.Records[0].EventSource === "aws:sns" || 
+         event.Records[0].eventSource === "aws:sns" ||
+         (event.Records[0].Sns && event.Records[0].EventSubscriptionArn))) {
+      console.log("SNS notification detected with structure:", {
+        hasSns: !!event.Records[0].Sns,
+        hasEventSubscriptionArn: !!event.Records[0].EventSubscriptionArn,
+        eventSource: event.Records[0].eventSource || event.Records[0].EventSource
+      });
       return await handleSNSNotification(event, requestId);
     }
 
@@ -323,6 +347,15 @@ export const handler = async (event) => {
     if (event.requestContext || event.httpMethod) {
       return await handleApiRequest(event, requestId);
     }
+
+    console.log("Unsupported event type detected");
+    console.log("Event structure:", {
+      hasRecords: !!event.Records,
+      firstRecordEventSource: event.Records?.[0]?.eventSource,
+      firstRecordEventName: event.Records?.[0]?.eventName,
+      hasRequestContext: !!event.requestContext,
+      hasHttpMethod: !!event.httpMethod
+    });
 
     return {
       statusCode: 400,
@@ -337,19 +370,40 @@ export const handler = async (event) => {
   }
 };
 
-// Handle SNS notifications from Textract
+// Enhanced SNS notification handler with better logging
 const handleSNSNotification = async (event, requestId) => {
   try {
+    console.log("=== SNS NOTIFICATION RECEIVED ===");
+    console.log("Request ID:", requestId);
+    console.log("Timestamp:", new Date().toISOString());
     console.log("Raw SNS Event:", JSON.stringify(event, null, 2));
+
+    // Check if we have a valid SNS record structure
+    if (!event.Records || !event.Records[0] || !event.Records[0].Sns) {
+      console.error("Invalid SNS event structure:", JSON.stringify(event, null, 2));
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ 
+          error: "Invalid SNS event structure", 
+          requestId,
+          timestamp: new Date().toISOString()
+        }),
+      };
+    }
 
     const snsRecord = event.Records[0];
     const message = snsRecord.Sns.Message;
+    const messageId = snsRecord.Sns.MessageId;
+    const topicArn = snsRecord.Sns.TopicArn;
 
+    console.log("SNS Message ID:", messageId);
+    console.log("SNS Topic ARN:", topicArn);
     console.log("Raw SNS Message:", message);
 
     let snsMessage;
     try {
       snsMessage = JSON.parse(message);
+      console.log("Parsed SNS Message:", JSON.stringify(snsMessage, null, 2));
     } catch (parseError) {
       console.error("Failed to parse SNS message as JSON:", parseError);
       console.log("Attempting to extract JobId and Status manually...");
@@ -372,12 +426,19 @@ const handleSNSNotification = async (event, requestId) => {
     const jobId = snsMessage.JobId;
     const status = snsMessage.Status;
 
-    console.log(`Received Textract notification for job ${jobId}: ${status}`);
+    console.log(`=== PROCESSING TEXTRACT JOB ===`);
+    console.log(`Job ID: ${jobId}`);
+    console.log(`Status: ${status}`);
+    console.log(`Processing started at: ${new Date().toISOString()}`);
 
     if (status === "SUCCEEDED") {
+      console.log(`✅ Textract job ${jobId} succeeded - processing results`);
       await handleTextractCompletion(jobId);
+      console.log(`✅ Successfully processed Textract job ${jobId}`);
     } else if (status === "FAILED") {
-      console.log(`Textract job ${jobId} failed`);
+      console.log(`❌ Textract job ${jobId} failed`);
+      console.log("Status Message:", snsMessage.StatusMessage || "No status message provided");
+      
       // Update job status to failed
       await supabase
         .from("textract_jobs")
@@ -387,25 +448,41 @@ const handleSNSNotification = async (event, requestId) => {
           error_message: snsMessage.StatusMessage || "Job failed",
         })
         .eq("aws_job_id", jobId);
+        
+      console.log(`❌ Updated job ${jobId} status to FAILED in database`);
+    } else {
+      console.log(`⚠️ Unknown status received: ${status}`);
     }
 
+    console.log("=== SNS NOTIFICATION PROCESSING COMPLETE ===");
     return {
       statusCode: 200,
       body: JSON.stringify({
-        message: "SNS notification processed",
+        message: "SNS notification processed successfully",
+        jobId,
+        status,
         requestId,
+        processedAt: new Date().toISOString()
       }),
     };
   } catch (error) {
-    console.error("SNS handler error:", error);
+    console.error("=== SNS NOTIFICATION ERROR ===");
+    console.error("Error processing SNS notification:", error);
+    console.error("Error stack:", error.stack);
+    console.error("Request ID:", requestId);
+    
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message, requestId }),
+      body: JSON.stringify({ 
+        error: error.message, 
+        requestId,
+        timestamp: new Date().toISOString()
+      }),
     };
   }
 };
 
-// Handle S3 upload from AWS S3 bucket
+// Handle S3 upload from AWS S3 bucket - IDEMPOTENT VERSION
 const handleS3Upload = async (event, requestId) => {
   try {
     const record = event.Records[0];
@@ -413,10 +490,13 @@ const handleS3Upload = async (event, requestId) => {
     const filePath = decodeURIComponent(
       record.s3.object.key.replace(/\+/g, " "),
     );
+    const eventName = record.eventName;
 
-    console.log(
-      `Processing uploaded file: ${filePath} from AWS S3 bucket: ${bucketName}`,
-    );
+    console.log(`=== S3 UPLOAD EVENT RECEIVED ===`);
+    console.log(`Event: ${eventName}`);
+    console.log(`File: ${filePath}`);
+    console.log(`Bucket: ${bucketName}`);
+    console.log(`Request ID: ${requestId}`);
 
     // Validate bucket
     if (bucketName !== AWS_S3_BUCKET) {
@@ -466,15 +546,93 @@ const handleS3Upload = async (event, requestId) => {
       };
     }
 
-    // Create document record in Supabase
+    // CHECK FOR EXISTING DOCUMENT - PREVENT DUPLICATES
+    const fileUrl = `https://${bucketName}.s3.${REGION}.amazonaws.com/${filePath}`;
+    
+    console.log("=== CHECKING FOR EXISTING DOCUMENT ===");
+    console.log("File URL:", fileUrl);
+    
+    const { data: existingDoc, error: checkError } = await supabase
+      .from("documents")
+      .select("id, processing_status, textract_status, uploaded_at")
+      .eq("user_id", userId)
+      .eq("file_url", fileUrl)
+      .maybeSingle();
+
+    if (checkError) {
+      console.error("Error checking for existing document:", checkError);
+      // Continue anyway - don't fail on check error
+    }
+
+    if (existingDoc) {
+      console.log(`=== EXISTING DOCUMENT FOUND ===`);
+      console.log(`Document ID: ${existingDoc.id}`);
+      console.log(`Uploaded: ${existingDoc.uploaded_at}`);
+      console.log(`Processing Status: ${existingDoc.processing_status}`);
+      console.log(`Textract Status: ${existingDoc.textract_status}`);
+      
+      if (existingDoc.processing_status === "processing" && 
+          existingDoc.textract_status === "processing") {
+        console.log("✅ Document already being processed - skipping duplicate");
+        return {
+          statusCode: 200,
+          body: JSON.stringify({
+            message: "Document already exists and is being processed",
+            documentId: existingDoc.id,
+            status: "duplicate_skipped",
+            requestId,
+          }),
+        };
+      }
+      
+      if (existingDoc.processing_status === "completed") {
+        console.log("✅ Document already completed - skipping duplicate");
+        return {
+          statusCode: 200,
+          body: JSON.stringify({
+            message: "Document already completed",
+            documentId: existingDoc.id,
+            status: "already_completed",
+            requestId,
+          }),
+        };
+      }
+      
+      if (existingDoc.processing_status === "failed" || 
+          existingDoc.textract_status === "pending" ||
+          existingDoc.textract_status === "failed") {
+        console.log("🔄 Document exists but failed or pending - retrying processing");
+        
+        await supabase
+          .from("documents")
+          .update({
+            processing_status: "processing",
+            textract_status: "processing",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existingDoc.id);
+
+        return await startTextractProcessing(
+          bucketName,
+          filePath,
+          existingDoc.id,
+          userId,
+          requestId,
+        );
+      }
+    }
+
+    // Create new document record only if it doesn't exist
     const documentId = uuidv4();
+    console.log("=== CREATING NEW DOCUMENT ===");
+    console.log("Document ID:", documentId);
 
     const { error } = await supabase.from("documents").insert({
       id: documentId,
       user_id: userId,
       file_name: fileName,
       document_name: fileName.replace(/\.[^/.]+$/, ""), // Remove extension
-      file_url: `https://${bucketName}.s3.${REGION}.amazonaws.com/${filePath}`,
+      file_url: fileUrl,
       upload_status: "uploaded",
       processing_status: "processing",
       textract_status: "processing",
@@ -484,8 +642,37 @@ const handleS3Upload = async (event, requestId) => {
 
     if (error) {
       console.error("Failed to create document record:", error);
+      
+      // Check if this is a unique constraint violation (duplicate)
+      if (error.code === "23505" || error.message?.includes("duplicate")) {
+        console.log("🔍 Duplicate document detected during insert - checking existing record");
+        // Try to get the existing document
+        const { data: duplicateDoc } = await supabase
+          .from("documents")
+          .select("id")
+          .eq("user_id", userId)
+          .eq("file_url", fileUrl)
+          .single();
+          
+        if (duplicateDoc) {
+          console.log("✅ Using existing document ID:", duplicateDoc.id);
+          return {
+            statusCode: 200,
+            body: JSON.stringify({
+              message: "Document already exists",
+              documentId: duplicateDoc.id,
+              status: "duplicate_found",
+              requestId,
+            }),
+          };
+        }
+      }
+      
       throw new Error("Failed to create document record");
     }
+
+    console.log("✅ Successfully created document record");
+    console.log("🚀 Starting Textract processing...");
 
     // Start Textract processing
     return await startTextractProcessing(
@@ -496,7 +683,9 @@ const handleS3Upload = async (event, requestId) => {
       requestId,
     );
   } catch (error) {
-    console.error("S3 upload handler error:", error);
+    console.error("=== S3 UPLOAD HANDLER ERROR ===");
+    console.error("Error:", error);
+    console.error("Request ID:", requestId);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: error.message, requestId }),
@@ -533,9 +722,10 @@ const startTextractProcessing = async (
       QueriesConfig: {
         Queries: MEDICAL_QUERIES,
       },
+      JobTag: documentId, // Add JobTag for better tracking
       NotificationChannel: {
-        SNSTopicArn: "arn:aws:sns:us-east-2:281439767132:textract-completion",
-        RoleArn: "arn:aws:iam::281439767132:role/TextractServiceRole",
+        SNSTopicArn: process.env.TEXTRACT_SNS_TOPIC_ARN || "arn:aws:sns:us-east-2:281439767132:textract-completion",
+        RoleArn: process.env.TEXTRACT_SNS_ROLE_ARN || "arn:aws:iam::281439767132:role/TextractServiceRole",
       },
     });
 

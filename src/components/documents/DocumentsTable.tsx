@@ -308,7 +308,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => setSelectedDocument(row.original)}
+              onClick={() => onView?.(row.original)}
               title="View"
             >
               <FileText className="h-4 w-4" />
