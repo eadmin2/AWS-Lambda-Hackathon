@@ -122,9 +122,9 @@ const ProfilePage: React.FC = () => {
               Your Profile
             </h1>
 
-            <div className="grid md:grid-cols-3 gap-6">
-              <div className="md:col-span-2">
-                <Card>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+              <div className="flex flex-col h-full">
+                <Card className="flex flex-col h-full">
                   <CardHeader>
                     <CardTitle>Personal Information</CardTitle>
                   </CardHeader>
@@ -212,10 +212,37 @@ const ProfilePage: React.FC = () => {
                         Save Changes
                       </Button>
                     </CardFooter>
+                    {/* Need Help section inside the card */}
+                    <div className="border-t mt-8 pt-6">
+                      <h2 className="text-lg font-semibold mb-2">Need Help?</h2>
+                      <p className="text-sm text-gray-500 mb-4">
+                        If you have any questions or need assistance with your account, please contact our support team.
+                      </p>
+                      <Button
+                        variant="secondary"
+                        className="w-full mb-4"
+                        onClick={() => (window.location.href = "/contact")}
+                      >
+                        Contact Support
+                      </Button>
+                      {/* Danger Zone section inside the card */}
+                      <div className="mt-8 border-t pt-8">
+                        <h2 className="text-lg font-bold text-error-600 mb-2">Danger Zone</h2>
+                        <p className="text-sm text-error-700 mb-4">
+                          Permanently delete your profile and all associated data. This action cannot be undone.
+                        </p>
+                        <Button
+                          variant="danger"
+                          className="w-full"
+                          onClick={() => setShowDeleteModal(true)}
+                        >
+                          Delete My Profile
+                        </Button>
+                      </div>
+                    </div>
                   </form>
                 </Card>
               </div>
-
               <div>
                 <Card>
                   <CardHeader>
@@ -240,7 +267,6 @@ const ProfilePage: React.FC = () => {
                             : "N/A"}
                         </p>
                       </div>
-
                       <div>
                         <h3 className="text-sm font-medium text-gray-500 mb-1">
                           Last Sign In
@@ -258,7 +284,6 @@ const ProfilePage: React.FC = () => {
                             : "N/A"}
                         </p>
                       </div>
-
                       <div>
                         <h3 className="text-sm font-medium text-gray-500 mb-1">
                           Account Type
@@ -266,6 +291,16 @@ const ProfilePage: React.FC = () => {
                         <p className="text-base font-medium">
                           {profile?.role === "admin" ? "Admin" : "Veteran"}
                         </p>
+                      </div>
+                      <div className="border-t pt-4 mt-4">
+                        <h3 className="text-sm font-medium text-gray-500 mb-1">
+                          Subscription Status
+                        </h3>
+                        <p className="text-base font-medium text-green-600">Active</p>
+                        <h3 className="text-sm font-medium text-gray-500 mb-1 mt-3">
+                          Upload Credits
+                        </h3>
+                        <p className="text-base font-medium text-green-600">Unlimited</p>
                       </div>
                     </div>
                   </CardContent>
@@ -417,118 +452,82 @@ const ProfilePage: React.FC = () => {
                     </Button>
                   </CardContent>
                 </Card>
-
-                <Card className="mt-6">
-                  <CardHeader>
-                    <CardTitle>Need Help?</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-gray-500 mb-4">
-                      If you have any questions or need assistance with your
-                      account, please contact our support team.
-                    </p>
-                    <Button
-                      variant="secondary"
-                      className="w-full"
-                      onClick={() => (window.location.href = "/contact")}
-                    >
-                      Contact Support
-                    </Button>
-                  </CardContent>
-                </Card>
-                {/* Danger Zone */}
-                <div className="mt-8 border-t pt-8">
-                  <h2 className="text-lg font-bold text-error-600 mb-2">
-                    Danger Zone
-                  </h2>
-                  <p className="text-sm text-error-700 mb-4">
-                    Permanently delete your profile and all associated data.
-                    This action cannot be undone.
-                  </p>
-                  <Button
-                    variant="danger"
-                    className="w-full"
-                    onClick={() => setShowDeleteModal(true)}
-                  >
-                    Delete My Profile
-                  </Button>
-                </div>
-                {/* Delete Confirmation Modal */}
-                <Modal
-                  isOpen={showDeleteModal}
-                  onClose={() => setShowDeleteModal(false)}
-                >
-                  <div className="p-6">
-                    <h2 className="text-xl font-bold text-error-700 mb-4">
-                      Confirm Account Deletion
-                    </h2>
-                    <p className="mb-4 text-gray-700">
-                      This will permanently delete your account and all data.
-                      This action cannot be undone.
-                      <br />
-                      To confirm, type{" "}
-                      <span className="font-mono font-bold">DELETE</span> below.
-                    </p>
-                    <label htmlFor="deleteConfirm" className="block text-sm font-medium text-gray-700 mb-1">
-                      Type DELETE to confirm
-                    </label>
-                    <input
-                      type="text"
-                      id="deleteConfirm"
-                      name="deleteConfirm"
-                      className="input w-full mb-4"
-                      placeholder="Type DELETE to confirm"
-                      value={deleteConfirm}
-                      onChange={(e) => setDeleteConfirm(e.target.value)}
-                    />
-                    {deleteError && (
-                      <div className="mb-4 text-error-600 text-sm">
-                        {deleteError}
-                      </div>
-                    )}
-                    <div className="flex gap-3">
-                      <Button
-                        variant="danger"
-                        className="flex-1"
-                        disabled={deleteConfirm !== "DELETE" || deleteLoading}
-                        isLoading={deleteLoading}
-                        onClick={async () => {
-                          setDeleteLoading(true);
-                          setDeleteError(null);
-                          const result = await deleteAccountRequest();
-                          if (result.success) {
-                            // Log out and redirect to goodbye page
-                            try {
-                              await supabase.auth.signOut();
-                            } catch {}
-                            setDeleteLoading(false);
-                            navigate("/goodbye");
-                          } else {
-                            setDeleteLoading(false);
-                            setDeleteError(
-                              result.error || "Failed to delete account",
-                            );
-                          }
-                        }}
-                      >
-                        Permanently Delete
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        className="flex-1"
-                        onClick={() => setShowDeleteModal(false)}
-                        disabled={deleteLoading}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
-                </Modal>
               </div>
             </div>
           </div>
         </div>
       </div>
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+      >
+        <div className="p-6">
+          <h2 className="text-xl font-bold text-error-700 mb-4">
+            Confirm Account Deletion
+          </h2>
+          <p className="mb-4 text-gray-700">
+            This will permanently delete your account and all data.
+            This action cannot be undone.
+            <br />
+            To confirm, type{" "}
+            <span className="font-mono font-bold">DELETE</span> below.
+          </p>
+          <label htmlFor="deleteConfirm" className="block text-sm font-medium text-gray-700 mb-1">
+            Type DELETE to confirm
+          </label>
+          <input
+            type="text"
+            id="deleteConfirm"
+            name="deleteConfirm"
+            className="input w-full mb-4"
+            placeholder="Type DELETE to confirm"
+            value={deleteConfirm}
+            onChange={(e) => setDeleteConfirm(e.target.value)}
+          />
+          {deleteError && (
+            <div className="mb-4 text-error-600 text-sm">
+              {deleteError}
+            </div>
+          )}
+          <div className="flex gap-3">
+            <Button
+              variant="danger"
+              className="flex-1"
+              disabled={deleteConfirm !== "DELETE" || deleteLoading}
+              isLoading={deleteLoading}
+              onClick={async () => {
+                setDeleteLoading(true);
+                setDeleteError(null);
+                const result = await deleteAccountRequest();
+                if (result.success) {
+                  // Log out and redirect to goodbye page
+                  try {
+                    await supabase.auth.signOut();
+                  } catch {}
+                  setDeleteLoading(false);
+                  navigate("/goodbye");
+                } else {
+                  setDeleteLoading(false);
+                  setDeleteError(
+                    result.error || "Failed to delete account",
+                  );
+                }
+              }}
+            >
+              Permanently Delete
+            </Button>
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => setShowDeleteModal(false)}
+              disabled={deleteLoading}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </PageLayout>
   );
 };
