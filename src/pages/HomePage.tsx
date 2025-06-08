@@ -11,126 +11,145 @@ const HomePage: React.FC = () => {
       <Navbar />
       {/* Hero section */}
       <section className="bg-[#0a2a66] text-white py-16 md:py-24 min-h-[480px]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="ml-[clamp(56px,16vw,104px)] sm:ml-0"
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center md:items-stretch relative">
+          {/* Left: Bolt.new badge */}
+          <div className="flex-shrink-0 flex justify-center md:justify-start items-center md:items-start w-full md:w-auto mb-8 md:mb-0 md:mr-8 mt-0 md:mt-[-2.5rem] ml-0 md:ml-[-2.5rem]">
+            <a
+              href="https://bolt.new/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Powered by Bolt.new"
+              className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 flex items-center justify-center bolt-badge-spin"
             >
-              <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-4">
-                Simplify Your VA Disability Claim Process!
-              </h1>
-              <p className="text-xl md:text-2xl text-gray-200 mb-8">
-                Upload your medical documents and get an estimated VA disability
-                rating in minutes using advanced AI.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link to="/pricing#pricing-section">
-                  <Button size="lg" className="w-full sm:w-auto">
-                    View Pricing
-                  </Button>
-                </Link>
-                <a href="#how-it-works">
-                  <Button
-                    variant="secondary"
-                    size="lg"
-                    className="w-full sm:w-auto"
-                  >
-                    How It Works
-                  </Button>
-                </a>
-                <Link to="/calculator">
-                  <Button
-                    variant="secondary"
-                    size="lg"
-                    className="w-full sm:w-auto text-primary-900"
-                  >
-                    Try the 2025 VA Disability Calculator
-                  </Button>
-                </Link>
-              </div>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="w-full flex justify-center"
-            >
-              <div className="bg-white rounded-lg shadow-xl overflow-hidden w-full max-w-md">
-                <div className="bg-gray-200 p-4 border-b border-gray-200">
-                  <div className="flex items-center">
-                    <FileText className="h-6 w-6 text-primary-600 mr-2" />
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      VA Rating Estimate
-                    </h3>
-                  </div>
+              <img
+                src="/white_circle_360x360.png"
+                alt="Powered by Bolt.new"
+                className="w-full h-full object-contain"
+              />
+            </a>
+          </div>
+          {/* Right: Main content grid */}
+          <div className="flex-1">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="ml-[clamp(56px,16vw,104px)] sm:ml-0"
+              >
+                <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-4">
+                  Simplify Your VA Disability Claim Process!
+                </h1>
+                <p className="text-xl md:text-2xl text-gray-200 mb-8">
+                  Upload your medical documents and get an estimated VA disability
+                  rating in minutes using advanced AI.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Link to="/pricing#pricing-section">
+                    <Button size="lg" className="w-full sm:w-auto">
+                      View Pricing
+                    </Button>
+                  </Link>
+                  <a href="#how-it-works">
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      className="w-full sm:w-auto"
+                    >
+                      How It Works
+                    </Button>
+                  </a>
+                  <Link to="/calculator">
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      className="w-full sm:w-auto text-primary-900"
+                    >
+                      Try the 2025 VA Disability Calculator
+                    </Button>
+                  </Link>
                 </div>
-                <div className="p-6 bg-white">
-                  <div className="space-y-4">
-                    <div>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm font-medium text-gray-700">
-                          PTSD
-                        </span>
-                        <span className="text-sm font-semibold text-primary-700">
-                          70%
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-primary-600 h-2 rounded-full"
-                          style={{ width: "70%" }}
-                        ></div>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm font-medium text-gray-700">
-                          Tinnitus
-                        </span>
-                        <span className="text-sm font-semibold text-primary-700">
-                          10%
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-primary-600 h-2 rounded-full"
-                          style={{ width: "10%" }}
-                        ></div>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-sm font-medium text-gray-700">
-                          Knee Injury
-                        </span>
-                        <span className="text-sm font-semibold text-primary-700">
-                          30%
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-primary-600 h-2 rounded-full"
-                          style={{ width: "30%" }}
-                        ></div>
-                      </div>
-                    </div>
-                    <div className="pt-4 border-t border-gray-200">
-                      <div className="flex justify-between items-center">
-                        <span className="text-base font-medium text-gray-900">
-                          Combined Rating
-                        </span>
-                        <span className="text-xl font-bold text-primary-700">
-                          80%
-                        </span>
-                      </div>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="w-full flex justify-center"
+              >
+                <div className="bg-white rounded-lg shadow-xl overflow-hidden w-full max-w-md">
+                  <div className="bg-gray-200 p-4 border-b border-gray-200">
+                    <div className="flex items-center">
+                      <FileText className="h-6 w-6 text-primary-600 mr-2" />
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        VA Rating Estimate
+                      </h3>
                     </div>
                   </div>
+                  <div className="p-6 bg-white">
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex justify-between mb-1">
+                          <span className="text-sm font-medium text-gray-700">
+                            PTSD
+                          </span>
+                          <span className="text-sm font-semibold text-primary-700">
+                            70%
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-primary-600 h-2 rounded-full"
+                            style={{ width: "70%" }}
+                          ></div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between mb-1">
+                          <span className="text-sm font-medium text-gray-700">
+                            Tinnitus
+                          </span>
+                          <span className="text-sm font-semibold text-primary-700">
+                            10%
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-primary-600 h-2 rounded-full"
+                            style={{ width: "10%" }}
+                          ></div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between mb-1">
+                          <span className="text-sm font-medium text-gray-700">
+                            Knee Injury
+                          </span>
+                          <span className="text-sm font-semibold text-primary-700">
+                            30%
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-primary-600 h-2 rounded-full"
+                            style={{ width: "30%" }}
+                          ></div>
+                        </div>
+                      </div>
+                      <div className="pt-4 border-t border-gray-200">
+                        <div className="flex justify-between items-center">
+                          <span className="text-base font-medium text-gray-900">
+                            Combined Rating
+                          </span>
+                          <span className="text-xl font-bold text-primary-700">
+                            80%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            </div>
           </div>
         </div>
       </section>
@@ -278,32 +297,6 @@ const HomePage: React.FC = () => {
           </div>
         </div>
       </section>
-      {/* Bolt.new badge - required for all projects */}
-      <a
-        href="https://bolt.new/"
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Powered by Bolt.new"
-        style={{
-          position: 'fixed',
-          left: '1.5rem',
-          top: 'calc(1.5rem + 4rem)',
-          zIndex: 50,
-          width: 'clamp(40px, 14vw, 88px)',
-          height: 'clamp(40px, 14vw, 88px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          transition: 'transform 0.2s',
-        }}
-        className="bolt-badge-spin"
-      >
-        <img
-          src="/white_circle_360x360.png"
-          alt="Powered by Bolt.new"
-          style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-        />
-      </a>
     </>
   );
 };
