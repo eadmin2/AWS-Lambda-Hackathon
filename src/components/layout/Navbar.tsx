@@ -69,17 +69,26 @@ const Navbar: React.FC<NavbarProps> = ({
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex">
+        <div className="flex justify-between h-16 items-center">
+          <div className="flex items-center">
             <Link to="/" className="flex-shrink-0 flex items-center">
               <span className="ml-2 text-xl font-bold text-gray-900">
                 VA Rating Assistant
               </span>
             </Link>
           </div>
-
+          {/* Hamburger for mobile */}
+          <div className="flex items-center sm:hidden">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
+            >
+              <span className="sr-only">Open main menu</span>
+              <Menu className="block h-6 w-6" />
+            </button>
+          </div>
           {/* Desktop menu */}
-          <div className="hidden sm:ml-6 sm:flex sm:items-center">
+          <div className="hidden sm:ml-6 sm:flex sm:items-center space-x-2">
             <Link
               to="/"
               className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
@@ -92,7 +101,7 @@ const Navbar: React.FC<NavbarProps> = ({
               className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              Calculator
+              Combined Rating Calculator
             </Link>
             {!isLoading && (
               <>
@@ -106,78 +115,76 @@ const Navbar: React.FC<NavbarProps> = ({
                       Dashboard
                     </Link>
                     {profile?.role === "admin" && (
-                      <>
-                        <Link
-                          to="/admin"
-                          className="text-purple-700 hover:text-purple-600 px-3 py-2 rounded-md text-sm font-medium"
-                          onClick={() => setIsMobileMenuOpen(false)}
-                        >
-                          Admin
-                        </Link>
-                        <div className="relative flex items-center">
-                          <button
-                            ref={bellRef}
-                            className="relative p-1 rounded-full hover:bg-gray-100 focus:outline-none"
-                            onClick={() =>
-                              onBellOpenChange && onBellOpenChange(!bellOpen)
-                            }
-                            aria-label="Notifications"
-                          >
-                            <Bell className="h-5 w-5 text-gray-700" />
-                            {notifications.length > 0 && (
-                              <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full transform translate-x-1/2 -translate-y-1/2">
-                                {notifications.length}
-                              </span>
-                            )}
-                          </button>
-                          {bellOpen && (
-                            <div
-                              ref={dropdownRef}
-                              className="absolute right-0 mt-4 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
-                            >
-                              <div className="p-4 border-b font-semibold text-gray-800">
-                                Notifications
-                              </div>
-                              <ul className="max-h-80 overflow-y-auto divide-y divide-gray-100">
-                                {notifications.length === 0 && (
-                                  <li className="p-4 text-gray-500 text-sm">
-                                    No notifications
-                                  </li>
-                                )}
-                                {notifications.map((notif, idx) => (
-                                  <li
-                                    key={idx}
-                                    className="p-4 text-sm flex justify-between items-start gap-2"
-                                  >
-                                    <div>
-                                      <div className="font-medium text-gray-900">
-                                        {notif.type}
-                                      </div>
-                                      <div className="text-gray-700">
-                                        {notif.user}
-                                      </div>
-                                      <div className="text-xs text-gray-500 mt-1">
-                                        {notif.date ? notif.date : ""}
-                                      </div>
-                                    </div>
-                                    <button
-                                      className="ml-2 text-gray-400 hover:text-red-500 text-xs"
-                                      aria-label="Dismiss notification"
-                                      onClick={() =>
-                                        onDismissNotification &&
-                                        onDismissNotification(idx)
-                                      }
-                                    >
-                                      ×
-                                    </button>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      </>
+                      <Link
+                        to="/admin"
+                        className="text-purple-700 hover:text-purple-600 px-3 py-2 rounded-md text-sm font-medium"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        Admin
+                      </Link>
                     )}
+                    <div className="relative flex items-center">
+                      <button
+                        ref={bellRef}
+                        className="relative p-1 rounded-full hover:bg-gray-100 focus:outline-none"
+                        onClick={() =>
+                          onBellOpenChange && onBellOpenChange(!bellOpen)
+                        }
+                        aria-label="Notifications"
+                      >
+                        <Bell className="h-5 w-5 text-gray-700" />
+                        {notifications.length > 0 && (
+                          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full transform translate-x-1/2 -translate-y-1/2">
+                            {notifications.length}
+                          </span>
+                        )}
+                      </button>
+                      {bellOpen && (
+                        <div
+                          ref={dropdownRef}
+                          className="absolute right-0 mt-4 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                        >
+                          <div className="p-4 border-b font-semibold text-gray-800">
+                            Notifications
+                          </div>
+                          <ul className="max-h-80 overflow-y-auto divide-y divide-gray-100">
+                            {notifications.length === 0 && (
+                              <li className="p-4 text-gray-500 text-sm">
+                                No notifications
+                              </li>
+                            )}
+                            {notifications.map((notif, idx) => (
+                              <li
+                                key={idx}
+                                className="p-4 text-sm flex justify-between items-start gap-2"
+                              >
+                                <div>
+                                  <div className="font-medium text-gray-900">
+                                    {notif.type}
+                                  </div>
+                                  <div className="text-gray-700">
+                                    {notif.user}
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    {notif.date ? notif.date : ""}
+                                  </div>
+                                </div>
+                                <button
+                                  className="ml-2 text-gray-400 hover:text-red-500 text-xs"
+                                  aria-label="Dismiss notification"
+                                  onClick={() =>
+                                    onDismissNotification &&
+                                    onDismissNotification(idx)
+                                  }
+                                >
+                                  ×
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
                     <div className="relative ml-3">
                       <div>
                         <button
@@ -233,24 +240,12 @@ const Navbar: React.FC<NavbarProps> = ({
               </>
             )}
           </div>
-
-          {/* Mobile menu button */}
-          <div className="flex items-center sm:hidden">
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500"
-            >
-              <span className="sr-only">Open main menu</span>
-              <Menu className="block h-6 w-6" />
-            </button>
-          </div>
         </div>
       </div>
-
       {/* Mobile menu */}
       {isMobileMenuOpen && (
-        <div className="sm:hidden">
-          <div className="pt-2 pb-3 space-y-1">
+        <div className="sm:hidden bg-white border-t border-gray-200">
+          <div className="pt-2 pb-3 space-y-1 flex flex-col">
             <Link
               to="/"
               className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
@@ -263,7 +258,7 @@ const Navbar: React.FC<NavbarProps> = ({
               className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              Calculator
+              Combined Rating Calculator
             </Link>
             {user && (
               <>

@@ -22,6 +22,7 @@ import { useAuth } from "./contexts/AuthContext";
 import CheckoutPage from "./pages/CheckoutPage";
 import GoodbyePage from "./pages/GoodbyePage";
 import CalculatorPage from "./pages/CalculatorPage";
+import DocumentsPage from "./pages/DocumentsPage";
 import { Helmet } from "react-helmet-async";
 
 interface ProtectedRouteProps {
@@ -130,6 +131,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <CheckoutPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/documents"
+              element={
+                <ProtectedRoute>
+                  <DocumentsPage />
                 </ProtectedRoute>
               }
             />
