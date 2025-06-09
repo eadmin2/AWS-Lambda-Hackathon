@@ -5,7 +5,7 @@ interface DocumentViewerProps {
   userToken: string;
 }
 
-const API_URL = "https://vp1o1djnbe.execute-api.us-east-2.amazonaws.com/get-s3-url";
+const API_URL = "https://vp1o1djnbe.execute-api.us-east-2.amazonaws.com/default/get-s3-url";
 
 const DocumentViewer: React.FC<DocumentViewerProps> = ({ documentKey, userToken }) => {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
