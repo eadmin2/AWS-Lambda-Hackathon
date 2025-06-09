@@ -3,12 +3,13 @@ import React, { useEffect, useState } from "react";
 interface DocumentViewerProps {
   documentKey: string;
   userToken: string;
+  userId: string;
 }
 
 // Use the proxied endpoint instead of direct API Gateway URL
 const API_URL = "/get-s3-url";
 
-const DocumentViewer: React.FC<DocumentViewerProps> = ({ documentKey, userToken }) => {
+const DocumentViewer: React.FC<DocumentViewerProps> = ({ documentKey, userToken, userId }) => {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +34,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ documentKey, userToken 
           "Content-Type": "application/json",
           "Authorization": `Bearer ${userToken}`,
         },
-        body: JSON.stringify({ key: documentKey }),
+        body: JSON.stringify({ key: documentKey, userId }),
       });
       const data = await res.json();
       if (!res.ok || !data.url) {

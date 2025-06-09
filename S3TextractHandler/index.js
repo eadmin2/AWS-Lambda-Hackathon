@@ -343,6 +343,16 @@ export const handler = async (event) => {
       return await handleSNSNotification(event, requestId);
     }
 
+    // --- NEW: Handle direct invocation for get-s3-url (plain event with key/userId) ---
+    if (event.key) {
+      // If userId is not present, try to extract from event.userId or event.userid
+      const userId = event.userId || event.userid || null;
+      return await handleGetS3Url({
+        httpMethod: "POST",
+        body: JSON.stringify({ key: event.key, userId }),
+      }, requestId);
+    }
+
     // Handle API Gateway requests
     if (event.requestContext || event.httpMethod) {
       return await handleApiRequest(event, requestId);

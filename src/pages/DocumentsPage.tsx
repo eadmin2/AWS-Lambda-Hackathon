@@ -42,18 +42,22 @@ const DocumentsPage: React.FC = () => {
     const match = url.match(/https?:\/\/[^/]+\/(.+)/);
     const objectKey = match ? match[1] : url;
 
-    // Use the proxied endpoint instead of direct API call
-    const res = await fetch(`/get-s3-url?key=${encodeURIComponent(objectKey)}`);
+    // Use the proxied endpoint and send both key and userId in the POST body
+    const res = await fetch('/get-s3-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: objectKey, userId: doc.user_id })
+    });
     const data = await res.json();
     if (res.ok && data.url) {
-      const link = document.createElement("a");
+      const link = document.createElement('a');
       link.href = data.url;
       link.download = doc.file_name;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     } else {
-      setDeleteError("Failed to get signed URL for download.");
+      setDeleteError('Failed to get signed URL for download.');
     }
   };
 
@@ -132,7 +136,8 @@ const DocumentsPage: React.FC = () => {
                 const match = url.match(/https?:\/\/[^/]+\/(.+)/);
                 return match ? match[1] : url;
               })()}
-              userToken={session?.access_token || ""} 
+              userToken={session?.access_token || ""}
+              userId={selectedDocument.user_id}
             />
           </Modal>
         )}
