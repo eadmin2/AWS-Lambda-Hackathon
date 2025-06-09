@@ -63,6 +63,12 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ document }) => {
     }
   };
 
+  const handleView = () => {
+    if (signedUrl) {
+      window.open(signedUrl, "_blank", "noopener");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[200px] p-4">
@@ -92,7 +98,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ document }) => {
     );
   }
 
-  // Header with file info and download button
+  // Header with file info and download/view button
   const DocumentHeader = () => (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 p-4 bg-gray-50 rounded-lg">
       <div className="min-w-0 flex-1">
@@ -103,16 +109,25 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ document }) => {
           {new Date(document.uploaded_at).toLocaleDateString()}
         </p>
       </div>
-      <Button
-        variant="primary"
-        size="sm"
-        onClick={handleDownload}
-        className="flex-shrink-0"
-        disabled={!signedUrl}
-      >
-        <Download className="h-4 w-4 mr-2" />
-        Download
-      </Button>
+      <div className="flex gap-2 flex-shrink-0">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={handleView}
+          disabled={!signedUrl}
+        >
+          View Document
+        </Button>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={handleDownload}
+          disabled={!signedUrl}
+        >
+          <Download className="h-4 w-4 mr-2" />
+          Download
+        </Button>
+      </div>
     </div>
   );
 
@@ -130,11 +145,16 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ document }) => {
           className="max-w-full max-h-[70vh] mx-auto rounded shadow"
         />
       ) : fileType === "pdf" ? (
-        <iframe
-          src={signedUrl}
-          title={document.file_name}
-          className="w-full min-h-[60vh] rounded shadow"
-        />
+        <div className="flex flex-col items-center">
+          <iframe
+            src={signedUrl!}
+            title={document.file_name}
+            className="w-full min-h-[60vh] rounded shadow mb-4"
+          />
+          <Button variant="secondary" size="sm" onClick={handleView} disabled={!signedUrl}>
+            View in new tab
+          </Button>
+        </div>
       ) : (
         <div className="text-center text-gray-500 mt-8">
           <p>Preview not available for this file type.</p>

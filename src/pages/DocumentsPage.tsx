@@ -7,6 +7,8 @@ import { getUserDocuments } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import PageLayout from "../components/layout/PageLayout";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/Card";
+import DocumentViewer from "../components/documents/DocumentViewer";
+import Modal from "../components/ui/Modal";
 
 const DocumentsPage: React.FC = () => {
   const { user } = useAuth();
@@ -15,6 +17,7 @@ const DocumentsPage: React.FC = () => {
   const [renameError, setRenameError] = useState<string | null>(null);
   const [hasSubscription] = useState<boolean>(true); // Set logic as needed
   const [canUpload] = useState<boolean>(true); // Set logic as needed
+  const [selectedDocument, setSelectedDocument] = useState<DocumentRow | null>(null);
 
   // Fetch documents
   const fetchDocuments = () => {
@@ -27,18 +30,31 @@ const DocumentsPage: React.FC = () => {
     // eslint-disable-next-line
   }, [user]);
 
-  // Handler stubs (replace with real logic as needed)
+  // Handler for viewing a document (opens modal)
   const handleViewDocument = (doc: DocumentRow) => {
-    window.open(doc.file_url, "_blank");
+    setSelectedDocument(doc);
   };
-  const handleDownloadDocument = (doc: DocumentRow) => {
-    const link = document.createElement("a");
-    link.href = doc.file_url;
-    link.download = doc.file_name;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+  // Handler for secure download using /get-s3-url
+  const handleDownloadDocument = async (doc: DocumentRow) => {
+    let fileKey = doc.file_url.split(`/${doc.user_id}/`).pop();
+    if (!fileKey) fileKey = doc.file_name;
+    const res = await fetch(
+      `/get-s3-url?key=${encodeURIComponent(doc.user_id + "/" + fileKey)}&userId=${encodeURIComponent(doc.user_id)}`
+    );
+    const data = await res.json();
+    if (res.ok && data.url) {
+      const link = document.createElement("a");
+      link.href = data.url;
+      link.download = doc.file_name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      setDeleteError("Failed to get signed URL for download.");
+    }
   };
+
   const handleDeleteDocument = async (doc: DocumentRow) => {
     try {
       // TODO: Call delete API
@@ -105,6 +121,11 @@ const DocumentsPage: React.FC = () => {
           onDelete={handleDeleteDocument}
           onRename={handleRenameDocument}
         />
+        {selectedDocument && (
+          <Modal isOpen={!!selectedDocument} onClose={() => setSelectedDocument(null)}>
+            <DocumentViewer document={selectedDocument} />
+          </Modal>
+        )}
         {deleteError && (
           <div className="mt-4 bg-error-100 border border-error-200 p-3 rounded-md flex items-start">
             <AlertCircle className="h-5 w-5 text-error-500 mr-2 flex-shrink-0 mt-0.5" />
