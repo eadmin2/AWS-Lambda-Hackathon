@@ -35,13 +35,15 @@ const DocumentsPage: React.FC = () => {
     setSelectedDocument(doc);
   };
 
-  // Handler for secure download using /get-s3-url
+  // Handler for secure download using proxied endpoint
   const handleDownloadDocument = async (doc: DocumentRow) => {
-    let fileKey = doc.file_url.split(`/${doc.user_id}/`).pop();
-    if (!fileKey) fileKey = doc.file_name;
-    const res = await fetch(
-      `/get-s3-url?key=${encodeURIComponent(doc.user_id + "/" + fileKey)}&userId=${encodeURIComponent(doc.user_id)}`
-    );
+    // Extract only the S3 object key from file_url
+    const url = doc.file_url;
+    const match = url.match(/https?:\/\/[^/]+\/(.+)/);
+    const objectKey = match ? match[1] : url;
+
+    // Use the proxied endpoint instead of direct API call
+    const res = await fetch(`/get-s3-url?key=${encodeURIComponent(objectKey)}`);
     const data = await res.json();
     if (res.ok && data.url) {
       const link = document.createElement("a");
