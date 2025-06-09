@@ -131,19 +131,20 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         const ext = file.name.split(".").pop();
         const finalName = `${name}.${ext}`;
 
-        // Step 1: Get presigned URL from API Gateway via /get-s3-url
-        const res = await fetch("/get-s3-url", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fileName: finalName,
-            userId: userId,
-            fileType: file.type,
-          }),
-        });
-        const urlData = await res.json();
-        if (!res.ok || !urlData.url) {
-          throw new Error(urlData.error || "Failed to get upload URL");
+        // Step 1: Get presigned URL from Supabase Edge Function
+        const { data: urlData, error: urlError } =
+          await supabase.functions.invoke("generate-presigned-url", {
+            body: {
+              fileName: finalName,
+              userId: userId,
+              fileType: file.type,
+            },
+          });
+
+        if (urlError || !urlData) {
+          throw new Error(
+            `Failed to get upload URL: ${urlError?.message || "Unknown error"}`,
+          );
         }
 
         const { url: presignedUrl, key } = urlData;
