@@ -11,7 +11,7 @@ import DocumentViewer from "../components/documents/DocumentViewer";
 import Modal from "../components/ui/Modal";
 
 const DocumentsPage: React.FC = () => {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [renameError, setRenameError] = useState<string | null>(null);
@@ -123,7 +123,7 @@ const DocumentsPage: React.FC = () => {
         />
         {selectedDocument && (
           <Modal isOpen={!!selectedDocument} onClose={() => setSelectedDocument(null)}>
-            <DocumentViewer document={selectedDocument} />
+            <DocumentViewer documentKey={selectedDocument.file_url} userToken={session?.access_token || ""} />
           </Modal>
         )}
         {deleteError && (

@@ -1,7 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { AlertCircle, Download } from "lucide-react";
-import Button from "../ui/Button";
-import { getFileType } from "../../lib/utils";
 
 interface DocumentViewerProps {
   documentKey: string;
