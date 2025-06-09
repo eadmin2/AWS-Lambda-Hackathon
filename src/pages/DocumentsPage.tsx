@@ -123,7 +123,15 @@ const DocumentsPage: React.FC = () => {
         />
         {selectedDocument && (
           <Modal isOpen={!!selectedDocument} onClose={() => setSelectedDocument(null)}>
-            <DocumentViewer documentKey={selectedDocument.file_url} userToken={session?.access_token || ""} />
+            <DocumentViewer 
+              documentKey={(() => {
+                // Remove the bucket URL prefix if present
+                const url = selectedDocument.file_url;
+                const match = url.match(/https?:\/\/[^/]+\/(.+)/);
+                return match ? match[1] : url;
+              })()}
+              userToken={session?.access_token || ""} 
+            />
           </Modal>
         )}
         {deleteError && (
