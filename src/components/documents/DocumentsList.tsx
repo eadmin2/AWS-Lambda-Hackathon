@@ -34,12 +34,12 @@ const DocumentsList: React.FC<DocumentsListProps> = ({
     );
     const data = await res.json();
     if (res.ok && data.url) {
-      const link = window.document.createElement("a");
+    const link = window.document.createElement("a");
       link.href = data.url;
-      link.download = document.file_name;
-      window.document.body.appendChild(link);
-      link.click();
-      window.document.body.removeChild(link);
+    link.download = document.file_name;
+    window.document.body.appendChild(link);
+    link.click();
+    window.document.body.removeChild(link);
     } else {
       alert("Failed to get signed URL");
     }

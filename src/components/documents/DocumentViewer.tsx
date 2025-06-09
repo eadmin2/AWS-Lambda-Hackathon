@@ -24,8 +24,8 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ documentKey, userToken,
   };
 
   const fetchSignedUrl = async () => {
-    setIsLoading(true);
-    setError(null);
+      setIsLoading(true);
+      setError(null);
     setSignedUrl(null);
     try {
       const res = await fetch(API_URL, {
@@ -36,16 +36,16 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ documentKey, userToken,
         },
         body: JSON.stringify({ key: documentKey, userId }),
       });
-      const data = await res.json();
+        const data = await res.json();
       if (!res.ok || !data.url) {
-        throw new Error(data.error || "Failed to get signed URL");
+          throw new Error(data.error || "Failed to get signed URL");
       }
-      setSignedUrl(data.url);
+        setSignedUrl(data.url);
     } catch (err: any) {
       setError(err.message || "Failed to load document");
-    } finally {
-      setIsLoading(false);
-    }
+      } finally {
+        setIsLoading(false);
+      }
   };
 
   useEffect(() => {
@@ -59,7 +59,7 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ documentKey, userToken,
 
   const fileType = getFileType(documentKey);
 
-  return (
+    return (
     <div className="flex flex-col items-center justify-center min-h-[300px] p-4">
       {/* Button to open modal */}
       <button
@@ -82,15 +82,15 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ documentKey, userToken,
             </button>
             {isLoading ? (
               <div>
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mb-4"></div>
-                <div className="text-sm text-gray-600">Loading document...</div>
-              </div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mb-4"></div>
+        <div className="text-sm text-gray-600">Loading document...</div>
+      </div>
             ) : error ? (
               <div className="flex flex-col items-center">
                 <div className="text-red-500 text-2xl mb-2">!</div>
                 <div className="text-sm text-gray-600 mb-4 text-center">{error}</div>
                 <button className="btn btn-primary" onClick={handleRetry}>Retry</button>
-              </div>
+        </div>
             ) : signedUrl ? (
               fileType === "pdf" ? (
                 <iframe
@@ -98,22 +98,22 @@ const DocumentViewer: React.FC<DocumentViewerProps> = ({ documentKey, userToken,
                   title="Document PDF"
                   className="w-full min-h-[60vh] rounded shadow"
                 />
-              ) : fileType === "image" ? (
-                <img
-                  src={signedUrl}
+      ) : fileType === "image" ? (
+        <img
+          src={signedUrl}
                   alt="Document Preview"
-                  className="max-w-full max-h-[70vh] mx-auto rounded shadow"
-                />
-              ) : (
-                <div className="text-center text-gray-500 mt-8">
-                  <p>Preview not available for this file type.</p>
+          className="max-w-full max-h-[70vh] mx-auto rounded shadow"
+        />
+      ) : (
+        <div className="text-center text-gray-500 mt-8">
+          <p>Preview not available for this file type.</p>
                   <a
                     href={signedUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="btn btn-primary mt-4"
                   >
-                    Download File
+            Download File
                   </a>
                 </div>
               )
