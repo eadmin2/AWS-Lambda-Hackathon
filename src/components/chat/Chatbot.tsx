@@ -256,12 +256,15 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
                         <div
                           className={`px-3 py-2 rounded-2xl text-sm ${
                             message.sender === 'user'
-                              ? 'text-white'
+                              ? ''
                               : 'bg-gray-100 text-gray-900'
                           }`}
                           style={{
                             backgroundColor: message.sender === 'user'
                               ? config?.primaryColor || '#3b82f6'
+                              : undefined,
+                            color: message.sender === 'user'
+                              ? config?.userTextColor || '#fff'
                               : undefined
                           }}
                         >

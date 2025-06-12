@@ -15,6 +15,19 @@ interface ChatBotSettingsFormData {
   headerColor: string;
   enabled: boolean;
   position: 'bottom-right' | 'bottom-left';
+  userTextColor?: string;
+}
+
+// Helper to normalize hex color to 7-character format
+function normalizeHex(hex: string) {
+  if (!hex) return '#ffffff';
+  if (hex.length === 4 && hex[0] === '#') {
+    // e.g. #fff => #ffffff
+    return (
+      '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3]
+    ).toLowerCase();
+  }
+  return hex.toLowerCase();
 }
 
 const ChatBotSettings = () => {
@@ -40,6 +53,7 @@ const ChatBotSettings = () => {
       headerColor: config?.headerColor || '#f8fafc',
       enabled: config?.enabled ?? true,
       position: config?.position || 'bottom-right',
+      userTextColor: normalizeHex(config?.userTextColor || '#ffffff'),
     },
   });
 
@@ -56,6 +70,7 @@ const ChatBotSettings = () => {
       setValue('headerColor', config.headerColor);
       setValue('enabled', config.enabled);
       setValue('position', config.position);
+      setValue('userTextColor', normalizeHex(config.userTextColor || '#ffffff'));
     }
   }, [config, setValue]);
 
@@ -276,6 +291,26 @@ const ChatBotSettings = () => {
                 </div>
 
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    User Bubble Text Color
+                  </label>
+                  <div className="flex items-center space-x-3 mb-3">
+                    <input
+                      type="color"
+                      className="w-12 h-10 border border-gray-300 rounded cursor-pointer"
+                      value={normalizeHex(watchedValues.userTextColor || '#ffffff')}
+                      onChange={e => setValue('userTextColor', normalizeHex(e.target.value))}
+                    />
+                    <input
+                      type="text"
+                      className="input flex-1"
+                      value={watchedValues.userTextColor || ''}
+                      onChange={e => setValue('userTextColor', normalizeHex(e.target.value))}
+                    />
+                  </div>
+                </div>
+
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Position
                   </label>
@@ -357,8 +392,8 @@ const ChatBotSettings = () => {
                     
                     <div className="flex justify-end">
                       <div 
-                        className="px-3 py-2 rounded-2xl text-sm text-white max-w-[200px]"
-                        style={{ backgroundColor: watchedValues.primaryColor }}
+                        className="px-3 py-2 rounded-2xl text-sm max-w-[200px]"
+                        style={{ backgroundColor: watchedValues.primaryColor, color: normalizeHex(watchedValues.userTextColor || '#ffffff') }}
                       >
                         Hello! I need help with my VA rating.
                       </div>

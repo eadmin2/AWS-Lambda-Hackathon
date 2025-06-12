@@ -17,6 +17,7 @@ export interface ChatBotConfig {
   }>;
   created_at: string;
   updated_at: string;
+  userTextColor?: string;
 }
 
 interface UseChatBotConfigReturn {
@@ -55,6 +56,7 @@ export function useChatBotConfig(): UseChatBotConfigReturn {
         ],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        userTextColor: '#ffffff',
       };
       
       setConfig(defaultConfig);
@@ -82,6 +84,7 @@ export function useChatBotConfig(): UseChatBotConfigReturn {
         ],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
+        userTextColor: '#ffffff',
       });
     } finally {
       setLoading(false);
@@ -116,13 +119,28 @@ export function useChatBotConfig(): UseChatBotConfigReturn {
         parsedConfig.enabled = true;
         setConfig(parsedConfig);
         setLoading(false);
-        return;
+        // Don't return here, so we still set up the storage listener
       } catch (err) {
         console.error('Error parsing saved config:', err);
       }
     }
     
     fetchConfig();
+
+    // Listen for localStorage changes (from other tabs/components)
+    function handleStorage(event: StorageEvent) {
+      if (event.key === 'chatbot_config' && event.newValue) {
+        try {
+          const parsedConfig = JSON.parse(event.newValue);
+          parsedConfig.enabled = true;
+          setConfig(parsedConfig);
+        } catch (err) {
+          // ignore
+        }
+      }
+    }
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
   return {
