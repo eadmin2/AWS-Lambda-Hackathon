@@ -6,6 +6,18 @@ CREATE TABLE IF NOT EXISTS chatbot_config (
     max_tokens INTEGER NOT NULL DEFAULT 1000,
     temperature DECIMAL(3,2) NOT NULL DEFAULT 0.70,
     model TEXT NOT NULL DEFAULT 'gpt-4',
+    bot_name TEXT NOT NULL DEFAULT 'VA Assistant',
+    status_message TEXT NOT NULL DEFAULT 'Online • Typically replies instantly',
+    input_placeholder TEXT NOT NULL DEFAULT 'Type your message...',
+    primary_color TEXT NOT NULL DEFAULT '#3b82f6',
+    header_color TEXT NOT NULL DEFAULT '#f8fafc',
+    position TEXT NOT NULL DEFAULT 'bottom-right' CHECK (position IN ('bottom-right', 'bottom-left')),
+    quick_replies JSONB NOT NULL DEFAULT '[
+        {"id": "1", "text": "Calculate my rating", "action": "calculator"},
+        {"id": "2", "text": "Upload documents", "action": "upload"},
+        {"id": "3", "text": "Pricing info", "action": "pricing"},
+        {"id": "4", "text": "Contact support", "action": "support"}
+    ]'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -25,8 +37,39 @@ CREATE TRIGGER update_chatbot_config_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- Insert default configuration
-INSERT INTO chatbot_config (enabled, welcome_message, max_tokens, temperature, model)
-VALUES (true, 'Hello! How can I help you today?', 1000, 0.70, 'gpt-4')
+INSERT INTO chatbot_config (
+    enabled,
+    welcome_message,
+    max_tokens,
+    temperature,
+    model,
+    bot_name,
+    status_message,
+    input_placeholder,
+    primary_color,
+    header_color,
+    position,
+    quick_replies
+)
+VALUES (
+    true,
+    'Hello! How can I help you today?',
+    1000,
+    0.70,
+    'gpt-4',
+    'VA Assistant',
+    'Online • Typically replies instantly',
+    'Type your message...',
+    '#3b82f6',
+    '#f8fafc',
+    'bottom-right',
+    '[
+        {"id": "1", "text": "Calculate my rating", "action": "calculator"},
+        {"id": "2", "text": "Upload documents", "action": "upload"},
+        {"id": "3", "text": "Pricing info", "action": "pricing"},
+        {"id": "4", "text": "Contact support", "action": "support"}
+    ]'::jsonb
+)
 ON CONFLICT (id) DO NOTHING;
 
 -- Add RLS policies
