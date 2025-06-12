@@ -55,7 +55,7 @@ const CookieConsentBanner: React.FC = () => {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 flex justify-center items-end pointer-events-none">
+    <div className="fixed inset-x-0 bottom-0 z-[9998] flex justify-center items-end pointer-events-none">
       <div
         className="pointer-events-auto w-full max-w-2xl mx-auto mb-6 bg-white border border-gray-200 shadow-xl rounded-2xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-fade-in"
         role="dialog"

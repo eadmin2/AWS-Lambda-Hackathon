@@ -13,6 +13,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { supabase } from "../lib/supabase";
 import { formatDate } from "../lib/utils";
 import UserDetailModal from "../components/UserDetailModal";
+import ChatBotSettings from "../components/admin/ChatBotSettings";
 import {
   LineChart,
   Line,
@@ -846,6 +847,16 @@ const AdminDashboard = () => {
                   </ResponsiveContainer>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* ChatBot Configuration */}
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>ChatBot Configuration</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ChatBotSettings />
             </CardContent>
           </Card>
         </div>

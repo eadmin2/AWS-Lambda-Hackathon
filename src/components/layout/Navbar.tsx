@@ -142,7 +142,7 @@ const Navbar: React.FC<NavbarProps> = ({
                       {bellOpen && (
                         <div
                           ref={dropdownRef}
-                          className="absolute right-0 mt-4 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-50"
+                          className="absolute right-0 mt-4 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-[9998]"
                         >
                           <div className="p-4 border-b font-semibold text-gray-800">
                             Notifications
@@ -201,7 +201,7 @@ const Navbar: React.FC<NavbarProps> = ({
                       {isUserMenuOpen && (
                         <div
                           ref={userMenuDropdownRef}
-                          className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 z-10"
+                          className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 z-[9998]"
                         >
                           <Link
                             to="/profile"
@@ -244,7 +244,7 @@ const Navbar: React.FC<NavbarProps> = ({
       </div>
       {/* Mobile menu */}
       {isMobileMenuOpen && (
-        <div className="sm:hidden bg-white border-t border-gray-200">
+        <div className="sm:hidden bg-white border-t border-gray-200 z-[9998]">
           <div className="pt-2 pb-3 space-y-1 flex flex-col">
             <Link
               to="/"

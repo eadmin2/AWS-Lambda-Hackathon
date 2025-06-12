@@ -3,6 +3,7 @@ import Navbar from "./Navbar";
 import Footer from "./Footer";
 import CookieConsentBanner from "../CookieConsentBanner";
 import Sidebar from "./Sidebar";
+import Chatbot from "../chat/Chatbot";
 import { useLocation } from "react-router-dom";
 
 interface PageLayoutProps {
@@ -35,6 +36,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({
         <main className="flex-grow mt-4 md:mt-8">{children}</main>
         <Footer />
         <CookieConsentBanner />
+        <Chatbot />
       </main>
     </div>
   );

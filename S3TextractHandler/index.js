@@ -1001,19 +1001,23 @@ async function handleGetS3Url(event, requestId) {
 
 // Update API Gateway handler to route /get-s3-url requests
 const handleApiRequest = async (event, requestId) => {
-  // Route for secure S3 pre-signed URL
   if (
     (event.path && event.path.endsWith("/get-s3-url")) ||
     (event.rawPath && event.rawPath.endsWith("/get-s3-url"))
   ) {
     return await handleGetS3Url(event, requestId);
   }
+
+  if (
+    (event.path && event.path.endsWith("/chat-with-agent")) ||
+    (event.rawPath && event.rawPath.endsWith("/chat-with-agent"))
+  ) {
+    return await handleBedrockAgentChat(event, requestId);
+  }
+
   return {
-    statusCode: 200,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ message: "API endpoint placeholder", requestId }),
+    statusCode: 404,
+    body: JSON.stringify({ error: "Not Found", requestId }),
   };
 };
+

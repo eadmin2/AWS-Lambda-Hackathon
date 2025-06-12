@@ -1,14 +1,13 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { FileText, Shield, Award, CheckCircle } from "lucide-react";
-import Navbar from "../components/layout/Navbar";
+import PageLayout from "../components/layout/PageLayout";
 import Button from "../components/ui/Button";
 import { motion } from "framer-motion";
 
 const HomePage: React.FC = () => {
   return (
-    <>
-      <Navbar />
+    <PageLayout>
       {/* Hero section */}
       <section className="bg-[#0a2a66] text-white py-16 md:py-24 min-h-[480px]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center md:items-stretch relative">
@@ -297,7 +296,7 @@ const HomePage: React.FC = () => {
           </div>
         </div>
       </section>
-    </>
+    </PageLayout>
   );
 };
 

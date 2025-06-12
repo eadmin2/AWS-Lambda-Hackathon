@@ -64,6 +64,18 @@
   }
 }
 
+/* Chatbot specific styles */
+.chatbot-container {
+  position: fixed !important;
+  z-index: 9999 !important;
+  pointer-events: auto !important;
+}
+
+.chatbot-container button,
+.chatbot-container div {
+  pointer-events: auto !important;
+}
+
 /* Bolt.new badge spin effect */
 @keyframes bolt-spin {
   to {
