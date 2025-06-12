@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  MessageCircle, 
-  X, 
-  Send, 
-  Bot, 
-  User, 
-  Minimize2, 
+import {
+  MessageCircle,
+  X,
+  Send,
+  Bot,
+  User,
+  Minimize2,
   Maximize2
 } from 'lucide-react';
 import { useChatBotConfig } from '../../hooks/useChatBotConfig';
@@ -35,7 +35,7 @@ interface ChatBotProps {
 const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
   const { config, loading: configLoading } = useChatBotConfig();
   const [sessionId] = useState(() => uuidv4()); // Generate a unique session ID when component mounts
-  
+
   // Chat state
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
@@ -43,7 +43,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -100,7 +100,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
 
     try {
       const response = await sendMessageToBedrockAgent(content, sessionId);
-      
+
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: response.message,
@@ -169,7 +169,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
             className={`fixed bottom-6 right-6 z-[9999] w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-colors ${
               config?.primaryColor || 'bg-primary-600 hover:bg-primary-700'
             } text-white ${className}`}
-            style={{ 
+            style={{
               backgroundColor: config?.primaryColor,
               boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)'
             }}
@@ -192,12 +192,12 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
             } bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden ${className}`}
           >
             {/* Header */}
-            <div 
+            <div
               className="flex items-center justify-between p-4 border-b border-gray-200"
               style={{ backgroundColor: config?.headerColor || '#f8fafc' }}
             >
               <div className="flex items-center space-x-3">
-                <div 
+                <div
                   className="w-8 h-8 rounded-full flex items-center justify-center"
                   style={{ backgroundColor: config?.primaryColor || '#3b82f6' }}
                 >
@@ -245,14 +245,14 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
                     >
                       <div className={`flex items-start space-x-2 max-w-[80%]`}>
                         {message.sender === 'bot' && (
-                          <div 
+                          <div
                             className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
                             style={{ backgroundColor: config?.primaryColor || '#3b82f6' }}
                           >
                             <Bot className="h-3 w-3 text-white" />
                           </div>
                         )}
-                        
+
                         <div
                           className={`px-3 py-2 rounded-2xl text-sm ${
                             message.sender === 'user'
@@ -260,14 +260,17 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
                               : 'bg-gray-100 text-gray-900'
                           }`}
                           style={{
-                            backgroundColor: message.sender === 'user' 
+                            backgroundColor: message.sender === 'user'
                               ? config?.primaryColor || '#3b82f6'
                               : undefined
                           }}
                         >
+                          {/*  REPLACE THIS LINE:
                           {message.content}
+                          WITH THE FOLLOWING */}
+                          <div dangerouslySetInnerHTML={{ __html: message.content }} />
                         </div>
-                        
+
                         {message.sender === 'user' && (
                           <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center flex-shrink-0 mt-1">
                             <User className="h-3 w-3 text-gray-600" />
@@ -281,7 +284,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
                   {isTyping && (
                     <div className="flex justify-start">
                       <div className="flex items-start space-x-2">
-                        <div 
+                        <div
                           className="w-6 h-6 rounded-full flex items-center justify-center"
                           style={{ backgroundColor: config?.primaryColor || '#3b82f6' }}
                         >
@@ -310,9 +313,9 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
                           key={reply.id}
                           onClick={() => handleQuickReply(reply)}
                           className="px-3 py-1 text-xs border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
-                          style={{ 
+                          style={{
                             borderColor: config?.primaryColor,
-                            color: config?.primaryColor 
+                            color: config?.primaryColor
                           }}
                         >
                           {reply.text}
