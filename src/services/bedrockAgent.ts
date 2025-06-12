@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'https://ow0lv5yaw7.execute-api.us-east-2.amazonaws.com';
+const API_URL = 'https://ow0lv5yaw7.execute-api.us-east-2.amazonaws.com/chat-with-agent';
 
 export interface BedrockAgentResponse {
   message: string;
