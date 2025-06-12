@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   Navigate,
+  UNSAFE_NavigationContext as NavigationContext,
 } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import HomePage from "./pages/HomePage";
@@ -51,6 +52,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   return <>{children}</>;
 };
 
+// Add future flags configuration
+const router = {
+  future: {
+    v7_startTransition: true,
+    v7_relativeSplatPath: true
+  }
+};
+
 function App() {
   return (
     <>
@@ -89,7 +98,7 @@ function App() {
         <meta name="twitter:image" content="/Logo.svg" />
       </Helmet>
       <AuthProvider>
-        <Router>
+        <Router future={router.future}>
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/calculator" element={<CalculatorPage />} />
