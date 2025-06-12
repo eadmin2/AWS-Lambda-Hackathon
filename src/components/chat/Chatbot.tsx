@@ -265,10 +265,10 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
                               : undefined
                           }}
                         >
-                          {/*  REPLACE THIS LINE:
-                          {message.content}
-                          WITH THE FOLLOWING */}
-                          <div dangerouslySetInnerHTML={{ __html: message.content }} />
+                          <div 
+                            dangerouslySetInnerHTML={{ __html: message.content }} 
+                            className="prose prose-sm max-w-none [&_a]:text-blue-600 [&_a]:underline [&_a]:hover:text-blue-800"
+                          />
                         </div>
 
                         {message.sender === 'user' && (

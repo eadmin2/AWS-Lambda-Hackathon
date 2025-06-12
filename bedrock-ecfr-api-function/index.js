@@ -1,0 +1,343 @@
+const https = require('https');
+
+/**
+ * Lambda function to search eCFR API for VA disability rating criteria
+ */
+exports.handler = async (event) => {
+    console.log('Event received:', JSON.stringify(event, null, 2));
+
+    try {
+        const { messageVersion, agent, actionGroup, function: functionName, parameters } = event;
+
+        if (functionName === 'searchCFR') {
+            return await searchCFR(parameters);
+        } else if (functionName === 'getCFRSection') {
+            return await getCFRSection(parameters);
+        }
+
+        return {
+            messageVersion: "1.0",
+            response: {
+                actionGroup: actionGroup,
+                function: functionName,
+                functionResponse: {
+                    responseBody: {
+                        "TEXT": {
+                            "body": "Unknown function requested"
+                        }
+                    }
+                }
+            }
+        };
+
+    } catch (error) {
+        console.error('Error:', error);
+        return {
+            messageVersion: "1.0",
+            response: {
+                actionGroup: event.actionGroup,
+                function: event.function,
+                functionResponse: {
+                    responseBody: {
+                        "TEXT": {
+                            "body": `Error: ${error.message}`
+                        }
+                    }
+                }
+            }
+        };
+    }
+};
+
+/**
+ * Search for CFR sections related to a medical condition
+ */
+async function searchCFR(parameters) {
+    const searchQuery = parameters.find(p => p.name === 'searchQuery')?.value || '';
+    const part = parameters.find(p => p.name === 'part')?.value || '4';
+
+    console.log(`Searching CFR Part ${part} for: ${searchQuery}`);
+
+    try {
+        // Get the structure of 38 CFR Part 4
+        const structureUrl = `https://www.ecfr.gov/api/versioner/v1/structure/2024-01-01/title-38.json`; // Fixed date
+        console.log(`Fetching structure from: ${structureUrl}`);
+
+        const data = await makeHttpsRequest(structureUrl);
+        console.log('Structure data received, searching for sections...');
+
+        // Filter to Part 4 sections that might match the search query
+        const part4Sections = filterSections(data, searchQuery, part);
+
+        if (part4Sections.length === 0) {
+            // Return basic information if no specific matches
+            return formatResponse('searchCFR', `No specific CFR sections found for "${searchQuery}" in Part ${part}. You may want to try searching for specific body parts or conditions like "musculoskeletal", "mental", "respiratory", etc.`);
+        }
+
+        // Return the section information we found
+        let responseText = `Found ${part4Sections.length} relevant CFR section(s) for "${searchQuery}":\n\n`;
+
+        part4Sections.slice(0, 5).forEach(section => {
+            responseText += `**38 CFR § ${section.identifier}** - ${section.label}\n`;
+            if (section.description) {
+                responseText += `${section.description}\n`;
+            }
+            responseText += '\n';
+        });
+
+        responseText += '\nNote: This shows the section titles. For detailed rating criteria, ask me to get the specific section content (e.g., "Get me 38 CFR section 4.71a").';
+
+        const finalResponse = formatResponse('searchCFR', hyperlinkUrls(responseText)); // Apply hyperlink function
+        console.log("searchCFR Final Response:", JSON.stringify(finalResponse)); // Log the final response
+        return finalResponse;
+
+    } catch (error) {
+        console.error('Search error:', error);
+        const errorResponse = formatResponse('searchCFR', hyperlinkUrls(`Error searching CFR: ${error.message}. The eCFR API may be temporarily unavailable.`)); // Apply hyperlink function
+        console.log("searchCFR Error Response:", JSON.stringify(errorResponse)); // Log error response
+        return errorResponse;
+    }
+}
+
+/**
+ * Helper function to find a section in the CFR structure
+ */
+function findSectionInStructure(data, sectionIdentifier) {
+    function searchNode(node) {
+        if (node.identifier === sectionIdentifier) {
+            return node;
+        }
+
+        if (node.children) {
+            for (const child of node.children) {
+                const found = searchNode(child);
+                if (found) return found;
+            }
+        }
+
+        return null;
+    }
+
+    return searchNode(data);
+}
+
+/**
+ * Get a specific CFR section
+ */
+async function getCFRSection(parameters) {
+    const sectionNumber = parameters.find(p => p.name === 'sectionNumber')?.value || '';
+
+    console.log(`Getting CFR section: ${sectionNumber}`);
+
+    try {
+        const content = await getCFRSectionContent(sectionNumber);
+
+        if (!content) {
+            return formatResponse('getCFRSection', `Section 38 CFR § ${sectionNumber} not found`);
+        }
+
+        const responseText = `**38 CFR § ${sectionNumber}**\n\n${content}`;
+        const finalResponse = formatResponse('getCFRSection', hyperlinkUrls(responseText)); // Apply hyperlink function
+        console.log("getCFRSection Final Response:", JSON.stringify(finalResponse)); // Log final response
+        return finalResponse;
+
+    } catch (error) {
+        console.error('Get section error:', error);
+        const errorResponse = formatResponse('getCFRSection', hyperlinkUrls(`Error retrieving CFR section: ${error.message}`)); // Apply hyperlink function
+        console.log("getCFRSection Error Response:", JSON.stringify(errorResponse)); // Log error response
+        return errorResponse;
+    }
+}
+
+/**
+ * Get the content of a specific CFR section
+ */
+async function getCFRSectionContent(sectionIdentifier) {
+    // Try multiple API endpoint formats
+    const possibleUrls = [
+        `https://www.ecfr.gov/api/versioner/v1/full/2024-01-01/title-38/part-4/section-${sectionIdentifier}`, // Fixed date
+        `https://www.ecfr.gov/api/versioner/v1/full/2024-01-01/title-38/part-4/section-${sectionIdentifier}`, // Fixed date
+        `https://www.ecfr.gov/api/versioner/v1/structure/2024-01-01/title-38.json` // Fixed date
+    ];
+
+    console.log(`Trying to get section ${sectionIdentifier}`);
+
+    for (const url of possibleUrls) {
+        try {
+            console.log(`Trying URL: ${url}`);
+            const data = await makeHttpsRequest(url);
+            console.log(`Got response from ${url}:`, JSON.stringify(data, null, 2));
+
+            if (data && data.content) {
+                return extractTextFromContent(data.content);
+            } else if (data && data.children) {
+                // If we got the structure, search for the specific section
+                const section = findSectionInStructure(data, sectionIdentifier);
+                if (section) {
+                    return `Found section ${sectionIdentifier}: ${section.label}\n\n${section.text || 'Content not available in structure API'}`;
+                }
+            }
+        } catch (error) {
+            console.error(`Error with URL ${url}:`, error.message);
+            continue;
+        }
+    }
+
+    return `Unable to retrieve CFR section ${sectionIdentifier}. The eCFR API may be temporarily unavailable or the section format may have changed.`;
+}
+
+/**
+ * Filter sections based on search query
+ */
+function filterSections(data, searchQuery, part) {
+    if (!data || !data.children) return [];
+
+    const query = searchQuery.toLowerCase();
+    const sections = [];
+
+    function searchInNode(node) {
+        if (node.type === 'section' && node.identifier && node.identifier.startsWith(`${part}.`)) {
+            const label = (node.label || '').toLowerCase();
+            const description = (node.label_description || '').toLowerCase();
+
+            // Check if search terms match
+            const searchTerms = query.split(' ');
+            const matchScore = searchTerms.reduce((score, term) => {
+                if (label.includes(term) || description.includes(term)) {
+                    return score + 1;
+                }
+                return score;
+            }, 0);
+
+            if (matchScore > 0) {
+                sections.push({
+                    identifier: node.identifier,
+                    label: node.label,
+                    description: node.label_description,
+                    matchScore: matchScore
+                });
+            }
+        }
+
+        if (node.children) {
+            node.children.forEach(child => searchInNode(child));
+        }
+    }
+
+    searchInNode(data);
+
+    // Sort by match score (highest first)
+    return sections.sort((a, b) => b.matchScore - a.matchScore);
+}
+
+/**
+ * Extract readable text from eCFR content structure
+ */
+function extractTextFromContent(content) {
+    if (typeof content === 'string') {
+        return content.replace(/<[^>]*>/g, '').trim(); // Remove HTML tags
+    }
+
+    if (Array.isArray(content)) {
+        return content.map(item => extractTextFromContent(item)).join('\n');
+    }
+
+    if (content && typeof content === 'object') {
+        if (content.text) {
+            return content.text.replace(/<[^>]*>/g, '').trim();
+        }
+
+        // Try to extract from common content fields
+        const fields = ['content', 'text', 'value', 'body'];
+        for (const field of fields) {
+            if (content[field]) {
+                return extractTextFromContent(content[field]);
+            }
+        }
+
+        // If it's an object with children, process recursively
+        if (content.children || content.paragraphs || content.sections) {
+            const children = content.children || content.paragraphs || content.sections;
+            return extractTextFromContent(children);
+        }
+    }
+
+    return '';
+}
+
+/**
+ * Make HTTPS request and return parsed JSON
+ */
+function makeHttpsRequest(url) {
+    return new Promise((resolve, reject) => {
+        const request = https.get(url, (response) => {
+            let data = '';
+
+            response.on('data', (chunk) => {
+                data += chunk;
+            });
+
+            response.on('end', () => {
+                try {
+                    if (!data) {  // Check for empty response
+                        reject(new Error("Empty response from API"));
+                        return;
+                    }
+                    const jsonData = JSON.parse(data);
+                    resolve(jsonData);
+                } catch (error) {
+                    reject(new Error(`Failed to parse JSON: ${error.message}`));
+                }
+            });
+        });
+
+        request.on('error', (error) => {
+            reject(error);
+        });
+
+        request.setTimeout(10000, () => {
+            request.abort();
+            reject(new Error('Request timeout'));
+        });
+    });
+}
+
+/**
+ * Format response for Bedrock Agent
+ */
+function formatResponse(functionName, responseText) {
+    return {
+        messageVersion: "1.0",
+        response: {
+            actionGroup: "eCFRActionGroup",
+            function: functionName,
+            functionResponse: {
+                responseBody: {
+                    "TEXT": {
+                        "body": responseText,
+                        "contentType": "text/html"
+                    }
+                }
+            }
+        }
+    };
+}
+
+/**
+ * Function to hyperlink URLs in the response text
+ */
+function hyperlinkUrls(text) {
+    console.log("Original text:", text); // Add this line
+    const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/g;
+    const result = text.replace(urlRegex, (url) => {
+        let href = url; // Default to the original URL
+
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            href = 'http://' + url; // Prepend 'http://' if no protocol
+        }
+
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer">${href}</a>`;
+    });
+    console.log("Transformed text:", result); // Add this line
+    return result;
+}
