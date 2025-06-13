@@ -43,9 +43,9 @@ const HomePage: React.FC = () => {
                   Upload your medical documents and get an estimated VA disability
                   rating in minutes using advanced AI.
                 </p>
-                <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex flex-col xl:flex-row space-y-3 xl:space-y-0 xl:space-x-4">
                   <Link to="/pricing#pricing-section">
-                    <Button size="lg" className="w-full sm:w-auto">
+                    <Button size="lg" className="w-full xl:w-auto">
                       View Pricing
                     </Button>
                   </Link>
@@ -53,7 +53,7 @@ const HomePage: React.FC = () => {
                     <Button
                       variant="secondary"
                       size="lg"
-                      className="w-full sm:w-auto"
+                      className="w-full xl:w-auto"
                     >
                       How It Works
                     </Button>
@@ -62,7 +62,7 @@ const HomePage: React.FC = () => {
                     <Button
                       variant="secondary"
                       size="lg"
-                      className="w-full sm:w-auto text-primary-900"
+                      className="w-full xl:w-auto text-primary-900"
                     >
                       Try the 2025 VA Disability Calculator
                     </Button>
