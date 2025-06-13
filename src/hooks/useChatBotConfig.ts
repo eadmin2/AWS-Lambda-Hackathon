@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { PostgrestSingleResponse } from '@supabase/supabase-js';
 
 export interface ChatBotConfig {
   id: string;
@@ -32,115 +34,103 @@ export function useChatBotConfig(): UseChatBotConfigReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Fetch config from Supabase
   const fetchConfig = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // For now, use default config since we don't have the API endpoint yet
-      const defaultConfig: ChatBotConfig = {
-        id: 'default',
-        botName: 'VA Assistant',
-        welcomeMessage: "Hi! I'm your VA Rating Assistant. How can I help you today?",
-        statusMessage: 'Online • Typically replies instantly',
-        inputPlaceholder: 'Type your message...',
-        primaryColor: '#3b82f6',
-        headerColor: '#f8fafc',
-        enabled: true,
-        position: 'bottom-right',
-        quickReplies: [
-          { id: '1', text: 'Calculate my rating', action: 'calculator' },
-          { id: '2', text: 'Upload documents', action: 'upload' },
-          { id: '3', text: 'Pricing info', action: 'pricing' },
-          { id: '4', text: 'Contact support', action: 'support' },
-        ],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        userTextColor: '#ffffff',
-      };
-      
-      setConfig(defaultConfig);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load chatbot config';
-      setError(errorMessage);
-      console.error('Error fetching chatbot config:', err);
-      
-      // Fallback to default config
-      setConfig({
-        id: 'default',
-        botName: 'VA Assistant',
-        welcomeMessage: "Hi! I'm your VA Rating Assistant. How can I help you today?",
-        statusMessage: 'Online • Typically replies instantly',
-        inputPlaceholder: 'Type your message...',
-        primaryColor: '#3b82f6',
-        headerColor: '#f8fafc',
-        enabled: true,
-        position: 'bottom-right',
-        quickReplies: [
-          { id: '1', text: 'Calculate my rating', action: 'calculator' },
-          { id: '2', text: 'Upload documents', action: 'upload' },
-          { id: '3', text: 'Pricing info', action: 'pricing' },
-          { id: '4', text: 'Contact support', action: 'support' },
-        ],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        userTextColor: '#ffffff',
-      });
-    } finally {
+    setLoading(true);
+    setError(null);
+    const { data, error }: PostgrestSingleResponse<any> = await supabase
+      .from('chatbot_config')
+      .select('*')
+      .order('created_at', { ascending: true })
+      .limit(1);
+    if (error) {
+      setError(error.message);
       setLoading(false);
+      return;
     }
+    if (data && data.length > 0) {
+      // Parse quickReplies if needed
+      const cfg = {
+        ...data[0],
+        quickReplies: typeof data[0].quick_replies === 'string' ? JSON.parse(data[0].quick_replies) : data[0].quick_replies,
+        botName: data[0].bot_name,
+        welcomeMessage: data[0].welcome_message,
+        statusMessage: data[0].status_message,
+        inputPlaceholder: data[0].input_placeholder,
+        primaryColor: data[0].primary_color,
+        headerColor: data[0].header_color,
+        userTextColor: data[0].user_text_color,
+        position: data[0].position,
+        created_at: data[0].created_at,
+        updated_at: data[0].updated_at,
+        enabled: data[0].enabled,
+        id: data[0].id,
+      };
+      setConfig(cfg);
+    }
+    setLoading(false);
   };
 
+  // Update config in Supabase
   const updateConfig = async (updates: Partial<ChatBotConfig>) => {
-    try {
-      // For now, just update local state
-      // TODO: Replace with actual API call when backend is ready
-      if (config) {
-        const updatedConfig = { ...config, ...updates };
-        setConfig(updatedConfig);
-        
-        // Store in localStorage for persistence during development
-        localStorage.setItem('chatbot_config', JSON.stringify(updatedConfig));
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update chatbot config';
-      setError(errorMessage);
-      throw err;
-    }
+    if (!config) return;
+    const updateObj: any = { ...updates };
+    // Map camelCase to snake_case for DB
+    if (updateObj.botName) updateObj.bot_name = updateObj.botName;
+    if (updateObj.welcomeMessage) updateObj.welcome_message = updateObj.welcomeMessage;
+    if (updateObj.statusMessage) updateObj.status_message = updateObj.statusMessage;
+    if (updateObj.inputPlaceholder) updateObj.input_placeholder = updateObj.inputPlaceholder;
+    if (updateObj.primaryColor) updateObj.primary_color = updateObj.primaryColor;
+    if (updateObj.headerColor) updateObj.header_color = updateObj.headerColor;
+    if (updateObj.userTextColor) updateObj.user_text_color = updateObj.userTextColor;
+    if (updateObj.quickReplies) updateObj.quick_replies = JSON.stringify(updateObj.quickReplies);
+    delete updateObj.botName;
+    delete updateObj.welcomeMessage;
+    delete updateObj.statusMessage;
+    delete updateObj.inputPlaceholder;
+    delete updateObj.primaryColor;
+    delete updateObj.headerColor;
+    delete updateObj.userTextColor;
+    delete updateObj.quickReplies;
+    await supabase
+      .from('chatbot_config')
+      .update(updateObj)
+      .eq('id', config.id);
+    // No need to setConfig here, real-time will handle it
   };
 
   useEffect(() => {
-    // Try to load from localStorage first
-    const savedConfig = localStorage.getItem('chatbot_config');
-    if (savedConfig) {
-      try {
-        const parsedConfig = JSON.parse(savedConfig);
-        // Ensure enabled is true
-        parsedConfig.enabled = true;
-        setConfig(parsedConfig);
-        setLoading(false);
-        // Don't return here, so we still set up the storage listener
-      } catch (err) {
-        console.error('Error parsing saved config:', err);
-      }
-    }
-    
     fetchConfig();
-
-    // Listen for localStorage changes (from other tabs/components)
-    function handleStorage(event: StorageEvent) {
-      if (event.key === 'chatbot_config' && event.newValue) {
-        try {
-          const parsedConfig = JSON.parse(event.newValue);
-          parsedConfig.enabled = true;
-          setConfig(parsedConfig);
-        } catch (err) {
-          // ignore
+    // Subscribe to real-time updates
+    const channel = supabase
+      .channel('chatbot_config')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'chatbot_config' },
+        (payload) => {
+          const newConfig = payload.new;
+          setConfig({
+            ...newConfig,
+            quickReplies: typeof newConfig.quick_replies === 'string' ? JSON.parse(newConfig.quick_replies) : newConfig.quick_replies,
+            botName: newConfig.bot_name,
+            welcomeMessage: newConfig.welcome_message,
+            statusMessage: newConfig.status_message,
+            inputPlaceholder: newConfig.input_placeholder,
+            primaryColor: newConfig.primary_color,
+            headerColor: newConfig.header_color,
+            userTextColor: newConfig.user_text_color,
+            position: newConfig.position,
+            created_at: newConfig.created_at,
+            updated_at: newConfig.updated_at,
+            enabled: newConfig.enabled,
+            id: newConfig.id,
+          });
         }
-      }
-    }
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return {
