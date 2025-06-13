@@ -32,6 +32,17 @@ interface ChatBotProps {
   className?: string;
 }
 
+function hyperlinkUrls(text: string): string {
+  const urlRegex = /((https?:\/\/|www\.)[\w\-\.]+(\.[a-zA-Z]{2,})(:[0-9]{1,5})?(\/\S*)?)/g;
+  return text.replace(urlRegex, (url) => {
+    let href = url;
+    if (!url.startsWith('http')) {
+      href = 'https://' + url;
+    }
+    return `<a href="${href}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+  });
+}
+
 const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
   const { config, loading: configLoading } = useChatBotConfig();
   const [sessionId] = useState(() => uuidv4()); // Generate a unique session ID when component mounts
@@ -84,10 +95,10 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
   const sendMessage = async (content: string, type: 'text' | 'quick-reply' = 'text') => {
     if (!content.trim()) return;
 
-    // Add user message
+    // Add user message (with hyperlinks)
     const userMessage: Message = {
       id: Date.now().toString(),
-      content,
+      content: hyperlinkUrls(content),
       sender: 'user',
       timestamp: new Date(),
       type
