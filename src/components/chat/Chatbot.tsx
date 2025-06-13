@@ -12,6 +12,10 @@ import {
 import { useChatBotConfig } from '../../hooks/useChatBotConfig';
 import { sendMessageToBedrockAgent } from '../../services/bedrockAgent';
 import { v4 as uuidv4 } from 'uuid';
+import DOMPurify from 'dompurify';
+import LinkifyIt from 'linkify-it';
+
+const linkify = new LinkifyIt();
 
 interface Message {
   id: string;
@@ -32,15 +36,23 @@ interface ChatBotProps {
   className?: string;
 }
 
-function hyperlinkUrls(text: string): string {
-  const urlRegex = /((https?:\/\/|www\.)[\w\-\.]+(\.[a-zA-Z]{2,})(:[0-9]{1,5})?(\/\S*)?)/g;
-  return text.replace(urlRegex, (url) => {
-    let href = url;
-    if (!url.startsWith('http')) {
-      href = 'https://' + url;
-    }
-    return `<a href="${href}" target="_blank" rel="noopener noreferrer">${url}</a>`;
-  });
+function linkifyAndSanitize(text: string): string {
+  // Find all links in the text
+  const matches = linkify.match(text);
+  if (!matches) return DOMPurify.sanitize(text);
+
+  let result = '';
+  let lastIndex = 0;
+  for (const match of matches) {
+    // Append text before the link
+    result += DOMPurify.sanitize(text.slice(lastIndex, match.index));
+    // Append the link as an anchor tag
+    result += `<a href="${match.url}" target="_blank" rel="noopener noreferrer">${match.text}</a>`;
+    lastIndex = match.lastIndex;
+  }
+  // Append any remaining text after the last link
+  result += DOMPurify.sanitize(text.slice(lastIndex));
+  return result;
 }
 
 const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
@@ -98,7 +110,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
     // Add user message (with hyperlinks)
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: hyperlinkUrls(content),
+      content: linkifyAndSanitize(content),
       sender: 'user',
       timestamp: new Date(),
       type
@@ -114,7 +126,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
 
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: response.message,
+        content: linkifyAndSanitize(response.message),
         sender: 'bot',
         timestamp: new Date(),
         type: 'text'
@@ -125,7 +137,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
       console.error('Chatbot error:', error);
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: error instanceof Error ? error.message : "I'm sorry, I'm having trouble responding right now. Please try again or contact our support team.",
+        content: linkifyAndSanitize(error instanceof Error ? error.message : "I'm sorry, I'm having trouble responding right now. Please try again or contact our support team."),
         sender: 'bot',
         timestamp: new Date(),
         type: 'text'
