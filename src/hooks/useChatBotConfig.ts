@@ -101,9 +101,10 @@ export function useChatBotConfig(): UseChatBotConfigReturn {
 
   useEffect(() => {
     fetchConfig();
-    // Subscribe to real-time updates
+    // Use a unique channel name per instance to avoid multiple subscribe errors
+    const channelName = 'chatbot_config_' + Math.random().toString(36).substring(2, 15);
     const channel = supabase
-      .channel('chatbot_config')
+      .channel(channelName)
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'chatbot_config' },

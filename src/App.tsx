@@ -4,7 +4,6 @@ import {
   Routes,
   Route,
   Navigate,
-  UNSAFE_NavigationContext as NavigationContext,
 } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import HomePage from "./pages/HomePage";
