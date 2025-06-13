@@ -6,65 +6,92 @@
   html {
     -webkit-tap-highlight-color: transparent;
     scroll-behavior: smooth;
+    font-size: 16px; /* Base font size for rem calculations */
   }
 
   body {
     @apply bg-gray-50 text-gray-900 min-h-screen;
+    line-height: 1.5;
   }
 
+  /* Improved heading hierarchy with better contrast */
   h1 {
-    @apply text-3xl font-bold md:text-4xl;
+    @apply text-3xl font-bold md:text-4xl text-gray-900 mb-6;
   }
 
   h2 {
-    @apply text-2xl font-bold md:text-3xl;
+    @apply text-2xl font-bold md:text-3xl text-gray-800 mb-5;
   }
 
   h3 {
-    @apply text-xl font-semibold md:text-2xl;
+    @apply text-xl font-semibold md:text-2xl text-gray-800 mb-4;
   }
 
   h4 {
-    @apply text-lg font-semibold md:text-xl;
+    @apply text-lg font-semibold md:text-xl text-gray-800 mb-3;
   }
 
-  h5,
-  h6 {
-    @apply text-base font-semibold md:text-lg;
+  h5, h6 {
+    @apply text-base font-semibold md:text-lg text-gray-800 mb-2;
+  }
+
+  /* Improved focus styles */
+  :focus-visible {
+    @apply outline-2 outline-primary-600 outline-offset-2;
+  }
+
+  /* Skip to content link */
+  .skip-to-content {
+    @apply sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-primary-600 focus:rounded-md;
   }
 }
 
 @layer components {
+  /* Improved button styles with better contrast and touch targets */
   .btn {
-    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none;
+    @apply inline-flex items-center justify-center rounded-md px-4 py-3 text-sm font-medium transition-colors
+    focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2
+    disabled:opacity-50 disabled:pointer-events-none
+    min-h-[44px] min-w-[44px];
   }
 
   .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700 shadow-sm;
+    @apply bg-primary-700 text-white hover:bg-primary-800 active:bg-primary-900 shadow-sm;
   }
 
   .btn-secondary {
-    @apply bg-white text-gray-900 border border-gray-300 hover:bg-gray-100;
+    @apply bg-white text-gray-900 border-2 border-gray-300 hover:bg-gray-100 active:bg-gray-200;
   }
 
   .btn-accent {
-    @apply bg-accent-600 text-gray-900 hover:bg-accent-700;
+    @apply bg-accent-600 text-gray-900 hover:bg-accent-700 active:bg-accent-800;
   }
 
   .btn-danger {
-    @apply bg-error-500 text-white hover:bg-error-900;
+    @apply bg-error-500 text-white hover:bg-error-900 active:bg-error-900 shadow-sm;
   }
 
+  /* Improved form input styles */
   .input {
-    @apply block w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 disabled:opacity-50;
+    @apply block w-full rounded-md border-2 border-gray-300 px-4 py-3 text-base
+    placeholder-gray-500 shadow-sm
+    focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600
+    disabled:opacity-50 disabled:bg-gray-100;
   }
 
+  /* Improved card styles */
   .card {
-    @apply bg-white rounded-lg border border-gray-200 shadow-sm p-6;
+    @apply bg-white rounded-lg border-2 border-gray-200 shadow-sm p-6;
+  }
+
+  /* Improved link styles */
+  a {
+    @apply text-primary-700 hover:text-primary-800 underline-offset-2 hover:underline
+    focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 focus:rounded;
   }
 }
 
-/* Chatbot specific styles */
+/* Chatbot specific styles with improved accessibility */
 .chatbot-container {
   position: fixed !important;
   z-index: 9999 !important;
@@ -74,14 +101,23 @@
 .chatbot-container button,
 .chatbot-container div {
   pointer-events: auto !important;
+  min-height: 44px;
+  min-width: 44px;
 }
 
-/* Bolt.new badge spin effect */
+/* Improved animation for reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .bolt-badge-spin:hover {
+    animation: none;
+  }
+}
+
 @keyframes bolt-spin {
   to {
     transform: rotate(360deg);
   }
 }
+
 .bolt-badge-spin:hover {
   animation: bolt-spin 0.7s linear 1;
 }

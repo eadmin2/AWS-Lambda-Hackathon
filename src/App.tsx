@@ -37,7 +37,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { user, profile, isLoading } = useAuth();
 
   if (isLoading) {
-    return null;
+    return <div role="status" aria-label="Loading authentication status">Loading...</div>;
   }
 
   if (!user) {
@@ -69,6 +69,8 @@ function App() {
           name="description"
           content="Get instant, AI-powered VA disability rating estimates for veterans. Fast, accurate, and secure."
         />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="theme-color" content="#0A2463" />
 
         {/* Open Graph / Facebook / LinkedIn */}
         <meta property="og:type" content="website" />
@@ -98,60 +100,67 @@ function App() {
       </Helmet>
       <AuthProvider>
         <Router future={router.future}>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/calculator" element={<CalculatorPage />} />
-            <Route path="/pricing" element={<PricingPage />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/faq" element={<FAQPage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/help" element={<HelpPage />} />
-            <Route path="/privacy" element={<PrivacyPage />} />
-            <Route path="/terms" element={<TermsPage />} />
-            <Route path="/disclaimer" element={<DisclaimerPage />} />
-            <Route path="/goodbye" element={<GoodbyePage />} />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <DashboardPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <ProtectedRoute>
-                  <ProfilePage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute adminOnly>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/checkout"
-              element={
-                <ProtectedRoute>
-                  <CheckoutPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/documents"
-              element={
-                <ProtectedRoute>
-                  <DocumentsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+          {/* Skip to content link */}
+          <a href="#main-content" className="skip-to-content">
+            Skip to main content
+          </a>
+          
+          <main id="main-content" role="main">
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/calculator" element={<CalculatorPage />} />
+              <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/faq" element={<FAQPage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/help" element={<HelpPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/disclaimer" element={<DisclaimerPage />} />
+              <Route path="/goodbye" element={<GoodbyePage />} />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <DashboardPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute adminOnly>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/checkout"
+                element={
+                  <ProtectedRoute>
+                    <CheckoutPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/documents"
+                element={
+                  <ProtectedRoute>
+                    <DocumentsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </main>
         </Router>
       </AuthProvider>
     </>

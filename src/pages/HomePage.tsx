@@ -36,7 +36,7 @@ const HomePage: React.FC = () => {
                 transition={{ duration: 0.5 }}
                 className="ml-[clamp(56px,16vw,104px)] sm:ml-0"
               >
-                <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-4">
+                <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-4 text-white">
                   Simplify Your VA Disability Claim Process!
                 </h1>
                 <p className="text-xl md:text-2xl text-gray-200 mb-8">
@@ -283,7 +283,7 @@ const HomePage: React.FC = () => {
       <section className="py-16 bg-primary-800 text-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto">
-            <h2 className="text-3xl font-bold mb-4">Ready to get started?</h2>
+            <h2 className="text-3xl font-bold text-white mb-4">Ready to get started?</h2>
             <p className="text-xl text-gray-200 mb-8">
               Choose a plan and get your estimated VA disability rating in
               minutes.
