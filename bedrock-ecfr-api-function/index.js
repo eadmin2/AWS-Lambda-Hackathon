@@ -327,17 +327,23 @@ function formatResponse(functionName, responseText) {
  * Function to hyperlink URLs in the response text
  */
 function hyperlinkUrls(text) {
-    console.log("Original text:", text); // Add this line
-    const urlRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)/g;
+    console.log("Original text:", text);
+    
+    // More comprehensive URL regex that handles various URL formats
+    const urlRegex = /(?:(?:https?:\/\/)|(?:www\.))(?:[-\w.])+(?:\.[a-zA-Z]{2,3}|:[0-9]{1,5})(?:\/[^\s]*)?/g;
+    
     const result = text.replace(urlRegex, (url) => {
-        let href = url; // Default to the original URL
+        let href = url;
+        let displayUrl = url;
 
+        // Add protocol if missing
         if (!url.startsWith('http://') && !url.startsWith('https://')) {
-            href = 'http://' + url; // Prepend 'http://' if no protocol
+            href = 'https://' + url;
         }
 
-        return `<a href="${href}" target="_blank" rel="noopener noreferrer">${href}</a>`;
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color: #3b82f6; text-decoration: underline; cursor: pointer;">${displayUrl}</a>`;
     });
-    console.log("Transformed text:", result); // Add this line
+    
+    console.log("Transformed text:", result);
     return result;
 }

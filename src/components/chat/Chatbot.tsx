@@ -270,7 +270,11 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
                         >
                           <div 
                             dangerouslySetInnerHTML={{ __html: message.content }} 
-                            className="prose prose-sm max-w-none [&_a]:text-blue-600 [&_a]:underline [&_a]:hover:text-blue-800"
+                            className={`prose prose-sm max-w-none ${
+                              message.sender === 'user'
+                                ? '[&_a]:text-white [&_a]:underline [&_a]:hover:opacity-80'
+                                : '[&_a]:text-blue-600 [&_a]:underline [&_a]:hover:text-blue-800'
+                            }`}
                           />
                         </div>
 
