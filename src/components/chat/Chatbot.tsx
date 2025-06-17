@@ -295,7 +295,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
                             dangerouslySetInnerHTML={{ __html: message.content }} 
                             className={`prose prose-sm max-w-none ${
                               message.sender === 'user'
-                                ? '[&_a]:text-white [&_a]:underline [&_a]:hover:opacity-80'
+                                ? '[&_a]:text-white text-white [&_a]:underline [&_a]:hover:opacity-80'
                                 : '[&_a]:text-blue-600 [&_a]:underline [&_a]:hover:text-blue-800'
                             }`}
                           />
@@ -322,9 +322,9 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
                         </div>
                         <div className="bg-gray-100 px-3 py-2 rounded-2xl">
                           <div className="flex space-x-1">
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                            <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                            <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
+                            <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                            <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                           </div>
                         </div>
                       </div>
@@ -333,27 +333,6 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
 
                   <div ref={messagesEndRef} />
                 </div>
-
-                {/* Quick Replies */}
-                {messages.length > 0 && (
-                  <div className="px-4 pb-2">
-                    <div className="flex flex-wrap gap-2">
-                      {quickReplies.map((reply) => (
-                        <button
-                          key={reply.id}
-                          onClick={() => handleQuickReply(reply)}
-                          className="px-3 py-1 text-xs border border-gray-300 rounded-full hover:bg-gray-50 transition-colors"
-                          style={{
-                            borderColor: config?.primaryColor,
-                            color: config?.primaryColor
-                          }}
-                        >
-                          {reply.text}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 {/* Input Area */}
                 <div className="p-4 border-t border-gray-200">
