@@ -357,6 +357,22 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
                       <Send className="h-4 w-4 text-white" />
                     </button>
                   </div>
+                  
+                  {/* Quick Reply Buttons */}
+                  {messages.length === 1 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {quickReplies.map((reply) => (
+                        <button
+                          key={reply.id}
+                          onClick={() => handleQuickReply(reply)}
+                          className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
+                          style={{ color: config?.primaryColor || '#3b82f6' }}
+                        >
+                          {reply.text}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </>
             )}
