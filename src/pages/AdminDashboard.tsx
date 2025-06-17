@@ -122,6 +122,7 @@ const AdminDashboard = () => {
   const [documents, setDocuments] = useState<AdminDocument[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [activityLogs, setActivityLogs] = useState<AdminActivityLog[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
 
   // User detail modal state
   const [selectedUser, setSelectedUser] = useState<
@@ -140,46 +141,50 @@ const AdminDashboard = () => {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [bellOpen, setBellOpen] = useState(false);
 
+  // Fetch initial data
   useEffect(() => {
-    if (!user || profile?.role !== "admin") return;
+    let mounted = true;
 
     const fetchData = async () => {
+      if (!user || profile?.role !== "admin") return;
+      
       try {
+        setIsLoadingData(true);
+        
         // Fetch stats
-        const { data: usersData } = await supabase.from("profiles").select("*");
+        const [usersData, docsData, paymentsData] = await Promise.all([
+          supabase.from("profiles").select("*"),
+          supabase.from("documents").select("*"),
+          supabase.from("payments").select("*").eq("subscription_status", "active")
+        ]);
 
-        const { data: docsData } = await supabase.from("documents").select("*");
-
-        const { data: paymentsData } = await supabase
-          .from("payments")
-          .select("*")
-          .eq("subscription_status", "active");
+        if (!mounted) return;
 
         setStats({
-          totalUsers: usersData?.length || 0,
-          totalDocuments: docsData?.length || 0,
-          activeSubscriptions: paymentsData?.length || 0,
-          revenueThisMonth: paymentsData?.reduce((acc) => acc + 49, 0) || 0,
+          totalUsers: usersData.data?.length || 0,
+          totalDocuments: docsData.data?.length || 0,
+          activeSubscriptions: paymentsData.data?.length || 0,
+          revenueThisMonth: paymentsData.data?.reduce((acc) => acc + 49, 0) || 0,
         });
 
         // Fetch users with their documents and payments
         const { data: userData } = await supabase.from("profiles").select(`
-            *,
-            documents (count),
-            payments (
-              subscription_status,
-              subscription_end_date,
-              upload_credits
-            )
-          `);
+          *,
+          documents (count),
+          payments (
+            subscription_status,
+            subscription_end_date,
+            upload_credits
+          )
+        `);
 
+        if (!mounted) return;
         setUsers(userData || []);
 
         // Fetch recent documents
         const { data: recentDocs } = await supabase
           .from("documents")
-          .select(
-            `
+          .select(`
             *,
             profiles (email, full_name),
             disability_estimates (
@@ -187,122 +192,187 @@ const AdminDashboard = () => {
               estimated_rating,
               combined_rating
             )
-          `,
-          )
+          `)
           .order("uploaded_at", { ascending: false })
           .limit(10);
 
+        if (!mounted) return;
         setDocuments(recentDocs || []);
       } catch (error) {
         console.error("Error fetching admin data:", error);
+      } finally {
+        if (mounted) {
+          setIsLoadingData(false);
+        }
       }
     };
 
     fetchData();
 
-    // Fetch analytics data
-    const fetchAnalytics = async () => {
-      // User signups by month
-      const { data: signupData } = await supabase.rpc("monthly_user_signups");
-      setUserSignups(signupData || []);
-      // Document uploads by month
-      const { data: docData } = await supabase.rpc("monthly_document_uploads");
-      setDocumentUploads(docData || []);
-      // Revenue by month
-      const { data: revData } = await supabase.rpc("monthly_revenue");
-      setRevenueTrends(revData || []);
-      // Active vs inactive users
-      const { data: activeData } = await supabase.rpc("active_inactive_users");
-      setActiveInactiveUsers(activeData || []);
+    return () => {
+      mounted = false;
     };
+  }, [user, profile]);
+
+  // Fetch analytics data
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchAnalytics = async () => {
+      if (!user || profile?.role !== "admin") return;
+
+      try {
+        const [
+          { data: signupData },
+          { data: docData },
+          { data: revData },
+          { data: activeData }
+        ] = await Promise.all([
+          supabase.rpc("monthly_user_signups"),
+          supabase.rpc("monthly_document_uploads"),
+          supabase.rpc("monthly_revenue"),
+          supabase.rpc("active_inactive_users")
+        ]);
+
+        if (!mounted) return;
+
+        setUserSignups(signupData || []);
+        setDocumentUploads(docData || []);
+        setRevenueTrends(revData || []);
+        setActiveInactiveUsers(activeData || []);
+      } catch (error) {
+        console.error("Error fetching analytics:", error);
+      }
+    };
+
     fetchAnalytics();
 
-    // Fetch notifications
-    const fetchNotifications = async () => {
-      const now = new Date();
-      const in7days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-      // Expiring subscriptions (end date within 7 days)
-      const { data: expiring } = await supabase
-        .from("payments")
-        .select(
-          "id, user_id, subscription_end_date, subscription_status, profiles (email, full_name)",
-        )
-        .eq("subscription_status", "active")
-        .gte("subscription_end_date", now.toISOString())
-        .lte("subscription_end_date", in7days.toISOString());
-      // New orders (last 7 days, status active)
-      const { data: newOrders } = await supabase
-        .from("payments")
-        .select(
-          "id, user_id, created_at, subscription_status, profiles (email, full_name)",
-        )
-        .eq("subscription_status", "active")
-        .gte(
-          "created_at",
-          new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        );
-      // Recently cancelled orders (last 7 days, status cancelled)
-      const { data: cancelled } = await supabase
-        .from("payments")
-        .select(
-          "id, user_id, created_at, subscription_status, profiles (email, full_name)",
-        )
-        .eq("subscription_status", "cancelled")
-        .gte(
-          "created_at",
-          new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        );
-      // Failed payments (last 7 days, status failed)
-      const { data: failed } = await supabase
-        .from("payments")
-        .select(
-          "id, user_id, created_at, subscription_status, profiles (email, full_name)",
-        )
-        .eq("subscription_status", "failed")
-        .gte(
-          "created_at",
-          new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        );
-      // Combine and sort notifications
-      const notifs = [
-        ...(expiring || []).map((n: any) => ({
-          type: "Expiring Subscription",
-          user: n.profiles?.full_name || n.profiles?.email || n.user_id,
-          date: n.subscription_end_date,
-        })),
-        ...(newOrders || []).map((n: any) => ({
-          type: "New Order",
-          user: n.profiles?.full_name || n.profiles?.email || n.user_id,
-          date: n.created_at,
-        })),
-        ...(cancelled || []).map((n: any) => ({
-          type: "Cancelled Order",
-          user: n.profiles?.full_name || n.profiles?.email || n.user_id,
-          date: n.created_at,
-        })),
-        ...(failed || []).map((n: any) => ({
-          type: "Failed Payment",
-          user: n.profiles?.full_name || n.profiles?.email || n.user_id,
-          date: n.created_at,
-        })),
-      ].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-      setNotifications(notifs);
+    return () => {
+      mounted = false;
     };
+  }, [user, profile]);
+
+  // Fetch notifications
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchNotifications = async () => {
+      if (!user || profile?.role !== "admin") return;
+
+      try {
+        const now = new Date();
+        const in7days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+        const [
+          { data: expiring },
+          { data: newOrders },
+          { data: cancelled },
+          { data: failed }
+        ] = await Promise.all([
+          supabase
+            .from("payments")
+            .select(
+              "id, user_id, subscription_end_date, subscription_status, profiles (email, full_name)"
+            )
+            .eq("subscription_status", "active")
+            .gte("subscription_end_date", now.toISOString())
+            .lte("subscription_end_date", in7days.toISOString()),
+          supabase
+            .from("payments")
+            .select(
+              "id, user_id, created_at, subscription_status, profiles (email, full_name)"
+            )
+            .eq("subscription_status", "active")
+            .gte(
+              "created_at",
+              new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
+            ),
+          supabase
+            .from("payments")
+            .select(
+              "id, user_id, created_at, subscription_status, profiles (email, full_name)"
+            )
+            .eq("subscription_status", "cancelled")
+            .gte(
+              "created_at",
+              new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
+            ),
+          supabase
+            .from("payments")
+            .select(
+              "id, user_id, created_at, subscription_status, profiles (email, full_name)"
+            )
+            .eq("subscription_status", "failed")
+            .gte(
+              "created_at",
+              new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
+            )
+        ]);
+
+        if (!mounted) return;
+
+        const notifs = [
+          ...(expiring || []).map((n: any) => ({
+            type: "Expiring Subscription",
+            user: n.profiles?.full_name || n.profiles?.email || n.user_id,
+            date: n.subscription_end_date,
+          })),
+          ...(newOrders || []).map((n: any) => ({
+            type: "New Order",
+            user: n.profiles?.full_name || n.profiles?.email || n.user_id,
+            date: n.created_at,
+          })),
+          ...(cancelled || []).map((n: any) => ({
+            type: "Cancelled Order",
+            user: n.profiles?.full_name || n.profiles?.email || n.user_id,
+            date: n.created_at,
+          })),
+          ...(failed || []).map((n: any) => ({
+            type: "Failed Payment",
+            user: n.profiles?.full_name || n.profiles?.email || n.user_id,
+            date: n.created_at,
+          }))
+        ].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+
+        setNotifications(notifs);
+      } catch (error) {
+        console.error("Error fetching notifications:", error);
+      }
+    };
+
     fetchNotifications();
+
+    return () => {
+      mounted = false;
+    };
   }, [user, profile]);
 
   // Fetch activity logs
   useEffect(() => {
-    if (!user || profile?.role !== "admin") return;
+    let mounted = true;
+
     const fetchLogs = async () => {
-      const { data } = await supabase
-        .from("admin_activity_log")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(20);
-      setActivityLogs(data || []);
+      if (!user || profile?.role !== "admin") return;
+
+      try {
+        const { data } = await supabase
+          .from("admin_activity_log")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(20);
+
+        if (!mounted) return;
+        setActivityLogs(data || []);
+      } catch (error) {
+        console.error("Error fetching activity logs:", error);
+      }
     };
+
     fetchLogs();
+
+    return () => {
+      mounted = false;
+    };
   }, [user, profile]);
 
   // Redirect if not admin or not allowed
@@ -442,423 +512,431 @@ const AdminDashboard = () => {
             Admin Dashboard
           </h1>
 
-          {/* Stats Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center">
-                  <Users className="h-8 w-8 text-primary-500" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">
-                      Total Users
-                    </p>
-                    <p className="text-2xl font-semibold text-gray-900">
-                      {stats.totalUsers}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {isLoadingData ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-gray-500">Loading dashboard data...</div>
+            </div>
+          ) : (
+            <>
+              {/* Stats Overview */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center">
+                      <Users className="h-8 w-8 text-primary-500" />
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-500">
+                          Total Users
+                        </p>
+                        <p className="text-2xl font-semibold text-gray-900">
+                          {stats.totalUsers}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center">
-                  <FileText className="h-8 w-8 text-primary-500" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">
-                      Documents
-                    </p>
-                    <p className="text-2xl font-semibold text-gray-900">
-                      {stats.totalDocuments}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center">
+                      <FileText className="h-8 w-8 text-primary-500" />
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-500">
+                          Documents
+                        </p>
+                        <p className="text-2xl font-semibold text-gray-900">
+                          {stats.totalDocuments}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center">
-                  <CreditCard className="h-8 w-8 text-primary-500" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">
-                      Active Subscriptions
-                    </p>
-                    <p className="text-2xl font-semibold text-gray-900">
-                      {stats.activeSubscriptions}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center">
+                      <CreditCard className="h-8 w-8 text-primary-500" />
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-500">
+                          Active Subscriptions
+                        </p>
+                        <p className="text-2xl font-semibold text-gray-900">
+                          {stats.activeSubscriptions}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center">
-                  <BarChart3 className="h-8 w-8 text-primary-500" />
-                  <div className="ml-4">
-                    <p className="text-sm font-medium text-gray-500">
-                      Monthly Revenue
-                    </p>
-                    <p className="text-2xl font-semibold text-gray-900">
-                      ${stats.revenueThisMonth}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* User Management */}
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle>User Management</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Search users..."
-                    className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
+                <Card>
+                  <CardContent className="pt-4">
+                    <div className="flex items-center">
+                      <BarChart3 className="h-8 w-8 text-primary-500" />
+                      <div className="ml-4">
+                        <p className="text-sm font-medium text-gray-500">
+                          Monthly Revenue
+                        </p>
+                        <p className="text-2xl font-semibold text-gray-900">
+                          ${stats.revenueThisMonth}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        User
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Role
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Documents
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Subscription
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredUsers.map((user) => (
-                      <tr key={user.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            <div>
+              {/* User Management */}
+              <Card className="mb-8">
+                <CardHeader>
+                  <CardTitle>User Management</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="mb-4">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search users..."
+                        className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            User
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Role
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Documents
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Subscription
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {filteredUsers.map((user) => (
+                          <tr key={user.id}>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {user.full_name || "N/A"}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    {user.email}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span
+                                className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                  user.role === "admin"
+                                    ? "bg-purple-100 text-purple-800"
+                                    : "bg-green-100 text-green-800"
+                                }`}
+                              >
+                                {user.role}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {user.documents?.[0]?.count ?? 0}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">
+                                {user.payments?.[0]?.subscription_status || "None"}
+                              </div>
+                              {user.payments?.[0]?.upload_credits && (
+                                <div className="text-sm text-gray-500">
+                                  {user.payments?.[0]?.upload_credits} credits
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-2">
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleViewUser(user)}
+                                isLoading={
+                                  userModalLoading && selectedUser?.id === user.id
+                                }
+                              >
+                                View
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleToggleRole(user)}
+                              >
+                                Toggle Role
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Admin Activity Log */}
+              <Card className="mb-8">
+                <CardHeader>
+                  <CardTitle>Admin Activity Log</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Admin
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Action
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Target
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Details
+                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Time
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {activityLogs.map((log) => (
+                          <tr key={log.id}>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm">
+                              {log.admin_email}
+                            </td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm">
+                              {log.action}
+                            </td>
+                            <td className="px-4 py-2 whitespace-nowrap text-sm">
+                              {log.target_type}{" "}
+                              <span className="text-gray-400">/</span>{" "}
+                              {log.target_id}
+                            </td>
+                            <td
+                              className="px-4 py-2 whitespace-nowrap text-xs text-gray-600 max-w-xs truncate"
+                              title={renderLogDetails(log.details)}
+                            >
+                              {renderLogDetails(log.details)}
+                            </td>
+                            <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-500">
+                              {formatDate(log.created_at)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {activityLogs.length === 0 && (
+                      <div className="text-gray-500 text-sm py-4">
+                        No recent admin activity.
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Recent Documents */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Documents</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Document
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            User
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Upload Date
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Rating
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {documents.map((doc) => (
+                          <tr key={doc.id}>
+                            <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm font-medium text-gray-900">
-                                {user.full_name || "N/A"}
+                                {doc.file_name}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">
+                                {doc.profiles?.full_name || "N/A"}
                               </div>
                               <div className="text-sm text-gray-500">
-                                {user.email}
+                                {doc.profiles?.email}
                               </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              user.role === "admin"
-                                ? "bg-purple-100 text-purple-800"
-                                : "bg-green-100 text-green-800"
-                            }`}
-                          >
-                            {user.role}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {user.documents?.[0]?.count ?? 0}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {user.payments?.[0]?.subscription_status || "None"}
-                          </div>
-                          {user.payments?.[0]?.upload_credits && (
-                            <div className="text-sm text-gray-500">
-                              {user.payments?.[0]?.upload_credits} credits
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-2">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => handleViewUser(user)}
-                            isLoading={
-                              userModalLoading && selectedUser?.id === user.id
-                            }
-                          >
-                            View
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => handleToggleRole(user)}
-                          >
-                            Toggle Role
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Admin Activity Log */}
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle>Admin Activity Log</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Admin
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Action
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Target
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Details
-                      </th>
-                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Time
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {activityLogs.map((log) => (
-                      <tr key={log.id}>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm">
-                          {log.admin_email}
-                        </td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm">
-                          {log.action}
-                        </td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm">
-                          {log.target_type}{" "}
-                          <span className="text-gray-400">/</span>{" "}
-                          {log.target_id}
-                        </td>
-                        <td
-                          className="px-4 py-2 whitespace-nowrap text-xs text-gray-600 max-w-xs truncate"
-                          title={renderLogDetails(log.details)}
-                        >
-                          {renderLogDetails(log.details)}
-                        </td>
-                        <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-500">
-                          {formatDate(log.created_at)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {activityLogs.length === 0 && (
-                  <div className="text-gray-500 text-sm py-4">
-                    No recent admin activity.
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Recent Documents */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Documents</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Document
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        User
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Upload Date
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Rating
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {documents.map((doc) => (
-                      <tr key={doc.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">
-                            {doc.file_name}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {doc.profiles?.full_name || "N/A"}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {doc.profiles?.email}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {doc.uploaded_at ? formatDate(doc.uploaded_at) : ""}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {doc.disability_estimates?.[0] ? (
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">
-                                {doc.disability_estimates[0].combined_rating}%
-                              </div>
-                              <div className="text-xs text-gray-500">
-                                Combined Rating
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-sm text-gray-500">
-                              Processing
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          {/* Remove the View button from the Actions column */}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Analytics & Trends */}
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle>Analytics & Trends</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* User Signups Over Time */}
-                <div>
-                  <h3 className="font-semibold mb-2">User Signups Over Time</h3>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <LineChart
-                      data={userSignups}
-                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis allowDecimals={false} />
-                      <Tooltip />
-                      <Line
-                        type="monotone"
-                        dataKey="count"
-                        stroke="#8884d8"
-                        strokeWidth={2}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                {/* Document Uploads Over Time */}
-                <div>
-                  <h3 className="font-semibold mb-2">
-                    Document Uploads Over Time
-                  </h3>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <LineChart
-                      data={documentUploads}
-                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis allowDecimals={false} />
-                      <Tooltip />
-                      <Line
-                        type="monotone"
-                        dataKey="count"
-                        stroke="#82ca9d"
-                        strokeWidth={2}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                {/* Revenue Trends */}
-                <div>
-                  <h3 className="font-semibold mb-2">Revenue Trends</h3>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <BarChart
-                      data={revenueTrends}
-                      margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis allowDecimals={false} />
-                      <Tooltip />
-                      <Bar dataKey="revenue" fill="#ffc658" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                {/* Active vs Inactive Users */}
-                <div>
-                  <h3 className="font-semibold mb-2">
-                    Active vs Inactive Users
-                  </h3>
-                  <ResponsiveContainer width="100%" height={250}>
-                    <PieChart>
-                      <Pie
-                        data={activeInactiveUsers}
-                        dataKey="count"
-                        nameKey="status"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        label
-                      >
-                        {activeInactiveUsers.map((_, idx) => (
-                          <Cell
-                            key={`cell-${idx}`}
-                            fill={idx === 0 ? "#82ca9d" : "#d0d0d0"}
-                          />
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {doc.uploaded_at ? formatDate(doc.uploaded_at) : ""}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              {doc.disability_estimates?.[0] ? (
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {doc.disability_estimates[0].combined_rating}%
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    Combined Rating
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-sm text-gray-500">
+                                  Processing
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              {/* Remove the View button from the Actions column */}
+                            </td>
+                          </tr>
                         ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
 
-          {/* ChatBot Configuration */}
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle>ChatBot Configuration</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ChatBotSettings />
-            </CardContent>
-          </Card>
+              {/* Analytics & Trends */}
+              <Card className="mb-8">
+                <CardHeader>
+                  <CardTitle>Analytics & Trends</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* User Signups Over Time */}
+                    <div>
+                      <h3 className="font-semibold mb-2">User Signups Over Time</h3>
+                      <ResponsiveContainer width="100%" height={250}>
+                        <LineChart
+                          data={userSignups}
+                          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="month" />
+                          <YAxis allowDecimals={false} />
+                          <Tooltip />
+                          <Line
+                            type="monotone"
+                            dataKey="count"
+                            stroke="#8884d8"
+                            strokeWidth={2}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                    {/* Document Uploads Over Time */}
+                    <div>
+                      <h3 className="font-semibold mb-2">
+                        Document Uploads Over Time
+                      </h3>
+                      <ResponsiveContainer width="100%" height={250}>
+                        <LineChart
+                          data={documentUploads}
+                          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="month" />
+                          <YAxis allowDecimals={false} />
+                          <Tooltip />
+                          <Line
+                            type="monotone"
+                            dataKey="count"
+                            stroke="#82ca9d"
+                            strokeWidth={2}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                    {/* Revenue Trends */}
+                    <div>
+                      <h3 className="font-semibold mb-2">Revenue Trends</h3>
+                      <ResponsiveContainer width="100%" height={250}>
+                        <BarChart
+                          data={revenueTrends}
+                          margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="month" />
+                          <YAxis allowDecimals={false} />
+                          <Tooltip />
+                          <Bar dataKey="revenue" fill="#ffc658" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    {/* Active vs Inactive Users */}
+                    <div>
+                      <h3 className="font-semibold mb-2">
+                        Active vs Inactive Users
+                      </h3>
+                      <ResponsiveContainer width="100%" height={250}>
+                        <PieChart>
+                          <Pie
+                            data={activeInactiveUsers}
+                            dataKey="count"
+                            nameKey="status"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={80}
+                            label
+                          >
+                            {activeInactiveUsers.map((_, idx) => (
+                              <Cell
+                                key={`cell-${idx}`}
+                                fill={idx === 0 ? "#82ca9d" : "#d0d0d0"}
+                              />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* ChatBot Configuration */}
+              <Card className="mb-8">
+                <CardHeader>
+                  <CardTitle>ChatBot Configuration</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ChatBotSettings />
+                </CardContent>
+              </Card>
+            </>
+          )}
         </div>
       </div>
       {/* User Detail Modal */}

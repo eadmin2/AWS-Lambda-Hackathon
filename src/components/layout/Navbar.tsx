@@ -1,12 +1,13 @@
 import React, { useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { Bell, Menu, X } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import Button from "../ui/Button";
-import { Menu, Bell } from "lucide-react";
+import { cn } from "../../lib/utils";
 
 interface NavbarProps {
   notifications?: any[];
-  onDismissNotification?: (idx: number) => void;
+  onDismissNotification?: () => void;
   bellOpen?: boolean;
   onBellOpenChange?: (open: boolean) => void;
 }
@@ -18,7 +19,6 @@ const Navbar: React.FC<NavbarProps> = ({
   onBellOpenChange,
 }) => {
   const { user, profile, signOut, isLoading } = useAuth();
-  const navigate = useNavigate();
 
   // Separate state variables for different menus
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
@@ -30,8 +30,18 @@ const Navbar: React.FC<NavbarProps> = ({
   const userMenuDropdownRef = useRef<HTMLDivElement>(null);
 
   const handleSignOut = async () => {
-    await signOut();
-    navigate("/");
+    try {
+      await signOut();
+      // Force a complete page reload and clear cache
+      window.location.replace('/');
+      // If the above doesn't work, try this as a fallback
+      window.location.reload();
+    } catch (error) {
+      console.error('Error during sign out:', error);
+      // Still force a reload even if there's an error
+      window.location.replace('/');
+      window.location.reload();
+    }
   };
 
   useEffect(() => {
@@ -174,7 +184,7 @@ const Navbar: React.FC<NavbarProps> = ({
                                   aria-label="Dismiss notification"
                                   onClick={() =>
                                     onDismissNotification &&
-                                    onDismissNotification(idx)
+                                    onDismissNotification()
                                   }
                                 >
                                   ×
