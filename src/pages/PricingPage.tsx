@@ -56,7 +56,7 @@ const PricingPage = () => {
       {/* Hero Section */}
       <section className="bg-gradient-to-b from-primary-900 to-primary-800 text-white py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-6">
+          <h1 className="text-4xl md:text-5xl font-bold mb-6 text-white">
             Instant VA Disability Rating Estimate for Veterans
           </h1>
           <p className="text-xl text-gray-200 max-w-3xl mx-auto">
@@ -135,6 +135,17 @@ const PricingPage = () => {
             <p className="text-xl text-gray-600">
               Choose the plan that works best for you
             </p>
+            <div className="mt-4 bg-info-100 border border-info-200 p-4 rounded-md flex items-start max-w-2xl mx-auto">
+              <AlertCircle className="h-5 w-5 text-info-500 mr-2 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-info-700 text-sm font-medium">
+                  Coming Soon
+                </p>
+                <p className="text-info-600 text-xs mt-1">
+                  These are made up pricing plans. Ordering is not yet available. We'll notify you when the service launches.
+                </p>
+              </div>
+            </div>
           </div>
 
           <div

@@ -1,13 +1,32 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { FileText, Shield, Award, CheckCircle } from "lucide-react";
+import { FileText, Shield, Award, CheckCircle, Star } from "lucide-react";
 import PageLayout from "../components/layout/PageLayout";
 import Button from "../components/ui/Button";
 import { motion } from "framer-motion";
 
+const VeteranRibbon: React.FC = () => (
+  <motion.div
+    initial={{ y: -50, opacity: 0 }}
+    animate={{ y: 0, opacity: 1 }}
+    transition={{ duration: 0.5 }}
+    className="w-full bg-gradient-to-r from-red-600 via-white to-blue-600 py-1.5 relative overflow-hidden"
+  >
+    <div className="absolute inset-0 bg-gradient-to-r from-red-600 via-white to-blue-600 opacity-75 animate-pulse"></div>
+    <div className="container mx-auto px-4 flex items-center justify-center space-x-2">
+      <Star className="h-3 w-3 text-red-600 animate-ping" />
+      <span className="text-xs font-semibold text-gray-900">
+        Veteran Owned & Operated
+      </span>
+      <Star className="h-3 w-3 text-blue-600 animate-ping" style={{ animationDelay: '0.5s' }} />
+    </div>
+  </motion.div>
+);
+
 const HomePage: React.FC = () => {
   return (
     <PageLayout>
+      <VeteranRibbon />
       {/* Hero section */}
       <section className="bg-[#0a2a66] text-white py-16 md:py-24 min-h-[480px]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center md:items-stretch relative">
@@ -68,6 +87,28 @@ const HomePage: React.FC = () => {
                     </Button>
                   </Link>
                 </div>
+                
+                {/* Trust Message Box */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  className="mt-8 p-4 rounded-lg bg-blue-800/30 backdrop-blur-sm border border-blue-700/30"
+                >
+                  <div className="flex items-start space-x-3">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-r from-red-600 to-blue-600 flex items-center justify-center">
+                      <Star className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-white mb-1">
+                        Built by Veterans, for Veterans
+                      </h3>
+                      <p className="text-gray-200">
+                        We understand your journey because we've walked it too
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
               </motion.div>
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
@@ -217,17 +258,17 @@ const HomePage: React.FC = () => {
           </div>
 
           <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-white p-6 rounded-lg shadow-sm">
+            <div className="bg-gradient-to-br from-red-50 to-blue-50 p-6 rounded-lg shadow-sm border border-blue-200">
               <div className="flex items-start">
-                <CheckCircle className="h-6 w-6 text-primary-500 mr-3 flex-shrink-0 mt-0.5" />
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-r from-red-600 to-blue-600 flex items-center justify-center mr-3">
+                  <Star className="h-5 w-5 text-white" />
+                </div>
                 <div>
                   <h3 className="text-lg font-semibold mb-2">
-                    Accurate Assessments
+                    Veteran Experience & Understanding
                   </h3>
                   <p className="text-gray-600">
-                    Our AI system is trained on thousands of VA disability cases
-                    and the official VASRD criteria to provide accurate
-                    estimates.
+                    Built by veterans who understand the VA system firsthand. Our team's personal experience with the claims process ensures we provide the most relevant and helpful service.
                   </p>
                 </div>
               </div>
