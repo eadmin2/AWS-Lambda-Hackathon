@@ -42,6 +42,9 @@ export type DisabilityEstimate = {
   estimated_rating: number;
   combined_rating: number;
   created_at: string;
+  excerpt?: string;
+  cfr_criteria?: string;
+  matched_keywords?: string[];
 };
 
 // Helper functions for database operations

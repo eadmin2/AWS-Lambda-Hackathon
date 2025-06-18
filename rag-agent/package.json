@@ -1,0 +1,12 @@
+{
+    "name": "rag-agent",
+    "version": "1.0.0",
+    "type": "module",
+    "description": "RAG Agent for VA Disability Claims",
+    "main": "index.js",
+    "dependencies": {
+      "@aws-sdk/client-bedrock-runtime": "^3.450.0",
+      "@aws-sdk/client-lambda": "^3.450.0",
+      "@supabase/supabase-js": "^2.38.0"
+    }
+  }

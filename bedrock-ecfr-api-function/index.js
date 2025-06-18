@@ -4,9 +4,13 @@ const https = require('https');
  * Lambda function to search eCFR API for VA disability rating criteria
  */
 exports.handler = async (event) => {
-    console.log('Event received:', JSON.stringify(event, null, 2));
-
     try {
+        console.log('Event received:', JSON.stringify(event, null, 2));
+        // Check if this is a direct invocation (not through Bedrock Agent)
+        if (event.condition && (event.bodySystem || event.body_system || event.keywords)) {
+            return await handleDirectInvocation(event);
+        }
+
         const { messageVersion, agent, actionGroup, function: functionName, parameters } = event;
 
         if (functionName === 'searchCFR') {
@@ -15,21 +19,15 @@ exports.handler = async (event) => {
             return await getCFRSection(parameters);
         }
 
+        // Fallback: log and return error with event structure
+        console.error('No matching handler for event:', JSON.stringify(event, null, 2));
         return {
-            messageVersion: "1.0",
-            response: {
-                actionGroup: actionGroup,
-                function: functionName,
-                functionResponse: {
-                    responseBody: {
-                        "TEXT": {
-                            "body": "Unknown function requested"
-                        }
-                    }
-                }
-            }
+            statusCode: 400,
+            body: JSON.stringify({
+                error: 'No matching handler for event',
+                event
+            })
         };
-
     } catch (error) {
         console.error('Error:', error);
         return {
@@ -48,6 +46,131 @@ exports.handler = async (event) => {
         };
     }
 };
+
+/**
+ * Handle direct invocation from cfr-processor
+ */
+async function handleDirectInvocation(event) {
+    const { condition, bodySystem, body_system, keywords } = event;
+    const system = bodySystem || body_system;
+    
+    console.log(`Direct invocation for condition: ${condition}, body system: ${system}`);
+    
+    try {
+        // Search for CFR sections related to the condition
+        const searchQuery = condition;
+        const part = '4'; // VA disability ratings are in Part 4
+        
+        // Get the structure of 38 CFR Part 4
+        const structureUrl = `https://www.ecfr.gov/api/versioner/v1/structure/2024-01-01/title-38.json`;
+        console.log(`Fetching structure from: ${structureUrl}`);
+
+        const data = await makeHttpsRequest(structureUrl);
+        console.log('Structure data received, searching for sections...');
+
+        // Filter to Part 4 sections that might match the search query
+        let part4Sections = filterSections(data, searchQuery, part);
+        
+        // If no sections found, try alternative search strategies
+        if (part4Sections.length === 0) {
+            console.log('No direct matches found, trying alternative search strategies...');
+            
+            // Strategy 1: Try body system specific terms if available
+            if (system) {
+                const systemTerms = getBodySystemTerms(system);
+                for (const term of systemTerms) {
+                    const alternativeSections = filterSections(data, term, part);
+                    if (alternativeSections.length > 0) {
+                        part4Sections = alternativeSections;
+                        console.log(`Found ${alternativeSections.length} sections using body system term: ${term}`);
+                        break;
+                    }
+                }
+            }
+            
+            // Strategy 2: Try common medical condition categories
+            if (part4Sections.length === 0) {
+                const commonCategories = getCommonMedicalCategories(condition);
+                for (const category of commonCategories) {
+                    const alternativeSections = filterSections(data, category, part);
+                    if (alternativeSections.length > 0) {
+                        part4Sections = alternativeSections;
+                        console.log(`Found ${alternativeSections.length} sections using category: ${category}`);
+                        break;
+                    }
+                }
+            }
+            
+            // Strategy 3: Try broader anatomical terms
+            if (part4Sections.length === 0) {
+                const anatomicalTerms = getAnatomicalTerms(condition);
+                for (const term of anatomicalTerms) {
+                    const alternativeSections = filterSections(data, term, part);
+                    if (alternativeSections.length > 0) {
+                        part4Sections = alternativeSections;
+                        console.log(`Found ${alternativeSections.length} sections using anatomical term: ${term}`);
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (part4Sections.length === 0) {
+            return {
+                statusCode: 200,
+                body: JSON.stringify({
+                    condition: condition,
+                    bodySystem: system,
+                    sections: [],
+                    message: `No specific CFR sections found for "${condition}" in Part 4. This may be a newer condition or may be rated under a different category.`
+                })
+            };
+        }
+
+        // Get detailed content for the top matching sections
+        const detailedSections = [];
+        for (const section of part4Sections.slice(0, 3)) {
+            try {
+                const content = await getCFRSectionContent(section.identifier);
+                detailedSections.push({
+                    identifier: section.identifier,
+                    label: section.label,
+                    description: section.description,
+                    content: content
+                });
+            } catch (error) {
+                console.error(`Error getting content for section ${section.identifier}:`, error);
+                detailedSections.push({
+                    identifier: section.identifier,
+                    label: section.label,
+                    description: section.description,
+                    content: 'Content not available'
+                });
+            }
+        }
+
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                condition: condition,
+                bodySystem: system,
+                sections: detailedSections,
+                totalFound: part4Sections.length
+            })
+        };
+
+    } catch (error) {
+        console.error('Direct invocation error:', error);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({
+                error: error.message,
+                condition: condition,
+                bodySystem: system
+            })
+        };
+    }
+}
 
 /**
  * Search for CFR sections related to a medical condition
@@ -346,4 +469,112 @@ function hyperlinkUrls(text) {
     
     console.log("Transformed text:", result);
     return result;
+}
+
+/**
+ * Get body system specific search terms
+ */
+function getBodySystemTerms(bodySystem) {
+    const systemMap = {
+        'mental': ['mental', 'psychiatric', 'ptsd', 'post-traumatic', 'anxiety', 'depression', 'mood', 'psychosis', 'neurosis'],
+        'cardiovascular': ['heart', 'cardiac', 'cardiovascular', 'circulatory', 'blood', 'artery', 'vein'],
+        'respiratory': ['lung', 'respiratory', 'breathing', 'pulmonary', 'asthma', 'emphysema'],
+        'musculoskeletal': ['muscle', 'bone', 'joint', 'spine', 'back', 'knee', 'shoulder', 'arm', 'leg', 'musculoskeletal'],
+        'digestive': ['stomach', 'intestine', 'liver', 'gallbladder', 'pancreas', 'digestive', 'gastrointestinal'],
+        'nervous': ['brain', 'nervous', 'neurological', 'seizure', 'stroke', 'paralysis', 'neuropathy'],
+        'endocrine': ['diabetes', 'thyroid', 'hormone', 'endocrine', 'metabolic'],
+        'skin': ['skin', 'dermatological', 'dermatitis', 'eczema', 'psoriasis'],
+        'genitourinary': ['kidney', 'bladder', 'urinary', 'genital', 'reproductive'],
+        'hearing': ['ear', 'hearing', 'deafness', 'tinnitus', 'auditory'],
+        'vision': ['eye', 'vision', 'blindness', 'visual', 'ocular'],
+        'immune': ['immune', 'autoimmune', 'allergy', 'lupus', 'rheumatoid']
+    };
+    
+    const normalizedSystem = bodySystem.toLowerCase();
+    return systemMap[normalizedSystem] || [];
+}
+
+/**
+ * Get common medical condition categories based on condition keywords
+ */
+function getCommonMedicalCategories(condition) {
+    const conditionLower = condition.toLowerCase();
+    const categories = [];
+    
+    // Pain-related conditions
+    if (conditionLower.includes('pain') || conditionLower.includes('ache') || conditionLower.includes('sore')) {
+        categories.push('pain', 'musculoskeletal', 'joint');
+    }
+    
+    // Injury-related conditions
+    if (conditionLower.includes('injury') || conditionLower.includes('trauma') || conditionLower.includes('fracture') || 
+        conditionLower.includes('sprain') || conditionLower.includes('strain')) {
+        categories.push('musculoskeletal', 'bone', 'joint');
+    }
+    
+    // Infection-related conditions
+    if (conditionLower.includes('infection') || conditionLower.includes('bacterial') || conditionLower.includes('viral') ||
+        conditionLower.includes('fungal')) {
+        categories.push('infection', 'immune');
+    }
+    
+    // Cancer-related conditions
+    if (conditionLower.includes('cancer') || conditionLower.includes('tumor') || conditionLower.includes('malignant') ||
+        conditionLower.includes('carcinoma') || conditionLower.includes('sarcoma')) {
+        categories.push('cancer', 'neoplasm');
+    }
+    
+    // Chronic conditions
+    if (conditionLower.includes('chronic') || conditionLower.includes('degenerative') || conditionLower.includes('progressive')) {
+        categories.push('chronic', 'degenerative');
+    }
+    
+    // If no specific categories found, return general terms
+    if (categories.length === 0) {
+        categories.push('general', 'unspecified');
+    }
+    
+    return categories;
+}
+
+/**
+ * Get anatomical terms that might be related to the condition
+ */
+function getAnatomicalTerms(condition) {
+    const conditionLower = condition.toLowerCase();
+    const terms = [];
+    
+    // Extract potential body parts from condition name
+    const bodyParts = [
+        'head', 'neck', 'shoulder', 'arm', 'hand', 'finger', 'chest', 'back', 'spine',
+        'hip', 'leg', 'knee', 'foot', 'toe', 'eye', 'ear', 'nose', 'throat', 'heart',
+        'lung', 'stomach', 'liver', 'kidney', 'bladder', 'brain', 'nerve', 'muscle',
+        'bone', 'joint', 'skin', 'blood'
+    ];
+    
+    for (const part of bodyParts) {
+        if (conditionLower.includes(part)) {
+            terms.push(part);
+        }
+    }
+    
+    // If no specific body parts found, try broader anatomical systems
+    if (terms.length === 0) {
+        if (conditionLower.includes('mental') || conditionLower.includes('psych') || 
+            conditionLower.includes('ptsd') || conditionLower.includes('anxiety') ||
+            conditionLower.includes('depression')) {
+            terms.push('mental', 'psychiatric');
+        } else if (conditionLower.includes('heart') || conditionLower.includes('cardiac') ||
+                   conditionLower.includes('blood') || conditionLower.includes('circulation')) {
+            terms.push('cardiovascular', 'heart');
+        } else if (conditionLower.includes('lung') || conditionLower.includes('breathing') ||
+                   conditionLower.includes('respiratory')) {
+            terms.push('respiratory', 'lung');
+        } else if (conditionLower.includes('muscle') || conditionLower.includes('bone') ||
+                   conditionLower.includes('joint') || conditionLower.includes('spine')) {
+            terms.push('musculoskeletal', 'muscle', 'bone');
+        }
+    }
+    
+    return terms;
 }
