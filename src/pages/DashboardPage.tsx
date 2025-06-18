@@ -7,7 +7,7 @@ import SummaryCard from "../components/ui/SummaryCard";
 import ConditionItem from "../components/ui/ConditionItem";
 import CombinedRatingChart from "../components/ui/CombinedRatingChart";
 import { useAuth } from "../contexts/AuthContext";
-import { getUserDisabilityEstimates, getUserDocuments, DisabilityEstimate } from "../lib/supabase";
+import { getUserDisabilityEstimates, getUserDocuments } from "../lib/supabase";
 
 // Helper function to calculate VA combined rating
 function calculateCombinedRating(ratings: number[]): number {
@@ -73,7 +73,7 @@ const DashboardPage: React.FC = () => {
         const colors = ['#60a5fa', '#fbbf24', '#34d399', '#f472b6', '#a78bfa'];
 
         // Transform estimates into conditions format
-        const conditions = estimates.map((est, index) => ({
+        const conditions = estimates.map(est => ({
           name: est.condition,
           rating: est.estimated_rating,
           excerpt: est.excerpt || 'No excerpt available...',
