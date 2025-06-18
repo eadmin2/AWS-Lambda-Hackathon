@@ -32,15 +32,24 @@ const Navbar: React.FC<NavbarProps> = ({
   const handleSignOut = async () => {
     try {
       await signOut();
+      
       // Force a complete page reload and clear cache
+      // Using replace to prevent back-button issues
       window.location.replace('/');
-      // If the above doesn't work, try this as a fallback
-      window.location.reload();
+      
+      // Add a small delay before reloading to ensure all cleanup is done
+      setTimeout(() => {
+        // Force reload from server, not from cache
+        window.location.reload();
+      }, 100);
+      
     } catch (error) {
       console.error('Error during sign out:', error);
       // Still force a reload even if there's an error
       window.location.replace('/');
-      window.location.reload();
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     }
   };
 

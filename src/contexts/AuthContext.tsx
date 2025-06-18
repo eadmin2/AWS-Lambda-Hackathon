@@ -76,9 +76,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Attempt to sign out from Supabase
       await supabase.auth.signOut();
       
-      // Force clear any remaining session data
-      localStorage.removeItem('supabase.auth.token');
-      sessionStorage.clear();
+      // Force clear all possible auth states
+      localStorage.clear(); // Clear all localStorage
+      sessionStorage.clear(); // Clear all sessionStorage
+      
+      // Clear specific Supabase items
+      const supabaseKeys = Object.keys(localStorage).filter(key => 
+        key.startsWith('sb-') || 
+        key.includes('supabase') || 
+        key.includes('supabase.auth')
+      );
+      supabaseKeys.forEach(key => localStorage.removeItem(key));
+
+      // Clear cookies
+      document.cookie.split(";").forEach(function(c) { 
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+      });
       
     } catch (error) {
       console.error('Error during sign out:', error);
@@ -86,8 +99,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(null);
       setUser(null);
       setProfile(null);
-      localStorage.removeItem('supabase.auth.token');
+      localStorage.clear();
       sessionStorage.clear();
+      document.cookie.split(";").forEach(function(c) { 
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+      });
     }
   }
 
