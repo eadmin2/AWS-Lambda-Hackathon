@@ -445,6 +445,40 @@ const handleSNSNotification = async (event, requestId) => {
       console.log(`✅ Textract job ${jobId} succeeded - processing results`);
       await handleTextractCompletion(jobId);
       console.log(`✅ Successfully processed Textract job ${jobId}`);
+
+      // Notify the rag-agent to process the document
+      try {
+        const ragResponse = await fetch(`${supabaseUrl}/functions/v1/notify-rag-agent`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            user_id: document.user_id,
+            document_id: document.id
+          })
+        });
+
+        if (!ragResponse.ok) {
+          const errorText = await ragResponse.text();
+          console.error(`Failed to notify RAG agent: ${errorText}`);
+          throw new Error(`RAG agent notification failed: ${errorText}`);
+        }
+
+        console.log("✅ Successfully notified RAG agent");
+      } catch (error) {
+        console.error("Error notifying RAG agent:", error);
+        // Don't throw here - we still want to return success for the Textract processing
+      }
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          message: "Document processed successfully",
+          documentId: document.id
+        })
+      };
     } else if (status === "FAILED") {
       console.log(`❌ Textract job ${jobId} failed`);
       console.log("Status Message:", snsMessage.StatusMessage || "No status message provided");
