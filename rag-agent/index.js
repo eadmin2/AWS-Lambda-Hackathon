@@ -1,4 +1,5 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
+import { BedrockAgentRuntimeClient, InvokeAgentCommand } from "@aws-sdk/client-bedrock-agent-runtime";
 import { createClient } from "@supabase/supabase-js";
 import { getUserConditions } from './lib/supabase.js';
 import { generateRecommendation } from './lib/bedrock.js';
@@ -17,6 +18,11 @@ const supabase = createClient(
 
 const bedrock = new BedrockRuntimeClient({ region: "us-east-1" });
 
+// Bedrock Agent configuration
+const bedrockAgentClient = new BedrockAgentRuntimeClient({ region: "us-east-2" });
+const AGENT_ID = process.env.BEDROCK_AGENT_ID || "S9KQ4LEVEI";
+const AGENT_ALIAS_ID = process.env.BEDROCK_AGENT_ALIAS_ID || "YKOOLY6ZHJ";
+
 // Helper function to parse Bedrock's response and extract conditions
 const parseBedrockResponse = (response) => {
   try {
@@ -25,6 +31,47 @@ const parseBedrockResponse = (response) => {
     return JSON.parse(jsonStr);
   } catch (error) {
     console.error("Error parsing Bedrock response:", error);
+    return null;
+  }
+};
+
+// Helper function to parse Bedrock Agent responses and extract conditions
+const parseAgentResponse = (response) => {
+  try {
+    // The agent might return JSON directly or wrapped in markdown
+    // First, try to find JSON in the response
+    const jsonMatch = response.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    
+    // If no JSON found, try to extract conditions from text
+    // This is a fallback for when the agent doesn't return structured JSON
+    const conditions = [];
+    const lines = response.split('\n');
+    let currentCondition = null;
+    
+    for (const line of lines) {
+      if (line.includes('condition:') || line.includes('name:')) {
+        if (currentCondition) {
+          conditions.push(currentCondition);
+        }
+        currentCondition = { name: line.split(':')[1]?.trim() || 'Unknown Condition' };
+      } else if (line.includes('rating:') && currentCondition) {
+        const ratingMatch = line.match(/(\d+)%/);
+        currentCondition.rating = ratingMatch ? parseInt(ratingMatch[1]) : 10;
+      } else if (line.includes('severity:') && currentCondition) {
+        currentCondition.severity = line.split(':')[1]?.trim() || 'mild';
+      }
+    }
+    
+    if (currentCondition) {
+      conditions.push(currentCondition);
+    }
+    
+    return { conditions };
+  } catch (error) {
+    console.error("Error parsing agent response:", error);
     return null;
   }
 };
@@ -96,45 +143,53 @@ export const handler = async (event) => {
 
       console.log("Document text length:", documentText.length);
 
-      // Use Bedrock to analyze the text and identify conditions
-      const bedrockResponse = await bedrock.send(new InvokeModelCommand({
-        modelId: 'arn:aws:bedrock:us-east-2:281439767132:inference-profile/us.anthropic.claude-3-5-sonnet-20241022-v2:0',
-        contentType: "application/json",
-        accept: "application/json",
-        body: JSON.stringify({
-          prompt: `
-            You are a VA disability claims expert. Analyze the following medical document text and identify potential VA disability conditions.
-            For each condition found, provide the following in JSON format:
+      // Use Bedrock Agent to analyze the text and identify conditions
+      const commandParams = {
+        agentId: AGENT_ID,
+        agentAliasId: AGENT_ALIAS_ID,
+        sessionId: `${userId}-${document_id}`, // Create a unique session ID
+        inputText: `Analyze this medical document and identify potential VA disability conditions. For each condition found, provide the following in JSON format:
+        {
+          "conditions": [
             {
-              "conditions": [
-                {
-                  "name": "condition name",
-                  "rating": estimated rating percentage (10, 30, 50, 70, or 100),
-                  "severity": "mild/moderate/severe/total",
-                  "excerpt": "relevant text excerpt",
-                  "cfrCriteria": "relevant CFR citation",
-                  "keywords": ["matched", "keywords"]
-                }
-              ]
+              "name": "condition name",
+              "rating": estimated rating percentage (10, 30, 50, 70, or 100),
+              "severity": "mild/moderate/severe/total",
+              "excerpt": "relevant text excerpt",
+              "cfrCriteria": "relevant CFR citation",
+              "keywords": ["matched", "keywords"]
             }
+          ]
+        }
 
-            Consider VA rating criteria, symptoms described, and frequency/severity of symptoms.
-            Be specific with CFR citations (e.g., "38 CFR §4.130 - Mental Disorders").
+        Consider VA rating criteria, symptoms described, and frequency/severity of symptoms.
+        Be specific with CFR citations (e.g., "38 CFR §4.130 - Mental Disorders").
 
-            Medical Document Text:
-            ${documentText}
+        Medical Document Text:
+        ${documentText}
 
-            Provide your analysis in valid JSON format only.
-          `,
-          max_tokens: 2048,
-          temperature: 0.2
-        })
-      }));
+        Provide your analysis in valid JSON format only.`
+      };
 
-      const analysis = parseBedrockResponse(bedrockResponse.body);
+      const command = new InvokeAgentCommand(commandParams);
+      const agentResponse = await bedrockAgentClient.send(command);
+
+      // Process the streaming response
+      let fullResponse = '';
+      for await (const chunk of agentResponse.completion) {
+        if (chunk.chunk?.bytes) {
+          const text = new TextDecoder().decode(chunk.chunk.bytes);
+          fullResponse += text;
+        }
+      }
+
+      console.log("Agent response:", fullResponse);
+
+      // Parse the agent response
+      const analysis = parseAgentResponse(fullResponse);
       
       if (!analysis || !analysis.conditions) {
-        throw new Error("Failed to parse conditions from Bedrock response");
+        throw new Error("Failed to parse conditions from Bedrock Agent response");
       }
 
       console.log(`Found ${analysis.conditions.length} conditions`);

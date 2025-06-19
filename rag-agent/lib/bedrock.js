@@ -1,8 +1,14 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
+import { BedrockAgentRuntimeClient, InvokeAgentCommand } from '@aws-sdk/client-bedrock-agent-runtime';
 
 const client = new BedrockRuntimeClient({ 
     region: process.env.AWS_REGION || 'us-east-2' 
 });
+
+// Bedrock Agent configuration
+const bedrockAgentClient = new BedrockAgentRuntimeClient({ region: "us-east-2" });
+const AGENT_ID = process.env.BEDROCK_AGENT_ID || "S9KQ4LEVEI";
+const AGENT_ALIAS_ID = process.env.BEDROCK_AGENT_ALIAS_ID || "YKOOLY6ZHJ";
 
 export async function generateRecommendation(condition, cfrData) {
     const prompt = `
@@ -35,51 +41,36 @@ export async function generateRecommendation(condition, cfrData) {
     }
     `;
 
-    const params = {
-        modelId: 'arn:aws:bedrock:us-east-2:281439767132:inference-profile/us.anthropic.claude-3-5-sonnet-20241022-v2:0',
-        contentType: 'application/json',
-        accept: 'application/json',
-        body: JSON.stringify({
-            anthropic_version: 'bedrock-2023-05-31',
-            max_tokens: 1000,
-            messages: [
-                {
-                    role: 'user',
-                    content: prompt
-                }
-            ]
-        })
-    };
-
     try {
-        console.log('Calling Bedrock with model:', params.modelId);
-        const command = new InvokeModelCommand(params);
-        const response = await client.send(command);
-        const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+        console.log('Calling Bedrock Agent for recommendation');
         
-        console.log('Raw Bedrock response:', JSON.stringify(responseBody, null, 2));
-        
-        // Handle Claude 3.5 Sonnet response format
-        let responseText;
-        if (responseBody.content && Array.isArray(responseBody.content)) {
-            responseText = responseBody.content[0]?.text;
-        } else if (responseBody.completion) {
-            responseText = responseBody.completion;
-        } else if (responseBody.generation) {
-            responseText = responseBody.generation;
-        } else {
-            console.error('Unexpected response format:', responseBody);
-            throw new Error('Unexpected response format from Bedrock');
+        const commandParams = {
+            agentId: AGENT_ID,
+            agentAliasId: AGENT_ALIAS_ID,
+            sessionId: `recommendation-${condition.id || condition.name}-${Date.now()}`, // Create a unique session ID
+            inputText: prompt
+        };
+
+        const command = new InvokeAgentCommand(commandParams);
+        const agentResponse = await bedrockAgentClient.send(command);
+
+        // Process the streaming response
+        let fullResponse = '';
+        for await (const chunk of agentResponse.completion) {
+            if (chunk.chunk?.bytes) {
+                const text = new TextDecoder().decode(chunk.chunk.bytes);
+                fullResponse += text;
+            }
         }
         
-        if (!responseText) {
-            throw new Error('No response text found in Bedrock response');
-        }
+        console.log('Raw Agent response:', fullResponse);
         
-        console.log('Response text before parsing:', responseText);
+        if (!fullResponse) {
+            throw new Error('No response text found in Bedrock Agent response');
+        }
         
         // Try to extract JSON from the response text
-        let jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        let jsonMatch = fullResponse.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
             throw new Error('No JSON object found in response text');
         }
@@ -90,9 +81,9 @@ export async function generateRecommendation(condition, cfrData) {
         
         return recommendation;
     } catch (error) {
-        console.error('Error calling Bedrock:', error);
+        console.error('Error calling Bedrock Agent:', error);
         if (error.name === 'ValidationException') {
-            console.error('Model validation error. Available models may have changed.');
+            console.error('Agent validation error. Available agents may have changed.');
             // Return a fallback recommendation
             return {
                 summary: `Based on the condition ${condition.name}, this appears to be a service-connected disability that may qualify for VA benefits.`,
