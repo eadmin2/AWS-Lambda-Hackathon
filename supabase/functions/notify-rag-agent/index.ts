@@ -48,8 +48,7 @@ serve(async (req) => {
     const response = await fetch(`${ragAgentUrl}/rag-agent/${user_id}/reprocess`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${Deno.env.get("RAG_AGENT_API_KEY")}`
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
         document_id,

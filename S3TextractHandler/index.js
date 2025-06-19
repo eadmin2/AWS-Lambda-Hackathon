@@ -446,6 +446,29 @@ const handleSNSNotification = async (event, requestId) => {
       await handleTextractCompletion(jobId);
       console.log(`✅ Successfully processed Textract job ${jobId}`);
 
+      // Get document information for RAG agent notification
+      const { data: jobData, error: jobError } = await supabase
+        .from("textract_jobs")
+        .select("document_id")
+        .eq("aws_job_id", jobId)
+        .single();
+
+      if (jobError || !jobData) {
+        console.error("Failed to get document ID for RAG notification:", jobError);
+        throw new Error("Could not retrieve document information for RAG notification");
+      }
+
+      const { data: document, error: docError } = await supabase
+        .from("documents")
+        .select("id, user_id")
+        .eq("id", jobData.document_id)
+        .single();
+
+      if (docError || !document) {
+        console.error("Failed to get document details for RAG notification:", docError);
+        throw new Error("Could not retrieve document details for RAG notification");
+      }
+
       // Notify the rag-agent to process the document
       try {
         const ragResponse = await fetch(`${supabaseUrl}/functions/v1/notify-rag-agent`, {
@@ -466,10 +489,10 @@ const handleSNSNotification = async (event, requestId) => {
           throw new Error(`RAG agent notification failed: ${errorText}`);
         }
 
-        console.log("✅ Successfully notified RAG agent");
+        console.log(`✅ Successfully notified RAG agent for document ${document.id}`);
       } catch (error) {
         console.error("Error notifying RAG agent:", error);
-        // Don't throw here - we still want to return success for the Textract processing
+        throw error;
       }
 
       return {

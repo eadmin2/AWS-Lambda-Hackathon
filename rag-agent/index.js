@@ -45,10 +45,15 @@ export const handler = async (event) => {
   try {
     console.log("Event received:", JSON.stringify(event));
 
+    // Handle API Gateway v2 format
+    const httpMethod = event.httpMethod || event.requestContext?.http?.method;
+    const routeKey = event.routeKey;
+    const pathParameters = event.pathParameters;
+
     // Handle different HTTP methods and routes
-    if (event.httpMethod === "GET" && event.resource === "/rag-agent/{userId}") {
+    if (httpMethod === "GET" && (routeKey === "GET /rag-agent/{userId}" || event.resource === "/rag-agent/{userId}")) {
       // Get all conditions for a user
-      const userId = event.pathParameters.userId;
+      const userId = pathParameters?.userId || event.pathParameters?.userId;
       
       const { data, error } = await supabase
         .from("disability_estimates")
@@ -63,9 +68,11 @@ export const handler = async (event) => {
       };
     }
 
-    if (event.httpMethod === "POST" && event.resource === "/rag-agent/{userId}/reprocess") {
-      const userId = event.pathParameters.userId;
+    if (httpMethod === "POST" && (routeKey === "POST /rag-agent/{userId}/reprocess" || event.resource === "/rag-agent/{userId}/reprocess")) {
+      const userId = pathParameters?.userId || event.pathParameters?.userId;
       const { document_id } = JSON.parse(event.body);
+
+      console.log(`Processing document ${document_id} for user ${userId}`);
 
       // Get the document chunks from Supabase
       const { data: chunks, error: chunksError } = await supabase
@@ -75,18 +82,23 @@ export const handler = async (event) => {
         .order("chunk_index");
 
       if (chunksError || !chunks || chunks.length === 0) {
+        console.error("No document chunks found:", chunksError);
         return {
           statusCode: 404,
           body: JSON.stringify({ error: "No document chunks found" })
         };
       }
 
+      console.log(`Found ${chunks.length} document chunks`);
+
       // Combine all chunks into one text
       const documentText = chunks.map(chunk => chunk.content).join("\n\n");
 
+      console.log("Document text length:", documentText.length);
+
       // Use Bedrock to analyze the text and identify conditions
       const bedrockResponse = await bedrock.send(new InvokeModelCommand({
-        modelId: "anthropic.claude-v2",
+        modelId: 'arn:aws:bedrock:us-east-2:281439767132:inference-profile/us.anthropic.claude-3-5-sonnet-20241022-v2:0',
         contentType: "application/json",
         accept: "application/json",
         body: JSON.stringify({
@@ -125,6 +137,8 @@ export const handler = async (event) => {
         throw new Error("Failed to parse conditions from Bedrock response");
       }
 
+      console.log(`Found ${analysis.conditions.length} conditions`);
+
       // Process each identified condition
       const processedConditions = [];
       for (const condition of analysis.conditions) {
@@ -156,6 +170,8 @@ export const handler = async (event) => {
         processedConditions.push(upsertedCondition);
       }
 
+      console.log(`Successfully processed ${processedConditions.length} conditions`);
+
       return {
         statusCode: 200,
         body: JSON.stringify({
@@ -165,9 +181,9 @@ export const handler = async (event) => {
       };
     }
 
-    if (event.httpMethod === "GET" && event.resource === "/rag-agent/{userId}/conditions/{id}") {
+    if (httpMethod === "GET" && (routeKey === "GET /rag-agent/{userId}/conditions/{id}" || event.resource === "/rag-agent/{userId}/conditions/{id}")) {
       // Get specific condition
-      const { userId, id } = event.pathParameters;
+      const { userId, id } = pathParameters || event.pathParameters;
       
       const { data, error } = await supabase
         .from("disability_estimates")
@@ -184,6 +200,7 @@ export const handler = async (event) => {
       };
     }
 
+    console.log("Invalid endpoint - httpMethod:", httpMethod, "routeKey:", routeKey);
     return {
       statusCode: 400,
       body: JSON.stringify({ error: "Invalid endpoint" })
