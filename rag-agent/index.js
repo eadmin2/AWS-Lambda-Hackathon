@@ -88,6 +88,10 @@ const calculateRating = (symptoms, severity) => {
   return baseRatings[severity] || 10;
 };
 
+function normalizeConditionName(name) {
+  return name.trim().toLowerCase();
+}
+
 export const handler = async (event) => {
   try {
     console.log("Event received:", JSON.stringify(event));
@@ -121,10 +125,46 @@ export const handler = async (event) => {
 
       console.log(`Processing document ${document_id} for user ${userId}`);
 
-      // Get the document chunks from Supabase
+      // First, let's check the document metadata
+      const { data: document, error: docError } = await supabase
+        .from("documents")
+        .select("id, file_name, total_chunks, total_pages, textract_confidence, processing_status")
+        .eq("id", document_id)
+        .single();
+
+      if (docError) {
+        console.error("Error fetching document:", docError);
+      } else {
+        console.log("Document metadata:", document);
+      }
+
+      // Check Textract job details
+      const { data: textractJob, error: jobError } = await supabase
+        .from("textract_jobs")
+        .select("id, aws_job_id, status, started_at, completed_at, error_message")
+        .eq("document_id", document_id)
+        .order("started_at", { ascending: false })
+        .limit(1);
+
+      if (jobError) {
+        console.error("Error fetching Textract job:", jobError);
+      } else {
+        console.log("Textract job details:", textractJob);
+      }
+
+      // First, let's check if chunks exist without RLS restrictions
+      const { data: allChunks, error: allChunksError } = await supabase
+        .from("document_chunks")
+        .select("content, chunk_index, page_number, char_count")
+        .eq("document_id", document_id)
+        .order("chunk_index");
+
+      console.log(`Total chunks in database for document: ${allChunks?.length || 0}`);
+
+      // Get the document chunks from Supabase (this will respect RLS)
       const { data: chunks, error: chunksError } = await supabase
         .from("document_chunks")
-        .select("content")
+        .select("content, chunk_index, page_number, char_count")
         .eq("document_id", document_id)
         .order("chunk_index");
 
@@ -137,6 +177,12 @@ export const handler = async (event) => {
       }
 
       console.log(`Found ${chunks.length} document chunks`);
+      console.log("Chunk details:", chunks.map(chunk => ({
+        index: chunk.chunk_index,
+        page: chunk.page_number,
+        charCount: chunk.char_count,
+        contentLength: chunk.content?.length || 0
+      })));
 
       // Combine all chunks into one text
       const documentText = chunks.map(chunk => chunk.content).join("\n\n");
@@ -200,13 +246,17 @@ export const handler = async (event) => {
         // Calculate rating if not provided
         const rating = condition.rating || calculateRating(condition.keywords, condition.severity);
 
+        // Normalize condition name for deduplication
+        const normalizedConditionName = normalizeConditionName(condition.name);
+
         // Insert or update the disability_estimates table
         const { data: upsertedCondition, error: upsertError } = await supabase
           .from("disability_estimates")
           .upsert({
             user_id: userId,
             document_id,
-            condition: condition.name,
+            condition: normalizedConditionName,
+            condition_display: condition.name, // Store original for display
             estimated_rating: rating,
             excerpt: condition.excerpt,
             cfr_criteria: condition.cfrCriteria,

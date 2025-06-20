@@ -42,9 +42,9 @@ const MEDICAL_QUERIES = [
 
 // Chunking strategy for RAG
 const CHUNK_CONFIG = {
-  maxChunkSize: 1000, // characters
-  overlapSize: 200, // overlap between chunks
-  minChunkSize: 100, // minimum viable chunk size
+  maxChunkSize: 4000, // characters - increased from 1000 to capture more content
+  overlapSize: 500, // overlap between chunks - increased for better context
+  minChunkSize: 200, // minimum viable chunk size - increased slightly
 };
 
 // Helper function to create text chunks optimized for RAG
@@ -196,6 +196,12 @@ const processTextractForRAG = async (blocks, documentId) => {
 
     switch (block.BlockType) {
       case "LINE":
+        if (!pageTexts.has(pageNum)) pageTexts.set(pageNum, []);
+        pageTexts.get(pageNum).push(block.Text);
+        break;
+
+      case "WORD":
+        // Include individual words for more comprehensive text extraction
         if (!pageTexts.has(pageNum)) pageTexts.set(pageNum, []);
         pageTexts.get(pageNum).push(block.Text);
         break;
