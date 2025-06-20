@@ -1,20 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
-import {
-  TextractClient,
-  StartDocumentAnalysisCommand,
-  GetDocumentAnalysisCommand,
-} from "@aws-sdk/client-textract";
+import * as Textract from "@aws-sdk/client-textract";
 import { v4 as uuidv4 } from "uuid";
-import {
-  S3Client,
-  HeadObjectCommand,
-  GetObjectCommand,
-} from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import * as S3 from "@aws-sdk/client-s3";
+import * as S3RequestPresigner from "@aws-sdk/s3-request-presigner";
+import * as SQS from "@aws-sdk/client-sqs";
 
 const REGION = "us-east-2";
-const textractClient = new TextractClient({ region: REGION });
-const s3Client = new S3Client({ region: REGION });
+const textractClient = new Textract.TextractClient({ region: REGION });
+const s3Client = new S3.S3Client({ region: REGION });
+const sqsClient = new SQS.SQSClient({ region: REGION });
 
 // Supabase configuration
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -23,6 +17,9 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // AWS S3 bucket for processing
 const AWS_S3_BUCKET = "my-receipts-app-bucket";
+const RAG_AGENT_QUEUE_URL =
+  process.env.RAG_AGENT_QUEUE_URL ||
+  "https://sqs.us-east-2.amazonaws.com/281439767132/RagAgentQueue";
 
 // Medical document queries for Textract
 const MEDICAL_QUERIES = [
@@ -105,6 +102,54 @@ const createMedicalTextChunks = (text, pageNumber = 1) => {
 
 // Legacy function for backward compatibility
 const createTextChunks = createMedicalTextChunks;
+
+// Helper to update document status consistently
+const updateDocumentStatus = async (
+  documentId,
+  { processing_status, textract_status, error_message },
+) => {
+  const updatePayload = { updated_at: new Date().toISOString() };
+  if (processing_status) updatePayload.processing_status = processing_status;
+  if (textract_status) updatePayload.textract_status = textract_status;
+  if (error_message) updatePayload.error_message = error_message;
+
+  console.log(`Updating document ${documentId} with:`, updatePayload);
+
+  const { error } = await supabase
+    .from("documents")
+    .update(updatePayload)
+    .eq("id", documentId);
+
+  if (error) {
+    console.error(`Failed to update status for document ${documentId}:`, error);
+  }
+};
+
+// Helper to notify RAG agent via SQS
+const notifyRagAgentViaSQS = async (userId, documentId) => {
+  console.log(`Sending SQS message for document ${documentId} to queue ${RAG_AGENT_QUEUE_URL}`);
+  try {
+    const command = new SQS.SendMessageCommand({
+      QueueUrl: RAG_AGENT_QUEUE_URL,
+      MessageBody: JSON.stringify({
+        user_id: userId,
+        document_id: documentId,
+      }),
+      // Assuming a FIFO queue for ordering, though it works with standard queues too
+      MessageGroupId: documentId, 
+      MessageDeduplicationId: `${documentId}-${Date.now()}`
+    });
+    await sqsClient.send(command);
+    console.log(`✅ Successfully sent SQS message for document ${documentId}`);
+  } catch (error) {
+    console.error(`Failed to send SQS message for document ${documentId}:`, error);
+    await updateDocumentStatus(documentId, {
+        processing_status: 'failed',
+        error_message: 'Failed to queue for RAG processing.'
+    });
+    throw new Error(`Failed to notify RAG agent via SQS: ${error.message}`);
+  }
+};
 
 // Extract form fields from Textract blocks
 const extractFormFields = (blocks) => {
@@ -463,56 +508,40 @@ const handleSNSNotification = async (event, requestId) => {
 
     if (status === "SUCCEEDED") {
       console.log(`✅ Textract job ${jobId} succeeded - processing results`);
-      await handleTextractCompletion(jobId);
+      const result = await handleTextractCompletion(jobId);
       console.log(`✅ Successfully processed Textract job ${jobId}`);
 
-      // Get document information for RAG agent notification
-      const { data: jobData, error: jobError } = await supabase
-        .from("textract_jobs")
-        .select("document_id")
-        .eq("aws_job_id", jobId)
-        .single();
-
-      if (jobError || !jobData) {
-        console.error("Failed to get document ID for RAG notification:", jobError);
-        throw new Error("Could not retrieve document information for RAG notification");
+      if (!result || !result.documentId) {
+        throw new Error(
+          `handleTextractCompletion failed to return a documentId for job ${jobId}`,
+        );
       }
+      const { documentId } = result;
 
       const { data: document, error: docError } = await supabase
         .from("documents")
         .select("id, user_id")
-        .eq("id", jobData.document_id)
+        .eq("id", documentId)
         .single();
 
       if (docError || !document) {
-        console.error("Failed to get document details for RAG notification:", docError);
-        throw new Error("Could not retrieve document details for RAG notification");
+        console.error(
+          `Failed to get document details for RAG notification:`,
+          docError,
+        );
+        throw new Error(
+          `Could not retrieve document details for RAG notification for document ${documentId}`,
+        );
       }
 
-      // Notify the rag-agent to process the document
+      // Notify the rag-agent to process the document via SQS
       try {
-        const ragResponse = await fetch(`${supabaseUrl}/functions/v1/notify-rag-agent`, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            user_id: document.user_id,
-            document_id: document.id
-          })
-        });
-
-        if (!ragResponse.ok) {
-          const errorText = await ragResponse.text();
-          console.error(`Failed to notify RAG agent: ${errorText}`);
-          throw new Error(`RAG agent notification failed: ${errorText}`);
-        }
-
+        await notifyRagAgentViaSQS(document.user_id, document.id);
         console.log(`✅ Successfully notified RAG agent for document ${document.id}`);
       } catch (error) {
-        console.error("Error notifying RAG agent:", error);
-        throw error;
+        console.error("Error notifying RAG agent via SQS:", error);
+        // The error is already logged and document status updated in notifyRagAgentViaSQS
+        throw error; // Re-throw to fail the overall execution
       }
 
       return {
@@ -798,7 +827,7 @@ const startTextractProcessing = async (
     console.log(`[DEBUG] Proceeding directly to Textract - S3 event confirms object exists`);
 
     // Start async Textract processing (works with AWS S3)
-    const command = new StartDocumentAnalysisCommand({
+    const command = new Textract.StartDocumentAnalysisCommand({
       DocumentLocation: {
         S3Object: {
           Bucket: bucketName,
@@ -881,53 +910,95 @@ const startTextractProcessing = async (
   }
 };
 
+// Get all Textract results with pagination
+const getAllTextractResults = async (awsJobId) => {
+  const allBlocks = [];
+  let nextToken = null;
+  let pageCount = 0;
+  
+  do {
+    pageCount++;
+    console.log(`[DEBUG] Fetching Textract results page ${pageCount}${nextToken ? ` with token: ${nextToken.substring(0, 20)}...` : ' (first page)'}`);
+    
+    const command = new Textract.GetDocumentAnalysisCommand({ 
+      JobId: awsJobId,
+      NextToken: nextToken 
+    });
+    
+    const result = await textractClient.send(command);
+    
+    if (result.JobStatus !== "SUCCEEDED") {
+      console.error(`Textract job ${awsJobId} failed with status: ${result.JobStatus}`);
+      throw new Error(`Textract job failed: ${result.StatusMessage || result.JobStatus}`);
+    }
+    
+    if (result.Blocks && result.Blocks.length > 0) {
+      allBlocks.push(...result.Blocks);
+      console.log(`[DEBUG] Page ${pageCount}: Added ${result.Blocks.length} blocks (total: ${allBlocks.length})`);
+    }
+    
+    nextToken = result.NextToken;
+    
+    // Safety check to prevent infinite loops
+    if (pageCount > 200) {
+      console.warn(`[WARNING] Reached maximum page limit (200) for job ${awsJobId}`);
+      break;
+    }
+    
+  } while (nextToken);
+  
+  console.log(`[SUCCESS] Retrieved all ${allBlocks.length} blocks across ${pageCount} pages`);
+  return allBlocks;
+};
+
 // Handle Textract job completion (this would be called by SNS notification or polling)
 const handleTextractCompletion = async (awsJobId) => {
+  let documentId = null;
   try {
-    // Get job completion status
-    const command = new GetDocumentAnalysisCommand({ JobId: awsJobId });
-    const result = await textractClient.send(command);
-
-    if (result.JobStatus !== "SUCCEEDED") {
-      console.error(
-        `Textract job ${awsJobId} failed with status: ${result.JobStatus}`,
-      );
-
-      // Update job status
-      await supabase
-        .from("textract_jobs")
-        .update({
-          status: result.JobStatus,
-          completed_at: new Date().toISOString(),
-          error_message: result.StatusMessage || "Job failed",
-        })
-        .eq("aws_job_id", awsJobId);
-
-      return;
-    }
-
-    // Get document information
+    // Get document information first
     const { data: jobData } = await supabase
       .from("textract_jobs")
       .select("document_id")
       .eq("aws_job_id", awsJobId)
       .single();
 
-    if (!jobData) {
-      console.error("Job not found in database:", awsJobId);
+    if (!jobData || !jobData.document_id) {
+      console.error("Job not found in database or document_id is missing:", awsJobId);
+      throw new Error(`Job ${awsJobId} not found in DB or has no document_id.`);
+    }
+    documentId = jobData.document_id;
+    
+    // Verify document exists before proceeding to prevent race conditions
+    const { data: document, error: docError } = await supabase
+      .from('documents')
+      .select('id')
+      .eq('id', documentId)
+      .single();
+
+    if (docError || !document) {
+        console.error(`Document ${documentId} not found for job ${awsJobId}. Error: ${docError?.message}`);
+        throw new Error(`Document ${documentId} not found, cannot process Textract results.`);
+    }
+
+    // Get ALL Textract results with pagination
+    console.log(`[DEBUG] Fetching all Textract results for job ${awsJobId}`);
+    const allBlocks = await getAllTextractResults(awsJobId);
+    
+    if (!allBlocks || allBlocks.length === 0) {
+      console.error(`No blocks retrieved for job ${awsJobId}`);
       return;
     }
 
+    console.log(`[DEBUG] Retrieved ${allBlocks.length} total blocks from Textract`);
+
     // Process results for RAG
-    console.log(`[DEBUG] Processing ${result.Blocks.length} Textract blocks for document ${jobData.document_id}`);
-    
     const processedData = await processTextractForRAG(
-      result.Blocks,
+      allBlocks,
       jobData.document_id,
     );
 
     console.log(`[DEBUG] Textract processing complete:`);
-    console.log(`- Blocks processed: ${result.Blocks.length}`);
+    console.log(`- Blocks processed: ${allBlocks.length}`);
     console.log(`- Full text length: ${processedData.fullText.length}`);
     console.log(`- Chunks created: ${processedData.chunks.length}`);
     console.log(`- Entities found: ${processedData.entities.length}`);
@@ -935,7 +1006,7 @@ const handleTextractCompletion = async (awsJobId) => {
     console.log(`- Tables: ${processedData.tables.length}`);
 
     // Calculate confidence and prepare updates
-    const avgConfidence = calculateAverageConfidence(result.Blocks);
+    const avgConfidence = calculateAverageConfidence(allBlocks);
     const signatures = processedData.signatures;
 
     // Store chunks in database
@@ -1000,7 +1071,7 @@ const handleTextractCompletion = async (awsJobId) => {
           textract_confidence: avgConfidence,
           has_signatures: signatures.length > 0,
           signature_count: signatures.length,
-          total_pages: Math.max(...result.Blocks.map((b) => b.Page || 1)),
+          total_pages: Math.max(...allBlocks.map((b) => b.Page || 1)),
           updated_at: new Date().toISOString(),
         })
         .eq("id", jobData.document_id),
@@ -1010,14 +1081,23 @@ const handleTextractCompletion = async (awsJobId) => {
         .update({
           status: "SUCCEEDED",
           completed_at: new Date().toISOString(),
-          raw_output: result.Blocks,
+          raw_output: allBlocks.slice(0, 1000), // Store first 1000 blocks to avoid size limits
         })
         .eq("aws_job_id", awsJobId),
     ]);
 
     console.log(`Successfully processed document ${jobData.document_id}`);
+    return { documentId: jobData.document_id };
   } catch (error) {
     console.error("Error processing Textract completion:", error);
+
+    if (documentId) {
+      await updateDocumentStatus(documentId, {
+        processing_status: "failed",
+        textract_status: "failed",
+        error_message: `Textract completion failed: ${error.message}`,
+      });
+    }
 
     // Update job status to failed
     await supabase
@@ -1028,6 +1108,8 @@ const handleTextractCompletion = async (awsJobId) => {
         error_message: error.message,
       })
       .eq("aws_job_id", awsJobId);
+    
+    throw error;
   }
 };
 
@@ -1071,11 +1153,11 @@ async function handleGetS3Url(event, requestId) {
     }
 
     // Generate a pre-signed URL for the file
-    const command = new GetObjectCommand({
+    const command = new S3.GetObjectCommand({
       Bucket: AWS_S3_BUCKET,
       Key: key,
     });
-    const url = await getSignedUrl(s3Client, command, { expiresIn: 60 * 5 }); // 5 min
+    const url = await S3RequestPresigner.getSignedUrl(s3Client, command, { expiresIn: 60 * 5 }); // 5 min
     return {
       statusCode: 200,
       headers: { "Content-Type": "application/json" },

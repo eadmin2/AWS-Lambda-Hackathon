@@ -194,7 +194,7 @@ export const handler = async (event) => {
         agentId: AGENT_ID,
         agentAliasId: AGENT_ALIAS_ID,
         sessionId: `${userId}-${document_id}`, // Create a unique session ID
-        inputText: `Analyze this medical document and identify potential VA disability conditions. For each condition found, provide the following in JSON format:
+        inputText: `Analyze this medical document and identify all potential VA disability conditions. Be comprehensive and extract all possible conditions, even minor ones. For each condition found, provide the following in JSON format:
         {
           "conditions": [
             {
