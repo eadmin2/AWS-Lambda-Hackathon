@@ -23,6 +23,10 @@ const bedrockAgentClient = new BedrockAgentRuntimeClient({ region: "us-east-2" }
 const AGENT_ID = process.env.BEDROCK_AGENT_ID || "S9KQ4LEVEI";
 const AGENT_ALIAS_ID = process.env.BEDROCK_AGENT_ALIAS_ID || "YKOOLY6ZHJ";
 
+// Configuration for batch processing
+const CHUNK_BATCH_SIZE = 3; // Process 3 chunks per Bedrock call for efficiency
+const MAX_RETRIES = 2; // Retry failed chunks
+
 // Helper function to parse Bedrock's response and extract conditions
 const parseBedrockResponse = (response) => {
   try {
@@ -35,14 +39,18 @@ const parseBedrockResponse = (response) => {
   }
 };
 
-// Helper function to parse Bedrock Agent responses and extract conditions
+// Enhanced helper function to parse Bedrock Agent responses and extract conditions
 const parseAgentResponse = (response) => {
   try {
     // The agent might return JSON directly or wrapped in markdown
     // First, try to find JSON in the response
     const jsonMatch = response.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(jsonMatch[0]);
+      // Ensure conditions is always an array
+      if (parsed.conditions && Array.isArray(parsed.conditions)) {
+        return parsed;
+      }
     }
     
     // If no JSON found, try to extract conditions from text
@@ -56,12 +64,18 @@ const parseAgentResponse = (response) => {
         if (currentCondition) {
           conditions.push(currentCondition);
         }
-        currentCondition = { name: line.split(':')[1]?.trim() || 'Unknown Condition' };
+        currentCondition = { 
+          name: line.split(':')[1]?.trim() || 'Unknown Condition',
+          keywords: [],
+          severity: 'mild'
+        };
       } else if (line.includes('rating:') && currentCondition) {
-        const ratingMatch = line.match(/(\d+)%/);
+        const ratingMatch = line.match(/(\d+)%?/);
         currentCondition.rating = ratingMatch ? parseInt(ratingMatch[1]) : 10;
       } else if (line.includes('severity:') && currentCondition) {
         currentCondition.severity = line.split(':')[1]?.trim() || 'mild';
+      } else if (line.includes('excerpt:') && currentCondition) {
+        currentCondition.excerpt = line.split(':')[1]?.trim() || '';
       }
     }
     
@@ -72,24 +86,76 @@ const parseAgentResponse = (response) => {
     return { conditions };
   } catch (error) {
     console.error("Error parsing agent response:", error);
-    return null;
+    return { conditions: [] }; // Return empty array instead of null
   }
 };
 
 // Helper function to calculate VA disability rating
-const calculateRating = (symptoms, severity) => {
-  // This is a simplified version - you might want to make this more sophisticated
+const calculateRating = (keywords, severity) => {
   const baseRatings = {
     mild: 10,
     moderate: 30,
     severe: 50,
     total: 100
   };
-  return baseRatings[severity] || 10;
+  
+  // Enhanced rating calculation based on keywords
+  let rating = baseRatings[severity] || 10;
+  
+  // Boost rating for certain serious conditions
+  if (keywords && Array.isArray(keywords)) {
+    const keywordStr = keywords.join(' ').toLowerCase();
+    if (keywordStr.includes('ptsd') || keywordStr.includes('traumatic')) rating = Math.max(rating, 50);
+    if (keywordStr.includes('cancer') || keywordStr.includes('malignant')) rating = Math.max(rating, 100);
+    if (keywordStr.includes('amputation') || keywordStr.includes('paralysis')) rating = Math.max(rating, 70);
+  }
+  
+  return Math.min(rating, 100); // Cap at 100%
 };
 
+// Enhanced condition normalization for better deduplication
 function normalizeConditionName(name) {
-  return name.trim().toLowerCase();
+  if (!name) return 'unknown';
+  
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^\w\s]/g, '') // Remove punctuation
+    .replace(/\s+/g, ' ') // Normalize spaces
+    .replace(/\b(left|right|bilateral|l|r)\b/g, '') // Remove laterality
+    .replace(/\b(chronic|acute|severe|mild|moderate)\b/g, '') // Remove severity modifiers
+    .trim();
+}
+
+// Enhanced similarity check for better deduplication
+function areConditionsSimilar(name1, name2) {
+  const norm1 = normalizeConditionName(name1);
+  const norm2 = normalizeConditionName(name2);
+  
+  // Exact match after normalization
+  if (norm1 === norm2) return true;
+  
+  // Check if one contains the other (for variants)
+  if (norm1.includes(norm2) || norm2.includes(norm1)) return true;
+  
+  // Check for common medical synonyms
+  const synonyms = {
+    'tinnitus': ['ringing ears', 'ear ringing'],
+    'ptsd': ['post traumatic stress', 'posttraumatic stress'],
+    'anxiety': ['anxious', 'panic'],
+    'depression': ['depressive', 'mood disorder'],
+    'sleep apnea': ['sleep disorder', 'breathing disorder'],
+    'hypertension': ['high blood pressure', 'elevated blood pressure']
+  };
+  
+  for (const [key, values] of Object.entries(synonyms)) {
+    if ((norm1.includes(key) || values.some(v => norm1.includes(v))) &&
+        (norm2.includes(key) || values.some(v => norm2.includes(v)))) {
+      return true;
+    }
+  }
+  
+  return false;
 }
 
 // Simplified RAG Agent Handler - only processes work messages
@@ -133,9 +199,8 @@ export const handler = async (event) => {
       const userId = pathParameters?.userId || event.pathParameters?.userId;
       console.log(`📋 GET request for user ${userId} conditions`);
       
-      // Fix: Use the correct table name
       const { data, error } = await supabase
-        .from("disability_estimates") // Changed from user_conditions
+        .from("disability_estimates")
         .select("*")
         .eq("user_id", userId);
 
@@ -152,11 +217,27 @@ export const handler = async (event) => {
   }
 };
 
-// Main document processing logic, extracted to be reusable
+// Enhanced document processing with batch optimization
 async function processDocument(userId, documentId) {
     console.log(`Processing document ${documentId} for user ${userId}`);
+    const startTime = Date.now();
 
-    // First, let's check the document metadata
+    // Check if estimates already exist for this document
+    const { data: existingEstimates } = await supabase
+      .from("disability_estimates")
+      .select("id")
+      .eq("document_id", documentId)
+      .limit(1);
+
+    if (existingEstimates && existingEstimates.length > 0) {
+      console.log("⚠️ Estimates already exist for this document. Skipping processing.");
+      return createSuccessResponse({ 
+        message: "Document already processed. Use reprocess endpoint to regenerate estimates.",
+        skipped: true
+      });
+    }
+
+    // Get document metadata
     const { data: document, error: docError } = await supabase
       .from("documents")
       .select("id, file_name, total_chunks, total_pages, textract_confidence, processing_status")
@@ -169,30 +250,7 @@ async function processDocument(userId, documentId) {
       console.log("Document metadata:", document);
     }
 
-    // Check Textract job details
-    const { data: textractJob, error: jobError } = await supabase
-      .from("textract_jobs")
-      .select("id, aws_job_id, status, started_at, completed_at, error_message")
-      .eq("document_id", documentId)
-      .order("started_at", { ascending: false })
-      .limit(1);
-
-    if (jobError) {
-      console.error("Error fetching Textract job:", jobError);
-    } else {
-      console.log("Textract job details:", textractJob);
-    }
-
-    // First, let's check if chunks exist without RLS restrictions
-    const { data: allChunks, error: allChunksError } = await supabase
-      .from("document_chunks")
-      .select("content, chunk_index, page_number, char_count")
-      .eq("document_id", documentId)
-      .order("chunk_index");
-
-    console.log(`Total chunks in database for document: ${allChunks?.length || 0}`);
-
-    // Get the document chunks from Supabase (this will respect RLS)
+    // Get document chunks
     const { data: chunks, error: chunksError } = await supabase
       .from("document_chunks")
       .select("content, chunk_index, page_number, char_count")
@@ -205,134 +263,180 @@ async function processDocument(userId, documentId) {
     }
 
     console.log(`Found ${chunks.length} document chunks`);
-    console.log("Chunk details:", chunks.map(chunk => ({
-      index: chunk.chunk_index,
-      page: chunk.page_number,
-      charCount: chunk.char_count,
-      contentLength: chunk.content?.length || 0
-    })));
 
-    // Combine all chunks into one text
-    const documentText = chunks.map(chunk => chunk.content).join("\n\n");
+    // Group chunks into batches for more efficient processing
+    const chunkBatches = [];
+    for (let i = 0; i < chunks.length; i += CHUNK_BATCH_SIZE) {
+      chunkBatches.push(chunks.slice(i, i + CHUNK_BATCH_SIZE));
+    }
 
-    console.log("Document text length:", documentText.length);
+    console.log(`Processing ${chunks.length} chunks in ${chunkBatches.length} batches`);
 
-    // Use Bedrock Agent to analyze the text and identify conditions
-    const commandParams = {
-      agentId: AGENT_ID,
-      agentAliasId: AGENT_ALIAS_ID,
-      sessionId: `${userId}-${documentId}`, // Create a unique session ID
-      inputText: `Analyze this medical document and identify all potential VA disability conditions. Be comprehensive and extract all possible conditions, even minor ones. For each condition found, provide the following in JSON format:
-      {
-        "conditions": [
-          {
-            "name": "condition name",
-            "rating": estimated rating percentage (10, 30, 50, 70, or 100),
-            "severity": "mild/moderate/severe/total",
-            "excerpt": "relevant text excerpt",
-            "cfrCriteria": "relevant CFR citation",
-            "keywords": ["matched", "keywords"]
-          }
-        ]
+    let allConditions = [];
+    let processedChunks = 0;
+
+    // Process chunks in batches
+    for (let batchIndex = 0; batchIndex < chunkBatches.length; batchIndex++) {
+      const batch = chunkBatches[batchIndex];
+      console.log(`Processing batch ${batchIndex + 1}/${chunkBatches.length} (chunks ${batch[0].chunk_index}-${batch[batch.length-1].chunk_index})`);
+
+      try {
+        const batchConditions = await processBatch(batch, userId, documentId, batchIndex);
+        allConditions.push(...batchConditions);
+        processedChunks += batch.length;
+        
+        // Progress logging
+        const progress = Math.round((processedChunks / chunks.length) * 100);
+        console.log(`Progress: ${progress}% (${processedChunks}/${chunks.length} chunks)`);
+        
+      } catch (error) {
+        console.error(`Error processing batch ${batchIndex + 1}:`, error);
+        // Continue with next batch
       }
+    }
+    
+    console.log(`Found a total of ${allConditions.length} conditions across all chunks (before deduplication).`);
 
-      Consider VA rating criteria, symptoms described, and frequency/severity of symptoms.
-      Be specific with CFR citations (e.g., "38 CFR §4.130 - Mental Disorders").
+    // Enhanced deduplication with similarity checking
+    const uniqueConditions = [];
+    
+    for (const condition of allConditions) {
+      const isDuplicate = uniqueConditions.some(existing => 
+        areConditionsSimilar(condition.name, existing.name)
+      );
+      
+      if (!isDuplicate) {
+        uniqueConditions.push(condition);
+      } else {
+        console.log(`Deduplicating: "${condition.name}" (similar to existing condition)`);
+      }
+    }
 
-      Medical Document Text:
-      ${documentText}
+    console.log(`Found ${uniqueConditions.length} unique conditions after enhanced deduplication.`);
 
-      Provide your analysis in valid JSON format only.`
+    // Process each unique identified condition
+    const processedConditions = [];
+    for (const condition of uniqueConditions) {
+        try {
+            const rating = condition.rating || calculateRating(condition.keywords, condition.severity);
+            const normalizedConditionName = normalizeConditionName(condition.name);
+            
+            let cfrData = null;
+            try {
+                if (condition.keywords && Array.isArray(condition.keywords) && condition.keywords.length > 0) {
+                    cfrData = await getCFRData(condition);
+                }
+            } catch (cfrError) {
+                console.error(`Error getting CFR data for condition ${condition.name}:`, cfrError);
+            }
+            
+            const newCondition = {
+                user_id: userId,
+                document_id: documentId,
+                condition: normalizedConditionName,
+                condition_display: condition.name,
+                estimated_rating: rating,
+                severity: condition.severity || 'mild',
+                cfr_criteria: condition.cfrCriteria || (cfrData ? cfrData.title : null),
+                excerpt: condition.excerpt || '',
+                matched_keywords: condition.keywords || [],
+            };
+            processedConditions.push(newCondition);
+        } catch (conditionError) {
+            console.error(`Error processing condition ${condition.name}:`, conditionError);
+        }
+    }
+    
+    // Save conditions to database
+    if (processedConditions.length > 0) {
+        const { error } = await supabase
+            .from("disability_estimates")
+            .insert(processedConditions);
+        
+        if (error) {
+            console.error("Error saving conditions:", error);
+            throw error;
+        }
+        
+        console.log(`Successfully saved ${processedConditions.length} conditions`);
+    }
+
+    const processingTime = Math.round((Date.now() - startTime) / 1000);
+    console.log(`✅ Document processing completed in ${processingTime} seconds`);
+
+    return createSuccessResponse({ 
+        message: `Successfully processed document and saved ${processedConditions.length} conditions.`,
+        conditions: processedConditions,
+        processingTime,
+        chunksProcessed: processedChunks,
+        conditionsFound: allConditions.length,
+        uniqueConditions: uniqueConditions.length
+    });
+}
+
+// Process a batch of chunks together for efficiency
+async function processBatch(chunkBatch, userId, documentId, batchIndex) {
+  const conditions = [];
+  
+  // Combine chunks for batch processing
+  const combinedContent = chunkBatch.map(chunk => 
+    `--- Chunk ${chunk.chunk_index} (Page ${chunk.page_number}) ---\n${chunk.content}`
+  ).join('\n\n');
+
+  try {
+    const inputText = `Analyze these medical document chunks and identify all potential VA disability conditions. Be comprehensive and extract all possible conditions. For each condition found, provide the following in JSON format:
+    {
+      "conditions": [
+        {
+          "name": "condition name",
+          "rating": estimated rating percentage (e.g. 10, 30, 50),
+          "severity": "mild/moderate/severe",
+          "excerpt": "relevant text excerpt from the document chunks",
+          "cfrCriteria": "relevant CFR citation (e.g., '38 CFR §4.130')",
+          "keywords": ["matched", "keywords"]
+        }
+      ]
+    }
+
+    Medical Document Chunks:
+    ${combinedContent}
+
+    Provide your analysis in valid JSON format only. If no conditions are found, return an empty "conditions" array.`;
+
+    const commandParams = {
+        agentId: AGENT_ID,
+        agentAliasId: AGENT_ALIAS_ID,
+        sessionId: `${userId}-${documentId}-batch-${batchIndex}`,
+        inputText,
     };
 
     const command = new InvokeAgentCommand(commandParams);
     const agentResponse = await bedrockAgentClient.send(command);
 
-    // Process the streaming response
     let fullResponse = '';
-    for await (const chunk of agentResponse.completion) {
-      if (chunk.chunk?.bytes) {
-        const text = new TextDecoder().decode(chunk.chunk.bytes);
-        fullResponse += text;
-      }
-    }
-
-    console.log("Agent response:", fullResponse);
-
-    // Parse the agent response
-    const analysis = parseAgentResponse(fullResponse);
-    
-    if (!analysis || !analysis.conditions) {
-      throw new Error("Failed to parse conditions from Bedrock Agent response");
-    }
-
-    console.log(`Found ${analysis.conditions.length} conditions`);
-
-    // Process each identified condition
-    const processedConditions = [];
-    for (const condition of analysis.conditions) {
-      try {
-        // Calculate rating if not provided
-        const rating = condition.rating || calculateRating(condition.keywords, condition.severity);
-
-        // Normalize condition name for deduplication
-        const normalizedConditionName = normalizeConditionName(condition.name);
-        
-        // Find matching CFR data with error handling
-        let cfrData = null;
-        try {
-          // Only call getCFRData if we have valid keywords
-          if (condition.keywords && Array.isArray(condition.keywords) && condition.keywords.length > 0) {
-            cfrData = await getCFRData(condition);
-          }
-        } catch (cfrError) {
-          console.error(`Error getting CFR data for condition ${condition.name}:`, cfrError);
-          // Continue processing without CFR data
+    for await (const responseChunk of agentResponse.completion) {
+        if (responseChunk.chunk?.bytes) {
+            fullResponse += new TextDecoder().decode(responseChunk.chunk.bytes);
         }
-        
-        const newCondition = {
-          user_id: userId,
-          document_id: documentId,
-          condition: normalizedConditionName,
-          condition_display: condition.name, // Original condition name for display
-          estimated_rating: rating,
-          severity: condition.severity,
-          cfr_criteria: condition.cfrCriteria || (cfrData ? cfrData.title : null),
-          excerpt: condition.excerpt,
-          matched_keywords: condition.keywords || [],
-        };
-        processedConditions.push(newCondition);
-      } catch (conditionError) {
-        console.error(`Error processing condition ${condition.name}:`, conditionError);
-        // Continue with next condition
-      }
-    }
-    
-    // Save conditions to database
-    if (processedConditions.length > 0) {
-      // Fix: Use the correct table name
-      const { data, error } = await supabase
-        .from("disability_estimates") // Changed from user_conditions
-        .insert(processedConditions);
-      
-      if (error) {
-        console.error("Error saving conditions:", error);
-        throw error;
-      }
-      
-      console.log(`Successfully saved ${processedConditions.length} conditions`);
     }
 
-    // Return a success response
-    return createSuccessResponse({ 
-      message: `Successfully processed document and saved ${processedConditions.length} conditions.`,
-      conditions: processedConditions 
-    });
+    console.log(`Agent response for batch ${batchIndex}:`, fullResponse.substring(0, 500) + '...');
+
+    const analysis = parseAgentResponse(fullResponse);
+    if (analysis && analysis.conditions && analysis.conditions.length > 0) {
+        console.log(`Found ${analysis.conditions.length} conditions in batch ${batchIndex}`);
+        conditions.push(...analysis.conditions);
+    }
+  } catch (error) {
+    console.error(`Error processing batch ${batchIndex}:`, error);
+    // Continue processing - don't fail the entire document
+  }
+
+  return conditions;
 }
 
 // Main processing function
 async function processAllConditions(userId) {
-    // Step 1: Query Supabase for user conditions
     const conditions = await getUserConditions(userId);
     
     if (!conditions || conditions.length === 0) {
@@ -344,14 +448,12 @@ async function processAllConditions(userId) {
 
     console.log(`Found ${conditions.length} conditions for user`);
 
-    // Step 2: Process each condition
     const processedConditions = [];
     
     for (const condition of conditions) {
         try {
             console.log(`Processing condition: ${condition.name}`);
 
-            // Step 3: Get CFR data for the condition with error handling
             let cfrData = null;
             try {
                 if (condition.keywords && Array.isArray(condition.keywords) && condition.keywords.length > 0) {
@@ -359,25 +461,16 @@ async function processAllConditions(userId) {
                 }
             } catch (cfrError) {
                 console.error(`Error getting CFR data for condition ${condition.name}:`, cfrError);
-                // Continue without CFR data
             }
             
-            // Step 4: Generate recommendation using Bedrock
             const recommendation = await generateRecommendation(condition, cfrData);
-            
-            // Step 5: Format the response
-            const formattedCondition = formatConditionResponse(
-                condition, 
-                cfrData, 
-                recommendation
-            );
+            const formattedCondition = formatConditionResponse(condition, cfrData, recommendation);
             
             processedConditions.push(formattedCondition);
             
         } catch (conditionError) {
             console.error(`Error processing condition ${condition.name}:`, conditionError);
             
-            // Add error condition to results
             processedConditions.push({
                 id: condition.id,
                 title: condition.name,
@@ -387,7 +480,6 @@ async function processAllConditions(userId) {
         }
     }
 
-    // Step 6: Return structured response
     return createSuccessResponse({
         userId,
         totalConditions: conditions.length,
@@ -398,9 +490,8 @@ async function processAllConditions(userId) {
 
 // Handle single condition lookup
 async function handleSingleCondition(userId, conditionId) {
-    // Fix: Use the correct table name
     const { data, error } = await supabase
-        .from('disability_estimates') // Changed from user_conditions
+        .from('disability_estimates')
         .select('*')
         .eq('user_id', userId)
         .eq('id', conditionId)
@@ -413,8 +504,11 @@ async function handleSingleCondition(userId, conditionId) {
     try {
         let cfrData = null;
         try {
-            if (data.keywords && Array.isArray(data.keywords) && data.keywords.length > 0) {
-                cfrData = await getCFRData(data);
+            if (data.matched_keywords && Array.isArray(data.matched_keywords) && data.matched_keywords.length > 0) {
+                cfrData = await getCFRData({
+                  name: data.condition_display,
+                  keywords: data.matched_keywords
+                });
             }
         } catch (cfrError) {
             console.error(`Error getting CFR data:`, cfrError);
@@ -431,7 +525,5 @@ async function handleSingleCondition(userId, conditionId) {
 
 // Handle reprocessing request
 async function handleReprocess(userId) {
-    // Add any special reprocessing logic here
-    // For now, just call the main processing function
     return await processAllConditions(userId);
 }
