@@ -15,11 +15,12 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// AWS S3 bucket for processing
+// Updated environment variables
 const AWS_S3_BUCKET = "my-receipts-app-bucket";
-const RAG_AGENT_QUEUE_URL =
-  process.env.RAG_AGENT_QUEUE_URL ||
-  "https://sqs.us-east-2.amazonaws.com/281439767132/RagAgentQueue";
+
+// SEPARATE QUEUES
+const TEXTRACT_COMPLETION_QUEUE = "https://sqs.us-east-2.amazonaws.com/281439767132/RagAgentQueue"; // Current queue for Textract notifications
+const RAG_WORK_QUEUE = "https://sqs.us-east-2.amazonaws.com/281439767132/RagWorkQueue"; // New queue for RAG work
 
 // Medical document queries for Textract
 const MEDICAL_QUERIES = [
@@ -45,9 +46,9 @@ const CHUNK_CONFIG = {
 };
 
 // Helper function to create text chunks optimized for medical documents
-const createMedicalTextChunks = (text, pageNumber = 1) => {
+const createMedicalTextChunks = (text, pageNumber = 1, startingChunkIndex = 0) => {
   const chunks = [];
-  let chunkIndex = 0;
+  let chunkIndex = startingChunkIndex;
   
   // Split by lines first to preserve medical document structure
   const lines = text.split('\n').filter(line => line.trim().length > 0);
@@ -125,24 +126,35 @@ const updateDocumentStatus = async (
   }
 };
 
-// Helper to notify RAG agent via SQS
+// Updated notification function - now sends to dedicated RAG work queue
 const notifyRagAgentViaSQS = async (userId, documentId) => {
-  console.log(`Sending SQS message for document ${documentId} to queue ${RAG_AGENT_QUEUE_URL}`);
+  console.log(`Sending RAG work message for document ${documentId} to queue ${RAG_WORK_QUEUE}`);
   try {
-    const command = new SQS.SendMessageCommand({
-      QueueUrl: RAG_AGENT_QUEUE_URL,
+    // Determine if this is a FIFO queue
+    const isFifoQueue = RAG_WORK_QUEUE.endsWith('.fifo');
+    
+    const messageCommand = {
+      QueueUrl: RAG_WORK_QUEUE, // Send to dedicated RAG work queue
       MessageBody: JSON.stringify({
         user_id: userId,
         document_id: documentId,
+        timestamp: new Date().toISOString(),
+        source: "document_processor"
       }),
-      // Assuming a FIFO queue for ordering, though it works with standard queues too
-      MessageGroupId: documentId, 
-      MessageDeduplicationId: `${documentId}-${Date.now()}`
-    });
+    };
+    
+    // Add FIFO-specific parameters if needed
+    if (isFifoQueue) {
+      messageCommand.MessageGroupId = documentId;
+      messageCommand.MessageDeduplicationId = `${documentId}-${Date.now()}`;
+      console.log(`Using FIFO queue parameters for document ${documentId}`);
+    }
+    
+    const command = new SQS.SendMessageCommand(messageCommand);
     await sqsClient.send(command);
-    console.log(`✅ Successfully sent SQS message for document ${documentId}`);
+    console.log(`✅ Successfully sent RAG work message for document ${documentId}`);
   } catch (error) {
-    console.error(`Failed to send SQS message for document ${documentId}:`, error);
+    console.error(`Failed to send RAG work message for document ${documentId}:`, error);
     await updateDocumentStatus(documentId, {
         processing_status: 'failed',
         error_message: 'Failed to queue for RAG processing.'
@@ -288,8 +300,8 @@ const processTextractForRAG = async (blocks, documentId) => {
     const pageText = texts.join("\n"); // Use newlines to preserve structure
     fullText += `\n\n=== PAGE ${pageNum} ===\n` + pageText;
 
-    // Create chunks for this page with better logic
-    const pageChunks = createMedicalTextChunks(pageText, pageNum);
+    // Create chunks for this page, passing the current size of allChunks as the starting index
+    const pageChunks = createMedicalTextChunks(pageText, pageNum, allChunks.length);
     allChunks.push(...pageChunks);
   }
 
@@ -363,7 +375,7 @@ const processTableBlock = (tableBlock, allBlocks) => {
   return table;
 };
 
-// Main Lambda handler
+// Main Lambda handler - FIXED with SQS support
 export const handler = async (event) => {
   const requestId = uuidv4();
   console.log("Request ID:", requestId);
@@ -395,22 +407,54 @@ export const handler = async (event) => {
       return await handleS3Upload(event, requestId);
     }
 
-    // Handle Textract job completion (SNS notification)
+    // Simplified SQS handler - only handles Textract notifications now
+    if (
+      event.Records &&
+      event.Records[0].eventSource === "aws:sqs"
+    ) {
+      console.log("SQS event detected - processing Textract notification");
+      
+      try {
+        const sqsRecord = event.Records[0];
+        const messageBody = JSON.parse(sqsRecord.body);
+        
+        // This queue now ONLY receives Textract SNS notifications
+        if (messageBody.Type === "Notification" && messageBody.TopicArn && messageBody.Message) {
+          console.log("📄 Textract SNS notification detected - processing");
+          
+          const snsEvent = {
+            Records: [{
+              Sns: {
+                Message: messageBody.Message,
+                MessageId: messageBody.MessageId,
+                TopicArn: messageBody.TopicArn
+              }
+            }]
+          };
+          
+          return await handleSNSNotification(snsEvent, requestId);
+        } else {
+          console.error("❓ Unexpected message format in Textract completion queue:", messageBody);
+          throw new Error("Unexpected message format");
+        }
+        
+      } catch (error) {
+        console.error("❌ Error processing SQS message:", error);
+        throw error;
+      }
+    }
+
+    // Handle direct SNS notifications (if not going through SQS)
     if (event.Records && 
         (event.Records[0].EventSource === "aws:sns" || 
          event.Records[0].eventSource === "aws:sns" ||
          (event.Records[0].Sns && event.Records[0].EventSubscriptionArn))) {
-      console.log("SNS notification detected with structure:", {
-        hasSns: !!event.Records[0].Sns,
-        hasEventSubscriptionArn: !!event.Records[0].EventSubscriptionArn,
-        eventSource: event.Records[0].eventSource || event.Records[0].EventSource
-      });
+      console.log("Direct SNS notification detected");
       return await handleSNSNotification(event, requestId);
     }
 
-    // --- NEW: Handle direct invocation for get-s3-url (plain event with key/userId) ---
+    // Handle direct invocation for get-s3-url (plain event with key/userId)
     if (event.key) {
-      // If userId is not present, try to extract from event.userId or event.userid
       const userId = event.userId || event.userid || null;
       return await handleGetS3Url({
         httpMethod: "POST",
@@ -1012,6 +1056,21 @@ const handleTextractCompletion = async (awsJobId) => {
     // Store chunks in database
     if (processedData.chunks.length > 0) {
       console.log(`[DEBUG] Storing ${processedData.chunks.length} chunks in database`);
+      
+      // NEW: Delete existing chunks for this document to prevent duplicates on reprocessing
+      console.log(`[CLEANUP] Deleting existing chunks for document ${jobData.document_id}`);
+      const { error: deleteError } = await supabase
+        .from('document_chunks')
+        .delete()
+        .eq('document_id', jobData.document_id);
+
+      if (deleteError) {
+        console.error(`[CLEANUP] Failed to delete old chunks:`, deleteError);
+        // This is not a fatal error, as the insert would fail anyway.
+        // We log it and proceed.
+      } else {
+        console.log(`[CLEANUP] Successfully deleted old chunks.`);
+      }
       
       const chunkInserts = processedData.chunks.map((chunk, index) => ({
         id: uuidv4(),

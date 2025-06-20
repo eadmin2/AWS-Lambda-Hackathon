@@ -92,233 +92,243 @@ function normalizeConditionName(name) {
   return name.trim().toLowerCase();
 }
 
+// Simplified RAG Agent Handler - only processes work messages
 export const handler = async (event) => {
   try {
-    console.log("Event received:", JSON.stringify(event));
+    console.log("Event received:", JSON.stringify(event, null, 2));
 
-    // Handle API Gateway v2 format
+    // Handle SQS event trigger - now only receives RAG work messages
+    if (event.Records && event.Records[0] && event.Records[0].eventSource === "aws:sqs") {
+      console.log("✅ SQS work message detected. Processing document...");
+      
+      const sqsRecord = event.Records[0];
+      const body = JSON.parse(sqsRecord.body);
+      console.log("RAG Work Message:", body);
+      
+      // This queue now ONLY receives RAG work messages with user_id and document_id
+      const { user_id, document_id, source } = body;
+
+      if (!user_id || !document_id) {
+        console.error("❌ Invalid work message format:", body);
+        return createErrorResponse(400, "Invalid work message format");
+      }
+      
+      console.log(`🚀 Processing document ${document_id} for user ${user_id} (source: ${source || 'unknown'})`);
+      return await processDocument(user_id, document_id);
+    }
+
+    // --- Handle API Gateway / Direct Invocation ---
     const httpMethod = event.httpMethod || event.requestContext?.http?.method;
     const routeKey = event.routeKey;
     const pathParameters = event.pathParameters;
 
-    // Handle different HTTP methods and routes
-    if (httpMethod === "GET" && (routeKey === "GET /rag-agent/{userId}" || event.resource === "/rag-agent/{userId}")) {
-      // Get all conditions for a user
+    if (httpMethod === "POST" && (routeKey === "POST /rag-agent/{userId}/reprocess" || event.resource === "/rag-agent/{userId}/reprocess")) {
       const userId = pathParameters?.userId || event.pathParameters?.userId;
+      const { document_id } = JSON.parse(event.body);
+      console.log(`📋 API reprocess call for user ${userId} and document ${document_id}`);
+      return await processDocument(userId, document_id);
+    }
+    
+    if (httpMethod === "GET" && (routeKey === "GET /rag-agent/{userId}" || event.resource === "/rag-agent/{userId}")) {
+      const userId = pathParameters?.userId || event.pathParameters?.userId;
+      console.log(`📋 GET request for user ${userId} conditions`);
       
+      // Fix: Use the correct table name
       const { data, error } = await supabase
-        .from("disability_estimates")
+        .from("disability_estimates") // Changed from user_conditions
         .select("*")
         .eq("user_id", userId);
 
       if (error) throw error;
-
-      return {
-        statusCode: 200,
-        body: JSON.stringify(data)
-      };
+      return createSuccessResponse(data);
     }
 
-    if (httpMethod === "POST" && (routeKey === "POST /rag-agent/{userId}/reprocess" || event.resource === "/rag-agent/{userId}/reprocess")) {
-      const userId = pathParameters?.userId || event.pathParameters?.userId;
-      const { document_id } = JSON.parse(event.body);
+    console.error("❓ Invalid endpoint or event type");
+    return createErrorResponse(400, "Invalid endpoint or event type");
 
-      console.log(`Processing document ${document_id} for user ${userId}`);
+  } catch (error) {
+    console.error("💥 Handler error:", error);
+    return createErrorResponse(500, error.message);
+  }
+};
 
-      // First, let's check the document metadata
-      const { data: document, error: docError } = await supabase
-        .from("documents")
-        .select("id, file_name, total_chunks, total_pages, textract_confidence, processing_status")
-        .eq("id", document_id)
-        .single();
+// Main document processing logic, extracted to be reusable
+async function processDocument(userId, documentId) {
+    console.log(`Processing document ${documentId} for user ${userId}`);
 
-      if (docError) {
-        console.error("Error fetching document:", docError);
-      } else {
-        console.log("Document metadata:", document);
+    // First, let's check the document metadata
+    const { data: document, error: docError } = await supabase
+      .from("documents")
+      .select("id, file_name, total_chunks, total_pages, textract_confidence, processing_status")
+      .eq("id", documentId)
+      .single();
+
+    if (docError) {
+      console.error("Error fetching document:", docError);
+    } else {
+      console.log("Document metadata:", document);
+    }
+
+    // Check Textract job details
+    const { data: textractJob, error: jobError } = await supabase
+      .from("textract_jobs")
+      .select("id, aws_job_id, status, started_at, completed_at, error_message")
+      .eq("document_id", documentId)
+      .order("started_at", { ascending: false })
+      .limit(1);
+
+    if (jobError) {
+      console.error("Error fetching Textract job:", jobError);
+    } else {
+      console.log("Textract job details:", textractJob);
+    }
+
+    // First, let's check if chunks exist without RLS restrictions
+    const { data: allChunks, error: allChunksError } = await supabase
+      .from("document_chunks")
+      .select("content, chunk_index, page_number, char_count")
+      .eq("document_id", documentId)
+      .order("chunk_index");
+
+    console.log(`Total chunks in database for document: ${allChunks?.length || 0}`);
+
+    // Get the document chunks from Supabase (this will respect RLS)
+    const { data: chunks, error: chunksError } = await supabase
+      .from("document_chunks")
+      .select("content, chunk_index, page_number, char_count")
+      .eq("document_id", documentId)
+      .order("chunk_index");
+
+    if (chunksError || !chunks || chunks.length === 0) {
+      console.error("No document chunks found:", chunksError);
+      return createErrorResponse(404, "No document chunks found");
+    }
+
+    console.log(`Found ${chunks.length} document chunks`);
+    console.log("Chunk details:", chunks.map(chunk => ({
+      index: chunk.chunk_index,
+      page: chunk.page_number,
+      charCount: chunk.char_count,
+      contentLength: chunk.content?.length || 0
+    })));
+
+    // Combine all chunks into one text
+    const documentText = chunks.map(chunk => chunk.content).join("\n\n");
+
+    console.log("Document text length:", documentText.length);
+
+    // Use Bedrock Agent to analyze the text and identify conditions
+    const commandParams = {
+      agentId: AGENT_ID,
+      agentAliasId: AGENT_ALIAS_ID,
+      sessionId: `${userId}-${documentId}`, // Create a unique session ID
+      inputText: `Analyze this medical document and identify all potential VA disability conditions. Be comprehensive and extract all possible conditions, even minor ones. For each condition found, provide the following in JSON format:
+      {
+        "conditions": [
+          {
+            "name": "condition name",
+            "rating": estimated rating percentage (10, 30, 50, 70, or 100),
+            "severity": "mild/moderate/severe/total",
+            "excerpt": "relevant text excerpt",
+            "cfrCriteria": "relevant CFR citation",
+            "keywords": ["matched", "keywords"]
+          }
+        ]
       }
 
-      // Check Textract job details
-      const { data: textractJob, error: jobError } = await supabase
-        .from("textract_jobs")
-        .select("id, aws_job_id, status, started_at, completed_at, error_message")
-        .eq("document_id", document_id)
-        .order("started_at", { ascending: false })
-        .limit(1);
+      Consider VA rating criteria, symptoms described, and frequency/severity of symptoms.
+      Be specific with CFR citations (e.g., "38 CFR §4.130 - Mental Disorders").
 
-      if (jobError) {
-        console.error("Error fetching Textract job:", jobError);
-      } else {
-        console.log("Textract job details:", textractJob);
+      Medical Document Text:
+      ${documentText}
+
+      Provide your analysis in valid JSON format only.`
+    };
+
+    const command = new InvokeAgentCommand(commandParams);
+    const agentResponse = await bedrockAgentClient.send(command);
+
+    // Process the streaming response
+    let fullResponse = '';
+    for await (const chunk of agentResponse.completion) {
+      if (chunk.chunk?.bytes) {
+        const text = new TextDecoder().decode(chunk.chunk.bytes);
+        fullResponse += text;
       }
+    }
 
-      // First, let's check if chunks exist without RLS restrictions
-      const { data: allChunks, error: allChunksError } = await supabase
-        .from("document_chunks")
-        .select("content, chunk_index, page_number, char_count")
-        .eq("document_id", document_id)
-        .order("chunk_index");
+    console.log("Agent response:", fullResponse);
 
-      console.log(`Total chunks in database for document: ${allChunks?.length || 0}`);
+    // Parse the agent response
+    const analysis = parseAgentResponse(fullResponse);
+    
+    if (!analysis || !analysis.conditions) {
+      throw new Error("Failed to parse conditions from Bedrock Agent response");
+    }
 
-      // Get the document chunks from Supabase (this will respect RLS)
-      const { data: chunks, error: chunksError } = await supabase
-        .from("document_chunks")
-        .select("content, chunk_index, page_number, char_count")
-        .eq("document_id", document_id)
-        .order("chunk_index");
+    console.log(`Found ${analysis.conditions.length} conditions`);
 
-      if (chunksError || !chunks || chunks.length === 0) {
-        console.error("No document chunks found:", chunksError);
-        return {
-          statusCode: 404,
-          body: JSON.stringify({ error: "No document chunks found" })
-        };
-      }
-
-      console.log(`Found ${chunks.length} document chunks`);
-      console.log("Chunk details:", chunks.map(chunk => ({
-        index: chunk.chunk_index,
-        page: chunk.page_number,
-        charCount: chunk.char_count,
-        contentLength: chunk.content?.length || 0
-      })));
-
-      // Combine all chunks into one text
-      const documentText = chunks.map(chunk => chunk.content).join("\n\n");
-
-      console.log("Document text length:", documentText.length);
-
-      // Use Bedrock Agent to analyze the text and identify conditions
-      const commandParams = {
-        agentId: AGENT_ID,
-        agentAliasId: AGENT_ALIAS_ID,
-        sessionId: `${userId}-${document_id}`, // Create a unique session ID
-        inputText: `Analyze this medical document and identify all potential VA disability conditions. Be comprehensive and extract all possible conditions, even minor ones. For each condition found, provide the following in JSON format:
-        {
-          "conditions": [
-            {
-              "name": "condition name",
-              "rating": estimated rating percentage (10, 30, 50, 70, or 100),
-              "severity": "mild/moderate/severe/total",
-              "excerpt": "relevant text excerpt",
-              "cfrCriteria": "relevant CFR citation",
-              "keywords": ["matched", "keywords"]
-            }
-          ]
-        }
-
-        Consider VA rating criteria, symptoms described, and frequency/severity of symptoms.
-        Be specific with CFR citations (e.g., "38 CFR §4.130 - Mental Disorders").
-
-        Medical Document Text:
-        ${documentText}
-
-        Provide your analysis in valid JSON format only.`
-      };
-
-      const command = new InvokeAgentCommand(commandParams);
-      const agentResponse = await bedrockAgentClient.send(command);
-
-      // Process the streaming response
-      let fullResponse = '';
-      for await (const chunk of agentResponse.completion) {
-        if (chunk.chunk?.bytes) {
-          const text = new TextDecoder().decode(chunk.chunk.bytes);
-          fullResponse += text;
-        }
-      }
-
-      console.log("Agent response:", fullResponse);
-
-      // Parse the agent response
-      const analysis = parseAgentResponse(fullResponse);
-      
-      if (!analysis || !analysis.conditions) {
-        throw new Error("Failed to parse conditions from Bedrock Agent response");
-      }
-
-      console.log(`Found ${analysis.conditions.length} conditions`);
-
-      // Process each identified condition
-      const processedConditions = [];
-      for (const condition of analysis.conditions) {
+    // Process each identified condition
+    const processedConditions = [];
+    for (const condition of analysis.conditions) {
+      try {
         // Calculate rating if not provided
         const rating = condition.rating || calculateRating(condition.keywords, condition.severity);
 
         // Normalize condition name for deduplication
         const normalizedConditionName = normalizeConditionName(condition.name);
-
-        // Insert or update the disability_estimates table
-        const { data: upsertedCondition, error: upsertError } = await supabase
-          .from("disability_estimates")
-          .upsert({
-            user_id: userId,
-            document_id,
-            condition: normalizedConditionName,
-            condition_display: condition.name, // Store original for display
-            estimated_rating: rating,
-            excerpt: condition.excerpt,
-            cfr_criteria: condition.cfrCriteria,
-            matched_keywords: condition.keywords,
-            created_at: new Date().toISOString()
-          }, {
-            onConflict: 'user_id,document_id,condition',
-            returning: true
-          });
-
-        if (upsertError) {
-          console.error("Error upserting condition:", upsertError);
-          continue;
+        
+        // Find matching CFR data with error handling
+        let cfrData = null;
+        try {
+          // Only call getCFRData if we have valid keywords
+          if (condition.keywords && Array.isArray(condition.keywords) && condition.keywords.length > 0) {
+            cfrData = await getCFRData(condition);
+          }
+        } catch (cfrError) {
+          console.error(`Error getting CFR data for condition ${condition.name}:`, cfrError);
+          // Continue processing without CFR data
         }
-
-        processedConditions.push(upsertedCondition);
+        
+        const newCondition = {
+          user_id: userId,
+          document_id: documentId,
+          condition: normalizedConditionName,
+          condition_display: condition.name, // Original condition name for display
+          estimated_rating: rating,
+          severity: condition.severity,
+          cfr_criteria: condition.cfrCriteria || (cfrData ? cfrData.title : null),
+          excerpt: condition.excerpt,
+          matched_keywords: condition.keywords || [],
+        };
+        processedConditions.push(newCondition);
+      } catch (conditionError) {
+        console.error(`Error processing condition ${condition.name}:`, conditionError);
+        // Continue with next condition
       }
-
-      console.log(`Successfully processed ${processedConditions.length} conditions`);
-
-      return {
-        statusCode: 200,
-        body: JSON.stringify({
-          message: "Document processed successfully",
-          conditions: processedConditions
-        })
-      };
     }
-
-    if (httpMethod === "GET" && (routeKey === "GET /rag-agent/{userId}/conditions/{id}" || event.resource === "/rag-agent/{userId}/conditions/{id}")) {
-      // Get specific condition
-      const { userId, id } = pathParameters || event.pathParameters;
-      
+    
+    // Save conditions to database
+    if (processedConditions.length > 0) {
+      // Fix: Use the correct table name
       const { data, error } = await supabase
-        .from("disability_estimates")
-        .select("*")
-        .eq("user_id", userId)
-        .eq("id", id)
-        .single();
-
-      if (error) throw error;
-
-      return {
-        statusCode: 200,
-        body: JSON.stringify(data)
-      };
+        .from("disability_estimates") // Changed from user_conditions
+        .insert(processedConditions);
+      
+      if (error) {
+        console.error("Error saving conditions:", error);
+        throw error;
+      }
+      
+      console.log(`Successfully saved ${processedConditions.length} conditions`);
     }
 
-    console.log("Invalid endpoint - httpMethod:", httpMethod, "routeKey:", routeKey);
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ error: "Invalid endpoint" })
-    };
-
-  } catch (error) {
-    console.error("Error in rag-agent:", error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message })
-    };
-  }
-};
+    // Return a success response
+    return createSuccessResponse({ 
+      message: `Successfully processed document and saved ${processedConditions.length} conditions.`,
+      conditions: processedConditions 
+    });
+}
 
 // Main processing function
 async function processAllConditions(userId) {
@@ -341,8 +351,16 @@ async function processAllConditions(userId) {
         try {
             console.log(`Processing condition: ${condition.name}`);
 
-            // Step 3: Get CFR data for the condition
-            const cfrData = await getCFRData(condition);
+            // Step 3: Get CFR data for the condition with error handling
+            let cfrData = null;
+            try {
+                if (condition.keywords && Array.isArray(condition.keywords) && condition.keywords.length > 0) {
+                    cfrData = await getCFRData(condition);
+                }
+            } catch (cfrError) {
+                console.error(`Error getting CFR data for condition ${condition.name}:`, cfrError);
+                // Continue without CFR data
+            }
             
             // Step 4: Generate recommendation using Bedrock
             const recommendation = await generateRecommendation(condition, cfrData);
@@ -380,8 +398,9 @@ async function processAllConditions(userId) {
 
 // Handle single condition lookup
 async function handleSingleCondition(userId, conditionId) {
+    // Fix: Use the correct table name
     const { data, error } = await supabase
-        .from('user_conditions')
+        .from('disability_estimates') // Changed from user_conditions
         .select('*')
         .eq('user_id', userId)
         .eq('id', conditionId)
@@ -392,7 +411,15 @@ async function handleSingleCondition(userId, conditionId) {
     }
 
     try {
-        const cfrData = await getCFRData(data);
+        let cfrData = null;
+        try {
+            if (data.keywords && Array.isArray(data.keywords) && data.keywords.length > 0) {
+                cfrData = await getCFRData(data);
+            }
+        } catch (cfrError) {
+            console.error(`Error getting CFR data:`, cfrError);
+        }
+
         const recommendation = await generateRecommendation(data, cfrData);
         const formattedCondition = formatConditionResponse(data, cfrData, recommendation);
         
@@ -407,4 +434,4 @@ async function handleReprocess(userId) {
     // Add any special reprocessing logic here
     // For now, just call the main processing function
     return await processAllConditions(userId);
-};
+}

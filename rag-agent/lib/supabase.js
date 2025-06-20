@@ -8,7 +8,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 export async function getUserConditions(userId) {
     try {
         const { data, error } = await supabase
-            .from('user_conditions')
+            .from('disability_estimates')
             .select('*')
             .eq('user_id', userId);
         
