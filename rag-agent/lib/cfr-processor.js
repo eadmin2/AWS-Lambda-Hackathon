@@ -24,7 +24,7 @@ export const getCFRData = async (condition) => {
     console.log("Calling eCFR Lambda with payload:", payload);
 
     const command = new InvokeCommand({
-      FunctionName: process.env.ECFR_LAMBDA_NAME || 'eCFRSearchFunction',
+      FunctionName: process.env.ECFR_LAMBDA_FUNCTION_NAME || process.env.ECFR_LAMBDA_NAME || 'bedrock-ecfr-api-function',
       InvocationType: 'RequestResponse',
       Payload: JSON.stringify(payload)
     });

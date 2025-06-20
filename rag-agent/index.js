@@ -222,22 +222,7 @@ async function processDocument(userId, documentId) {
     console.log(`Processing document ${documentId} for user ${userId}`);
     const startTime = Date.now();
 
-    // Check if estimates already exist for this document
-    const { data: existingEstimates } = await supabase
-      .from("disability_estimates")
-      .select("id")
-      .eq("document_id", documentId)
-      .limit(1);
-
-    if (existingEstimates && existingEstimates.length > 0) {
-      console.log("⚠️ Estimates already exist for this document. Skipping processing.");
-      return createSuccessResponse({ 
-        message: "Document already processed. Use reprocess endpoint to regenerate estimates.",
-        skipped: true
-      });
-    }
-
-    // Get document metadata
+    // Get document metadata and chunks
     const { data: document, error: docError } = await supabase
       .from("documents")
       .select("id, file_name, total_chunks, total_pages, textract_confidence, processing_status")
@@ -246,193 +231,181 @@ async function processDocument(userId, documentId) {
 
     if (docError) {
       console.error("Error fetching document:", docError);
-    } else {
-      console.log("Document metadata:", document);
+      return createErrorResponse(500, "Failed to fetch document metadata.");
     }
+    console.log("Document metadata:", document);
 
-    // Get document chunks
     const { data: chunks, error: chunksError } = await supabase
       .from("document_chunks")
-      .select("content, chunk_index, page_number, char_count")
+      .select("id, content, page_number")
       .eq("document_id", documentId)
-      .order("chunk_index");
+      .order("page_number");
 
-    if (chunksError || !chunks || chunks.length === 0) {
-      console.error("No document chunks found:", chunksError);
-      return createErrorResponse(404, "No document chunks found");
+    if (chunksError) {
+      console.error("Error fetching chunks:", chunksError);
+      return createErrorResponse(500, "Failed to fetch document chunks.");
     }
-
     console.log(`Found ${chunks.length} document chunks`);
 
-    // Group chunks into batches for more efficient processing
+    if (chunks.length === 0) {
+      console.log("No chunks found for this document. Nothing to process.");
+      return createSuccessResponse({ message: "No content to process." });
+    }
+
+    // Process chunks in batches
     const chunkBatches = [];
     for (let i = 0; i < chunks.length; i += CHUNK_BATCH_SIZE) {
       chunkBatches.push(chunks.slice(i, i + CHUNK_BATCH_SIZE));
     }
-
     console.log(`Processing ${chunks.length} chunks in ${chunkBatches.length} batches`);
 
     let allConditions = [];
-    let processedChunks = 0;
-
-    // Process chunks in batches
-    for (let batchIndex = 0; batchIndex < chunkBatches.length; batchIndex++) {
-      const batch = chunkBatches[batchIndex];
-      console.log(`Processing batch ${batchIndex + 1}/${chunkBatches.length} (chunks ${batch[0].chunk_index}-${batch[batch.length-1].chunk_index})`);
-
-      try {
-        const batchConditions = await processBatch(batch, userId, documentId, batchIndex);
-        allConditions.push(...batchConditions);
-        processedChunks += batch.length;
+    for (let i = 0; i < chunkBatches.length; i++) {
+        const batch = chunkBatches[i];
+        const progress = Math.round(((i + 1) / chunkBatches.length) * 100);
+        console.log(`Processing batch ${i + 1}/${chunkBatches.length} (chunks ${batch[0].page_number-1}-${batch[batch.length-1].page_number-1})`);
         
-        // Progress logging
-        const progress = Math.round((processedChunks / chunks.length) * 100);
-        console.log(`Progress: ${progress}% (${processedChunks}/${chunks.length} chunks)`);
+        const batchText = batch.map(c => `Page ${c.page_number}: ${c.content}`).join('\\n\\n');
+
+        // --- REVISED PROMPT TO AVOID GUARDRAILS ---
+        const prompt = `
+          Analyze the following document excerpts and extract any phrases that appear to be medical conditions, diagnoses, or symptoms. 
+          
+          For each identified phrase, format it as a JSON object with the following keys: "name", "rating", "severity", "excerpt", "cfrCriteria", and "keywords".
+          
+          - "name": The name of the condition.
+          - "rating": An estimated rating if mentioned, otherwise default to 10.
+          - "severity": "mild", "moderate", or "severe". If not mentioned, default to "mild".
+          - "excerpt": The exact text from the document where the condition was found.
+          - "cfrCriteria": The Code of Federal Regulations citation, if available.
+          - "keywords": A list of keywords related to the condition.
+          
+          Document Excerpts:
+          """
+          ${batchText}
+          """
+          
+          Your entire response must be a single JSON object. Do not include any other text.
+          The structure should be:
+          {
+            "conditions": [
+              {
+                "name": "Example Condition",
+                "rating": 10,
+                "severity": "mild",
+                "excerpt": "...",
+                "cfrCriteria": "38 CFR §X.XX",
+                "keywords": ["example"]
+              }
+            ]
+          }
+        `;
         
-      } catch (error) {
-        console.error(`Error processing batch ${batchIndex + 1}:`, error);
-        // Continue with next batch
-      }
+        const command = new InvokeAgentCommand({
+            agentId: AGENT_ID,
+            agentAliasId: AGENT_ALIAS_ID,
+            sessionId: `${userId}-${documentId}-${i}`,
+            inputText: prompt,
+        });
+
+        try {
+            const agentResponse = await bedrockAgentClient.send(command);
+            let fullResponse = '';
+            for await (const item of agentResponse.completion) {
+                if (item.chunk?.bytes) {
+                    fullResponse += new TextDecoder().decode(item.chunk.bytes);
+                }
+            }
+
+            console.log(`Agent response for batch ${i}:`, fullResponse);
+            const parsed = parseAgentResponse(fullResponse);
+            
+            if (parsed && parsed.conditions) {
+                console.log(`Found ${parsed.conditions.length} conditions in batch ${i}`);
+                allConditions = allConditions.concat(parsed.conditions);
+            }
+            console.log(`Progress: ${progress}% (${(i + 1) * CHUNK_BATCH_SIZE}/${chunks.length} chunks)`);
+        } catch (err) {
+            console.error(`Error processing batch ${i}:`, err);
+            // Optional: Implement retry logic here if needed
+        }
     }
-    
+
     console.log(`Found a total of ${allConditions.length} conditions across all chunks (before deduplication).`);
 
-    // Enhanced deduplication with similarity checking
+    // Enhanced deduplication logic
     const uniqueConditions = [];
-    
-    for (const condition of allConditions) {
-      const isDuplicate = uniqueConditions.some(existing => 
-        areConditionsSimilar(condition.name, existing.name)
-      );
-      
-      if (!isDuplicate) {
-        uniqueConditions.push(condition);
-      } else {
-        console.log(`Deduplicating: "${condition.name}" (similar to existing condition)`);
-      }
-    }
+    allConditions.forEach(condition => {
+        const existingCondition = uniqueConditions.find(uc => areConditionsSimilar(uc.name, condition.name));
+        if (!existingCondition) {
+            uniqueConditions.push(condition);
+        } else {
+            console.log(`Deduplicating: "${condition.name}" (similar to existing condition)`);
+            // Merge excerpts or keywords if desired
+            existingCondition.excerpt += ` | ${condition.excerpt}`;
+            if(condition.keywords) {
+              existingCondition.keywords = [...new Set([...(existingCondition.keywords || []), ...condition.keywords])];
+            }
+        }
+    });
 
     console.log(`Found ${uniqueConditions.length} unique conditions after enhanced deduplication.`);
 
-    // Process each unique identified condition
-    const processedConditions = [];
+    // Final processing and database insertion
+    const finalConditions = [];
     for (const condition of uniqueConditions) {
+        console.log(`Getting CFR data for condition: ${condition.name}`);
         try {
-            const rating = condition.rating || calculateRating(condition.keywords, condition.severity);
-            const normalizedConditionName = normalizeConditionName(condition.name);
-            
-            let cfrData = null;
-            try {
-                if (condition.keywords && Array.isArray(condition.keywords) && condition.keywords.length > 0) {
-                    cfrData = await getCFRData(condition);
-                }
-            } catch (cfrError) {
-                console.error(`Error getting CFR data for condition ${condition.name}:`, cfrError);
-            }
-            
-            const newCondition = {
-                user_id: userId,
-                document_id: documentId,
-                condition: normalizedConditionName,
-                condition_display: condition.name,
-                estimated_rating: rating,
-                severity: condition.severity || 'mild',
-                cfr_criteria: condition.cfrCriteria || (cfrData ? cfrData.title : null),
-                excerpt: condition.excerpt || '',
-                matched_keywords: condition.keywords || [],
+            // Pass the full condition object to getCFRData
+            const cfrData = await getCFRData(condition);
+            const enrichedCondition = {
+                ...condition,
+                body_system: cfrData.bodySystem || 'general', // Get body system from CFR data
+                cfr_data: cfrData,
+                cfr_link: generateCFRLink(cfrData),
             };
-            processedConditions.push(newCondition);
-        } catch (conditionError) {
-            console.error(`Error processing condition ${condition.name}:`, conditionError);
+            finalConditions.push(enrichedCondition);
+        } catch (cfrError) {
+            console.error(`Could not get CFR data for ${condition.name}:`, cfrError);
+            finalConditions.push({ ...condition, cfr_data: null, cfr_link: null }); // Add condition even if CFR lookup fails
         }
     }
-    
-    // Save conditions to database
-    if (processedConditions.length > 0) {
-        const { error } = await supabase
-            .from("disability_estimates")
-            .insert(processedConditions);
-        
-        if (error) {
-            console.error("Error saving conditions:", error);
-            throw error;
+
+    if (finalConditions.length > 0) {
+        const dbPayload = finalConditions.map(c => ({
+            user_id: userId,
+            name: c.name,
+            summary: c.excerpt, // Using excerpt as summary
+            body_system: c.body_system || 'general', // Fallback for body_system
+            keywords: c.keywords,
+            rating: c.rating,
+            cfr_criteria: c.cfrCriteria,
+        }));
+
+        const { error: insertError } = await supabase
+            .from("user_conditions")
+            .insert(dbPayload);
+
+        if (insertError) {
+            console.error("Error inserting conditions into DB:", insertError);
+            return createErrorResponse(500, "Failed to store analysis results.");
         }
-        
-        console.log(`Successfully saved ${processedConditions.length} conditions`);
     }
 
-    const processingTime = Math.round((Date.now() - startTime) / 1000);
-    console.log(`✅ Document processing completed in ${processingTime} seconds`);
+    // Update document status to 'completed'
+    await supabase
+        .from("documents")
+        .update({ processing_status: 'completed', rag_status: 'completed' })
+        .eq("id", documentId);
 
-    return createSuccessResponse({ 
-        message: `Successfully processed document and saved ${processedConditions.length} conditions.`,
-        conditions: processedConditions,
-        processingTime,
-        chunksProcessed: processedChunks,
-        conditionsFound: allConditions.length,
-        uniqueConditions: uniqueConditions.length
+    const duration = (Date.now() - startTime) / 1000;
+    console.log(`✅ Document processing complete in ${duration}s. Found ${finalConditions.length} unique conditions.`);
+
+    return createSuccessResponse({
+        message: "Document processed successfully",
+        uniqueConditionsFound: finalConditions.length,
+        conditions: finalConditions
     });
-}
-
-// Process a batch of chunks together for efficiency
-async function processBatch(chunkBatch, userId, documentId, batchIndex) {
-  const conditions = [];
-  
-  // Combine chunks for batch processing
-  const combinedContent = chunkBatch.map(chunk => 
-    `--- Chunk ${chunk.chunk_index} (Page ${chunk.page_number}) ---\n${chunk.content}`
-  ).join('\n\n');
-
-  try {
-    const inputText = `Analyze these medical document chunks and identify all potential VA disability conditions. Be comprehensive and extract all possible conditions. For each condition found, provide the following in JSON format:
-    {
-      "conditions": [
-        {
-          "name": "condition name",
-          "rating": estimated rating percentage (e.g. 10, 30, 50),
-          "severity": "mild/moderate/severe",
-          "excerpt": "relevant text excerpt from the document chunks",
-          "cfrCriteria": "relevant CFR citation (e.g., '38 CFR §4.130')",
-          "keywords": ["matched", "keywords"]
-        }
-      ]
-    }
-
-    Medical Document Chunks:
-    ${combinedContent}
-
-    Provide your analysis in valid JSON format only. If no conditions are found, return an empty "conditions" array.`;
-
-    const commandParams = {
-        agentId: AGENT_ID,
-        agentAliasId: AGENT_ALIAS_ID,
-        sessionId: `${userId}-${documentId}-batch-${batchIndex}`,
-        inputText,
-    };
-
-    const command = new InvokeAgentCommand(commandParams);
-    const agentResponse = await bedrockAgentClient.send(command);
-
-    let fullResponse = '';
-    for await (const responseChunk of agentResponse.completion) {
-        if (responseChunk.chunk?.bytes) {
-            fullResponse += new TextDecoder().decode(responseChunk.chunk.bytes);
-        }
-    }
-
-    console.log(`Agent response for batch ${batchIndex}:`, fullResponse.substring(0, 500) + '...');
-
-    const analysis = parseAgentResponse(fullResponse);
-    if (analysis && analysis.conditions && analysis.conditions.length > 0) {
-        console.log(`Found ${analysis.conditions.length} conditions in batch ${batchIndex}`);
-        conditions.push(...analysis.conditions);
-    }
-  } catch (error) {
-    console.error(`Error processing batch ${batchIndex}:`, error);
-    // Continue processing - don't fail the entire document
-  }
-
-  return conditions;
 }
 
 // Main processing function

@@ -11,7 +11,7 @@ const Header: React.FC<HeaderProps> = ({ veteranName, uploadDate, combinedRating
     <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-white border-b border-gray-200 shadow-sm">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">{veteranName}</h1>
-        <p className="text-sm text-gray-500">Uploaded: {uploadDate}</p>
+        <p className="text-sm text-gray-500">Uploaded: {new Date(uploadDate).toLocaleDateString()}</p>
       </div>
       <div className="flex items-center gap-2">
         <span className="inline-block bg-primary-100 text-primary-800 font-semibold px-4 py-2 rounded-full text-lg shadow">

@@ -273,50 +273,39 @@ async function getCFRSection(parameters) {
 }
 
 /**
- * Get the content of a specific CFR section
+ * Get content for a specific CFR section
  */
 async function getCFRSectionContent(sectionIdentifier) {
-    // Try multiple API endpoint formats
-    const possibleUrls = [
-        `https://www.ecfr.gov/api/versioner/v1/full/2024-01-01/title-38/part-4/section-${sectionIdentifier}`, // Fixed date
-        `https://www.ecfr.gov/api/versioner/v1/full/2024-01-01/title-38/part-4/section-${sectionIdentifier}`, // Fixed date
-        `https://www.ecfr.gov/api/versioner/v1/structure/2024-01-01/title-38.json` // Fixed date
-    ];
-
-    console.log(`Trying to get section ${sectionIdentifier}`);
-
-    for (const url of possibleUrls) {
-        try {
-            console.log(`Trying URL: ${url}`);
-            const data = await makeHttpsRequest(url);
-            console.log(`Got response from ${url}:`, JSON.stringify(data, null, 2));
-
-            if (data && data.content) {
-                return extractTextFromContent(data.content);
-            } else if (data && data.children) {
-                // If we got the structure, search for the specific section
-                const section = findSectionInStructure(data, sectionIdentifier);
-                if (section) {
-                    return `Found section ${sectionIdentifier}: ${section.label}\n\n${section.text || 'Content not available in structure API'}`;
-                }
-            }
-        } catch (error) {
-            console.error(`Error with URL ${url}:`, error.message);
-            continue;
+    try {
+        // Correctly construct the URL for the content API based on documentation
+        const url = `https://www.ecfr.gov/api/versioner/v1/full/2024-01-01/title-38.xml?part=4&section=${sectionIdentifier}`;
+        console.log(`Getting content from: ${url}`);
+        
+        const data = await makeHttpsRequest(url);
+        
+        // The content is directly in the response, we need to extract and format it
+        const extractedText = extractTextFromContent(data);
+        
+        if (!extractedText) {
+            console.warn(`No content found for section ${sectionIdentifier} in the response.`);
+            return `No detailed content could be extracted for section ${sectionIdentifier}. The section may exist but content is not available via the API.`;
         }
+        
+        console.log(`Successfully extracted content for ${sectionIdentifier}. Length: ${extractedText.length}`);
+        return extractedText;
+        
+    } catch (error) {
+        console.error(`Error getting content for section ${sectionIdentifier}:`, error);
+        return `Could not retrieve content for section ${sectionIdentifier} due to an error: ${error.message}`;
     }
-
-    return `Unable to retrieve CFR section ${sectionIdentifier}. The eCFR API may be temporarily unavailable or the section format may have changed.`;
 }
 
 /**
- * Filter sections based on search query
+ * Filter sections from the structure data based on search query
  */
 function filterSections(data, searchQuery, part) {
-    if (!data || !data.children) return [];
-
-    const query = searchQuery.toLowerCase();
-    const sections = [];
+    const matchingSections = [];
+    const searchTerms = searchQuery.toLowerCase().split(/\s+/).filter(term => term.length > 2); // Split query into terms
 
     function searchInNode(node) {
         if (node.type === 'section' && node.identifier && node.identifier.startsWith(`${part}.`)) {
@@ -324,7 +313,6 @@ function filterSections(data, searchQuery, part) {
             const description = (node.label_description || '').toLowerCase();
 
             // Check if search terms match
-            const searchTerms = query.split(' ');
             const matchScore = searchTerms.reduce((score, term) => {
                 if (label.includes(term) || description.includes(term)) {
                     return score + 1;
@@ -333,7 +321,7 @@ function filterSections(data, searchQuery, part) {
             }, 0);
 
             if (matchScore > 0) {
-                sections.push({
+                matchingSections.push({
                     identifier: node.identifier,
                     label: node.label,
                     description: node.label_description,
@@ -347,81 +335,111 @@ function filterSections(data, searchQuery, part) {
         }
     }
 
+    // Start search from the root
     searchInNode(data);
-
-    // Sort by match score (highest first)
-    return sections.sort((a, b) => b.matchScore - a.matchScore);
+    return matchingSections;
 }
 
 /**
- * Extract readable text from eCFR content structure
+ * Extracts and formats plain text from the structured eCFR content response.
  */
 function extractTextFromContent(content) {
-    if (typeof content === 'string') {
-        return content.replace(/<[^>]*>/g, '').trim(); // Remove HTML tags
-    }
+    // If content is an object, traverse it (for JSON structure API)
+    if (typeof content === 'object' && content !== null) {
+        let extractedText = '';
 
-    if (Array.isArray(content)) {
-        return content.map(item => extractTextFromContent(item)).join('\n');
-    }
+        function traverse(node) {
+            if (!node) return;
 
-    if (content && typeof content === 'object') {
-        if (content.text) {
-            return content.text.replace(/<[^>]*>/g, '').trim();
-        }
-
-        // Try to extract from common content fields
-        const fields = ['content', 'text', 'value', 'body'];
-        for (const field of fields) {
-            if (content[field]) {
-                return extractTextFromContent(content[field]);
+            // Extract text from the current node if it's a string
+            if (typeof node === 'string') {
+                extractedText += node + ' ';
+            }
+    
+            // If the node has a 'text' property, use it
+            if (node.text) {
+                extractedText += node.text + ' ';
+            }
+            
+            // If the node has a 'title' property, use it
+            if(node.title) {
+                extractedText += node.title + ' ';
+            }
+    
+            // Recursively traverse children if they exist
+            if (Array.isArray(node.children)) {
+                node.children.forEach(traverse);
+            } else if (typeof node === 'object') {
+                // Traverse through object properties if it's not an array
+                Object.values(node).forEach(value => {
+                    if (typeof value === 'object' || Array.isArray(value)) {
+                        traverse(value);
+                    }
+                });
             }
         }
-
-        // If it's an object with children, process recursively
-        if (content.children || content.paragraphs || content.sections) {
-            const children = content.children || content.paragraphs || content.sections;
-            return extractTextFromContent(children);
-        }
+        traverse(content);
+        return extractedText.replace(/\s+/g, ' ').trim();
+    }
+    
+    // If content is a string, assume it's XML and strip tags
+    if (typeof content === 'string') {
+        return content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
     }
 
     return '';
 }
 
 /**
- * Make HTTPS request and return parsed JSON
+ * Make HTTPS request and return parsed JSON or raw XML
  */
 function makeHttpsRequest(url) {
     return new Promise((resolve, reject) => {
-        const request = https.get(url, (response) => {
-            let data = '';
+        const parsedUrl = new URL(url);
+        const options = {
+            hostname: parsedUrl.hostname,
+            path: parsedUrl.pathname + parsedUrl.search,
+            method: 'GET',
+            headers: {
+                'User-Agent': 'VA-Disability-Assistant/1.0'
+            }
+        };
 
-            response.on('data', (chunk) => {
-                data += chunk;
+        const req = https.request(options, (res) => {
+            if (res.statusCode < 200 || res.statusCode >= 300) {
+                return reject(new Error(`Request failed with status code: ${res.statusCode}`));
+            }
+
+            let rawData = '';
+            res.on('data', (chunk) => {
+                rawData += chunk;
             });
 
-            response.on('end', () => {
+            res.on('end', () => {
+                if (!rawData) {
+                    return reject(new Error('Empty response from API'));
+                }
+                
+                // If it's an XML request, return raw text. Otherwise parse JSON.
+                if (parsedUrl.pathname.endsWith('.xml')) {
+                    resolve(rawData);
+                    return;
+                }
+
                 try {
-                    if (!data) {  // Check for empty response
-                        reject(new Error("Empty response from API"));
-                        return;
-                    }
-                    const jsonData = JSON.parse(data);
-                    resolve(jsonData);
-                } catch (error) {
-                    reject(new Error(`Failed to parse JSON: ${error.message}`));
+                    const parsedData = JSON.parse(rawData);
+                    resolve(parsedData);
+                } catch (e) {
+                    reject(new Error(`Failed to parse JSON response: ${e.message}`));
                 }
             });
         });
 
-        request.on('error', (error) => {
-            reject(error);
+        req.on('error', (e) => {
+            reject(new Error(`HTTPS request failed: ${e.message}`));
         });
 
-        request.setTimeout(10000, () => {
-            request.abort();
-            reject(new Error('Request timeout'));
-        });
+        req.end();
     });
 }
 

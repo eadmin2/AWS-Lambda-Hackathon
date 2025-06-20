@@ -34,17 +34,16 @@ export type Document = {
   uploaded_at: string;
 };
 
-export type DisabilityEstimate = {
+export type UserCondition = {
   id: string;
   user_id: string;
-  document_id: string;
-  condition: string;
-  estimated_rating: number;
-  combined_rating: number;
+  name: string;
+  summary: string;
+  body_system: string;
+  keywords: string[];
   created_at: string;
-  excerpt?: string;
+  rating?: number;
   cfr_criteria?: string;
-  matched_keywords?: string[];
 };
 
 // Helper functions for database operations
@@ -114,15 +113,15 @@ export async function getUserDocuments(userId: string) {
   return data as Document[];
 }
 
-export async function getUserDisabilityEstimates(userId: string) {
+export async function getUserConditions(userId: string) {
   const { data, error } = await supabase
-    .from("disability_estimates")
+    .from("user_conditions")
     .select("*")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
   if (error) throw error;
-  return data as DisabilityEstimate[];
+  return data as UserCondition[];
 }
 
 export { supabaseAnonKey };

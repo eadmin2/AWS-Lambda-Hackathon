@@ -7,7 +7,7 @@ import SummaryCard from "../components/ui/SummaryCard";
 import ConditionItem from "../components/ui/ConditionItem";
 import CombinedRatingChart from "../components/ui/CombinedRatingChart";
 import { useAuth } from "../contexts/AuthContext";
-import { getUserDisabilityEstimates, getUserDocuments } from "../lib/supabase";
+import { getUserConditions, getUserDocuments } from "../lib/supabase";
 
 // Helper function to calculate VA combined rating
 function calculateCombinedRating(ratings: number[]): number {
@@ -40,7 +40,7 @@ interface DashboardData {
     rating: number;
     excerpt: string;
     cfrCriteria: string;
-    matchedKeywords: string[];
+    keywords: string[];
   }[];
   chartData: {
     name: string;
@@ -59,32 +59,28 @@ const DashboardPage: React.FC = () => {
       if (!user) return;
 
       try {
-        // Fetch disability estimates and documents
-        const [estimates, documents] = await Promise.all([
-          getUserDisabilityEstimates(user.id),
+        // Fetch user conditions and documents
+        const [conditionsData, documents] = await Promise.all([
+          getUserConditions(user.id),
           getUserDocuments(user.id)
         ]);
 
-        // Calculate combined rating using VA math
-        const ratings = estimates.map(est => est.estimated_rating);
+        const ratings = conditionsData.map(c => c.rating || 0);
         const combinedRating = calculateCombinedRating(ratings);
 
-        // Generate chart colors
         const colors = ['#60a5fa', '#fbbf24', '#34d399', '#f472b6', '#a78bfa'];
 
-        // Transform estimates into conditions format
-        const conditions = estimates.map(est => ({
-          name: est.condition,
-          rating: est.estimated_rating,
-          excerpt: est.excerpt || 'No excerpt available...',
-          cfrCriteria: est.cfr_criteria || '§4.130 Schedule of ratings...',
-          matchedKeywords: est.matched_keywords || []
+        const conditions = conditionsData.map(c => ({
+          name: c.name,
+          rating: c.rating || 0,
+          excerpt: c.summary || 'No excerpt available...',
+          cfrCriteria: c.cfr_criteria || 'No CFR criteria found.',
+          keywords: c.keywords || []
         }));
 
-        // Create chart data
-        const chartData = estimates.map((est, index) => ({
-          name: est.condition,
-          value: est.estimated_rating,
+        const chartData = conditionsData.map((c, index) => ({
+          name: c.name,
+          value: c.rating || 0,
           color: colors[index % colors.length]
         }));
 
@@ -93,7 +89,7 @@ const DashboardPage: React.FC = () => {
           uploadDate: documents[0]?.uploaded_at || new Date().toISOString(),
           combinedRating,
           documentsScanned: documents.length,
-          conditionsFound: estimates.length,
+          conditionsFound: conditionsData.length,
           conditions,
           chartData
         });
@@ -145,7 +141,7 @@ const DashboardPage: React.FC = () => {
                   rating={cond.rating}
                   excerpt={cond.excerpt}
                   cfrCriteria={cond.cfrCriteria}
-                  matchedKeywords={cond.matchedKeywords}
+                  matchedKeywords={cond.keywords}
                 />
               ))}
             </div>
