@@ -40,66 +40,71 @@ const MEDICAL_QUERIES = [
   { Text: "Follow-up Instructions" },
 ];
 
-// Chunking strategy for RAG
+// Chunking strategy for RAG - optimized for medical documents
 const CHUNK_CONFIG = {
-  maxChunkSize: 4000, // characters - increased from 1000 to capture more content
-  overlapSize: 500, // overlap between chunks - increased for better context
-  minChunkSize: 200, // minimum viable chunk size - increased slightly
+  maxChunkSize: 8000, // characters - increased to capture more medical content
+  overlapSize: 800, // overlap between chunks - increased for better context
+  minChunkSize: 500, // minimum viable chunk size - increased for medical content
 };
 
-// Helper function to create text chunks optimized for RAG
-const createTextChunks = (text, pageNumber = 1) => {
+// Helper function to create text chunks optimized for medical documents
+const createMedicalTextChunks = (text, pageNumber = 1) => {
   const chunks = [];
-  const sentences = text.split(/[.!?]+/).filter((s) => s.trim().length > 0);
-
-  let currentChunk = "";
   let chunkIndex = 0;
-
-  for (const sentence of sentences) {
-    const trimmedSentence = sentence.trim();
-    if (!trimmedSentence) continue;
-
-    // Check if adding this sentence would exceed chunk size
-    const potentialChunk =
-      currentChunk + (currentChunk ? ". " : "") + trimmedSentence;
-
-    if (
-      potentialChunk.length > CHUNK_CONFIG.maxChunkSize &&
-      currentChunk.length > CHUNK_CONFIG.minChunkSize
-    ) {
+  
+  // Split by lines first to preserve medical document structure
+  const lines = text.split('\n').filter(line => line.trim().length > 0);
+  
+  let currentChunk = "";
+  let currentLines = [];
+  
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+    if (!trimmedLine) continue;
+    
+    // Check if adding this line would exceed chunk size
+    const potentialChunk = currentChunk + (currentChunk ? '\n' : '') + trimmedLine;
+    
+    if (potentialChunk.length > CHUNK_CONFIG.maxChunkSize && 
+        currentChunk.length > CHUNK_CONFIG.minChunkSize) {
+      
       // Save current chunk
       chunks.push({
         index: chunkIndex++,
-        content: currentChunk + ".",
+        content: currentChunk,
         pageNumber,
         wordCount: currentChunk.split(/\s+/).length,
         charCount: currentChunk.length,
+        lineCount: currentLines.length
       });
-
-      // Start new chunk with overlap
-      const words = currentChunk.split(/\s+/);
-      const overlapWords = words.slice(
-        -Math.floor(CHUNK_CONFIG.overlapSize / 6),
-      ); // rough estimate
-      currentChunk = overlapWords.join(" ") + ". " + trimmedSentence;
+      
+      // Start new chunk with overlap (keep last few lines for context)
+      const overlapLines = currentLines.slice(-3); // Keep last 3 lines for context
+      currentLines = [...overlapLines, trimmedLine];
+      currentChunk = currentLines.join('\n');
     } else {
+      currentLines.push(trimmedLine);
       currentChunk = potentialChunk;
     }
   }
-
+  
   // Add final chunk if it exists
   if (currentChunk.length >= CHUNK_CONFIG.minChunkSize) {
     chunks.push({
       index: chunkIndex,
-      content: currentChunk + ".",
+      content: currentChunk,
       pageNumber,
       wordCount: currentChunk.split(/\s+/).length,
       charCount: currentChunk.length,
+      lineCount: currentLines.length
     });
   }
-
+  
   return chunks;
 };
+
+// Legacy function for backward compatibility
+const createTextChunks = createMedicalTextChunks;
 
 // Extract form fields from Textract blocks
 const extractFormFields = (blocks) => {
@@ -186,7 +191,7 @@ const processTextractForRAG = async (blocks, documentId) => {
   // Extract signatures
   processedData.signatures = extractSignatures(blocks);
 
-  // Extract text by page
+  // Extract text by page - ONLY use LINE blocks to avoid duplication
   const pageTexts = new Map();
   const entities = [];
 
@@ -196,14 +201,11 @@ const processTextractForRAG = async (blocks, documentId) => {
 
     switch (block.BlockType) {
       case "LINE":
+        // Only process LINE blocks for text extraction
         if (!pageTexts.has(pageNum)) pageTexts.set(pageNum, []);
-        pageTexts.get(pageNum).push(block.Text);
-        break;
-
-      case "WORD":
-        // Include individual words for more comprehensive text extraction
-        if (!pageTexts.has(pageNum)) pageTexts.set(pageNum, []);
-        pageTexts.get(pageNum).push(block.Text);
+        if (block.Text && block.Text.trim()) {
+          pageTexts.get(pageNum).push(block.Text.trim());
+        }
         break;
 
       case "KEY_VALUE_SET":
@@ -233,19 +235,31 @@ const processTextractForRAG = async (blocks, documentId) => {
     }
   });
 
-  // Create full text and chunks
+  // Create full text and chunks with better preservation
   let fullText = "";
+  let allChunks = [];
+  
   for (const [pageNum, texts] of pageTexts.entries()) {
-    const pageText = texts.join(" ");
-    fullText += pageText + "\n\n";
+    const pageText = texts.join("\n"); // Use newlines to preserve structure
+    fullText += `\n\n=== PAGE ${pageNum} ===\n` + pageText;
 
-    // Create chunks for this page
-    const pageChunks = createTextChunks(pageText, pageNum);
-    processedData.chunks.push(...pageChunks);
+    // Create chunks for this page with better logic
+    const pageChunks = createMedicalTextChunks(pageText, pageNum);
+    allChunks.push(...pageChunks);
   }
 
   processedData.fullText = fullText.trim();
+  processedData.chunks = allChunks;
   processedData.entities = entities;
+
+  console.log(`[DEBUG] Text extraction complete:`);
+  console.log(`- Full text length: ${processedData.fullText.length} characters`);
+  console.log(`- Total chunks: ${processedData.chunks.length}`);
+  console.log(`- Chunks details:`, processedData.chunks.map(c => ({ 
+    index: c.index, 
+    page: c.pageNumber, 
+    charCount: c.charCount 
+  })));
 
   return processedData;
 };
@@ -905,10 +919,20 @@ const handleTextractCompletion = async (awsJobId) => {
     }
 
     // Process results for RAG
+    console.log(`[DEBUG] Processing ${result.Blocks.length} Textract blocks for document ${jobData.document_id}`);
+    
     const processedData = await processTextractForRAG(
       result.Blocks,
       jobData.document_id,
     );
+
+    console.log(`[DEBUG] Textract processing complete:`);
+    console.log(`- Blocks processed: ${result.Blocks.length}`);
+    console.log(`- Full text length: ${processedData.fullText.length}`);
+    console.log(`- Chunks created: ${processedData.chunks.length}`);
+    console.log(`- Entities found: ${processedData.entities.length}`);
+    console.log(`- Form fields: ${Object.keys(processedData.formFields).length}`);
+    console.log(`- Tables: ${processedData.tables.length}`);
 
     // Calculate confidence and prepare updates
     const avgConfidence = calculateAverageConfidence(result.Blocks);
@@ -916,6 +940,8 @@ const handleTextractCompletion = async (awsJobId) => {
 
     // Store chunks in database
     if (processedData.chunks.length > 0) {
+      console.log(`[DEBUG] Storing ${processedData.chunks.length} chunks in database`);
+      
       const chunkInserts = processedData.chunks.map((chunk, index) => ({
         id: uuidv4(),
         document_id: jobData.document_id,
@@ -934,7 +960,11 @@ const handleTextractCompletion = async (awsJobId) => {
 
       if (chunksError) {
         console.error("Failed to insert chunks:", chunksError);
+      } else {
+        console.log(`[SUCCESS] Successfully stored ${processedData.chunks.length} chunks`);
       }
+    } else {
+      console.warn(`[WARNING] No chunks created for document ${jobData.document_id}`);
     }
 
     // Store entities
