@@ -37,9 +37,9 @@ export function isValidFileType(file: File): boolean {
   return acceptedTypes.includes(file.type);
 }
 
-// Function to validate file size (max 10MB)
+// Function to validate file size (max 30MB)
 export function isValidFileSize(file: File): boolean {
-  const maxSize = 10 * 1024 * 1024; // 10MB
+  const maxSize = 30 * 1024 * 1024; // 30MB
   return file.size <= maxSize;
 }
 

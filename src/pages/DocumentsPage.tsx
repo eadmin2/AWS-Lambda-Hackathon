@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import DocumentsTable, { DocumentRow } from "../components/documents/DocumentsTable";
 import PaymentOptions from "../components/payment/PaymentOptions";
 import FileUploader from "../components/documents/FileUploader";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { getUserDocuments } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import PageLayout from "../components/layout/PageLayout";
@@ -101,6 +101,13 @@ const DocumentsPage: React.FC = () => {
     setDeleteError(err);
   };
 
+  const handleUploadComplete = (newDocument: DocumentRow) => {
+    setDocuments((prev) => [newDocument, ...prev]);
+    // Optionally, you can still fetch to ensure data consistency,
+    // but the immediate UI update is better for UX.
+    // fetchDocuments(); 
+  };
+
   return (
     <PageLayout>
       <div className="max-w-5xl mx-auto py-8 px-2 sm:px-4">
@@ -126,11 +133,44 @@ const DocumentsPage: React.FC = () => {
               ) : (
                 <FileUploader
                   userId={user?.id || ""}
-                  onUploadComplete={fetchDocuments}
+                  onUploadComplete={handleUploadComplete}
                   onUploadError={handleUploadError}
                   canUpload={canUpload}
                 />
               )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Instructions & Tips</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-3 text-sm text-gray-600">
+                <li className="flex items-start">
+                  <CheckCircle2 className="h-4 w-4 mr-2 mt-1 text-green-500 flex-shrink-0" />
+                  <span>
+                    <strong>Supported Files:</strong> PDF, JPEG, PNG, or TIFF.
+                  </span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle2 className="h-4 w-4 mr-2 mt-1 text-green-500 flex-shrink-0" />
+                  <span>
+                    <strong>Max Size:</strong> Up to 10MB per file.
+                  </span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle2 className="h-4 w-4 mr-2 mt-1 text-green-500 flex-shrink-0" />
+                  <span>
+                    After selecting files, you can rename them before clicking 'Upload'.
+                  </span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle2 className="h-4 w-4 mr-2 mt-1 text-green-500 flex-shrink-0" />
+                  <span>
+                    Uploaded documents will appear in the 'Your Documents' table below.
+                  </span>
+                </li>
+              </ul>
             </CardContent>
           </Card>
         </div>
