@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
     const { data, error } = await supabase.auth.admin.createUser({
       email,
       password,
-      email_confirm: false,
+      email_confirm: true,
       user_metadata: { full_name: fullName },
     });
 
@@ -62,48 +62,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Send welcome email via send-email Edge Function
-    // @ts-ignore
-    const websiteUrl = Deno.env.get("WEBSITE_URL") || "https://yourwebsite.com";
-    let welcomeEmailWarning: string | null = null;
-    try {
-      const welcomeEmailRes = await fetch(
-        `${websiteUrl}/functions/v1/send-email`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            from: `VA Rating Assistant <no-reply@${websiteUrl.replace(/^https?:\/\//, "")}>`,
-            to: email,
-            subject: "Welcome to VA Rating Assistant!",
-            tags: [{ name: "welcome", value: "true" }],
-            html: `<h1>Welcome, ${fullName}!</h1><p>Your username: <b>${email}</b></p><p>You can now log in with your email and password at <a href='${websiteUrl}/auth'>${websiteUrl}/auth</a>.</p>`,
-            text: `Welcome, ${fullName}!\nYour username: ${email}\nYou can now log in with your email and password at ${websiteUrl}/auth`,
-          }),
-        },
-      );
-      if (!welcomeEmailRes.ok) {
-        const err = await welcomeEmailRes.json().catch(() => ({}));
-        welcomeEmailWarning =
-          "User registered, but failed to send welcome email.";
-        // Optionally log the error for debugging
-        // deno-lint-ignore no-console
-        console.error("Welcome email error:", err);
-      }
-    } catch (err) {
-      welcomeEmailWarning =
-        "User registered, but failed to send welcome email.";
-      // Optionally log the error for debugging
-      // deno-lint-ignore no-console
-      console.error("Welcome email exception:", err);
-    }
-
+    // The welcome email is now redundant since Supabase sends a confirmation email.
+    // You can re-enable this or integrate it into your workflow as needed.
+    
     return new Response(
       JSON.stringify({
         success: true,
-        message: welcomeEmailWarning
-          ? `Registration successful, but failed to send welcome email. (Warning: ${welcomeEmailWarning})`
-          : "Registration successful! You can now log in with your email and password.",
+        message: "Registration successful! Please check your email to confirm your account.",
       }),
       { status: 200, headers: corsHeaders },
     );
