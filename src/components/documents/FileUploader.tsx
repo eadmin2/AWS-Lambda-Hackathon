@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useCallback, useEffect, useReducer, useRef } from "react";
 import { useDropzone, FileRejection } from "react-dropzone";
 import {
   Upload,
@@ -19,6 +19,40 @@ const AWS_REGION = "us-east-2";
 const MAX_SIZE_MB = 30;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
+interface UploaderState {
+  files: { file: File; name: string }[];
+  uploading: boolean;
+  uploadProgress: number;
+  error: string | null;
+}
+
+type UploaderAction =
+  | { type: 'SET_FILES'; files: { file: File; name: string }[] }
+  | { type: 'ADD_FILES'; files: { file: File; name: string }[] }
+  | { type: 'SET_UPLOADING'; uploading: boolean }
+  | { type: 'SET_PROGRESS'; progress: number }
+  | { type: 'SET_ERROR'; error: string | null }
+  | { type: 'UPLOAD_SUCCESS' };
+
+const uploaderReducer = (state: UploaderState, action: UploaderAction): UploaderState => {
+  switch (action.type) {
+    case 'SET_FILES':
+      return { ...state, files: action.files };
+    case 'ADD_FILES':
+      return { ...state, files: [...state.files, ...action.files], error: null };
+    case 'SET_UPLOADING':
+      return { ...state, uploading: action.uploading, error: null };
+    case 'SET_PROGRESS':
+      return { ...state, uploadProgress: action.progress };
+    case 'SET_ERROR':
+      return { ...state, error: action.error, uploading: false, files: [] };
+    case 'UPLOAD_SUCCESS':
+      return { ...state, files: [], error: null };
+    default:
+      throw new Error('Unhandled action type');
+  }
+};
+
 interface FileUploaderProps {
   userId: string;
   onUploadComplete: (document: DocumentRow) => void;
@@ -32,38 +66,59 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   onUploadError,
   canUpload,
 }) => {
-  const [files, setFiles] = useState<{ file: File; name: string }[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const initialState: UploaderState = {
+    files: [],
+    uploading: false,
+    uploadProgress: 0,
+    error: null,
+  };
+
+  const [state, dispatch] = useReducer(uploaderReducer, initialState);
+  const { files, uploading, uploadProgress, error } = state;
+  const workerRef = useRef<Worker | null>(null);
+
+  useEffect(() => {
+    workerRef.current = new Worker(new URL('../../workers/upload.worker.ts', import.meta.url));
+
+    workerRef.current.onmessage = (event) => {
+      const { type, percentComplete, error: workerError } = event.data;
+      if (type === 'progress') {
+        dispatch({ type: 'SET_PROGRESS', progress: Math.round(percentComplete) });
+      } else if (type === 'error') {
+        const errorMessage = workerError || "An unknown error occurred during upload.";
+        dispatch({ type: 'SET_ERROR', error: errorMessage });
+        onUploadError(errorMessage);
+      }
+    };
+
+    // Cleanup worker on component unmount
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+      }
+    };
+  }, [onUploadError]);
 
   const onDrop = useCallback((acceptedFiles: File[], fileRejections: FileRejection[]) => {
-    // Handle rejections first
     if (fileRejections.length > 0) {
       const firstRejection = fileRejections[0];
       const firstError = firstRejection.errors[0];
 
       if (firstError.code === 'file-too-large') {
-        setError(`File is too large. Maximum size is ${MAX_SIZE_MB}MB.`);
+        dispatch({ type: 'SET_ERROR', error: `File is too large. Maximum size is ${MAX_SIZE_MB}MB.` });
       } else if (firstError.code === 'file-invalid-type') {
-        setError('Invalid file type. Please upload a PDF, JPEG, PNG, or TIFF file.');
+        dispatch({ type: 'SET_ERROR', error: 'Invalid file type. Please upload a PDF, JPEG, PNG, or TIFF file.' });
       } else {
-        setError(firstError.message || 'File upload failed for an unknown reason.');
+        dispatch({ type: 'SET_ERROR', error: firstError.message || 'File is invalid.' });
       }
-    } else {
-      // Clear error only if all dropped files are accepted
-      setError(null);
+      return;
     }
 
-    // Always process accepted files. The UI will show both the files to be uploaded and the error message.
     const newFiles = acceptedFiles.map((file) => ({
       file,
       name: file.name.replace(/\.[^.]+$/, ""),
     }));
-
-    if (newFiles.length > 0) {
-      setFiles((prev) => [...prev, ...newFiles]);
-    }
+    dispatch({ type: 'ADD_FILES', files: newFiles });
   }, []);
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
@@ -84,55 +139,44 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   });
 
   const handleRemoveFile = (index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
-    setError(null);
+    const newFiles = files.filter((_, i) => i !== index);
+    dispatch({ type: 'SET_FILES', files: newFiles });
+    if (newFiles.length === 0) {
+      dispatch({ type: 'SET_ERROR', error: null });
+    }
   };
 
   const handleFileNameChange = (index: number, newName: string) => {
-    setFiles((prev) =>
-      prev.map((f, i) => (i === index ? { ...f, name: newName } : f)),
-    );
+    const newFiles = files.map((f, i) => (i === index ? { ...f, name: newName } : f));
+    dispatch({ type: 'SET_FILES', files: newFiles });
   };
 
-  // Function to upload file to S3 using presigned URL
-  const uploadFileToS3 = async (
-    file: File,
-    presignedUrl: string,
-  ): Promise<void> => {
+  const uploadFileWithWorker = (file: File, presignedUrl: string): Promise<void> => {
     return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
+      if (!workerRef.current) {
+        return reject(new Error("Upload worker is not available."));
+      }
 
-      xhr.upload.addEventListener("progress", (event) => {
-        if (event.lengthComputable) {
-          // This will be per-file progress; you might want to aggregate for multiple files
-          const percentComplete = (event.loaded / event.total) * 100;
-          setUploadProgress(Math.round(percentComplete));
-        }
-      });
-
-      xhr.addEventListener("load", () => {
-        if (xhr.status === 200) {
+      const messageHandler = (event: MessageEvent) => {
+        if (event.data.type === 'success') {
+          workerRef.current?.removeEventListener('message', messageHandler);
           resolve();
-        } else {
-          reject(new Error(`Upload failed with status: ${xhr.status}`));
+        } else if (event.data.type === 'error') {
+          workerRef.current?.removeEventListener('message', messageHandler);
+          reject(new Error(event.data.error));
         }
-      });
+      };
 
-      xhr.addEventListener("error", () => {
-        reject(new Error("Upload failed due to network error"));
-      });
-
-      xhr.open("PUT", presignedUrl);
-      xhr.setRequestHeader("Content-Type", file.type);
-      xhr.send(file);
+      workerRef.current.addEventListener('message', messageHandler);
+      workerRef.current.postMessage({ file, presignedUrl });
     });
   };
 
   const handleUpload = async () => {
     if (!files.length || !userId || !canUpload) return;
 
-    setUploading(true);
-    setUploadProgress(0);
+    dispatch({ type: 'SET_UPLOADING', uploading: true });
+    dispatch({ type: 'SET_PROGRESS', progress: 0 });
 
     try {
       for (let i = 0; i < files.length; i++) {
@@ -159,8 +203,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         const { url: presignedUrl, key } = urlData;
         const fileUrl = `https://${AWS_S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${key}`;
 
-        // Step 2: Upload file directly to S3
-        await uploadFileToS3(file, presignedUrl);
+        // Step 2: Upload file directly to S3 via Web Worker
+        await uploadFileWithWorker(file, presignedUrl);
 
         // Step 3: Create document record in Supabase database
         const { data: documentData, error: documentError } = await supabase
@@ -189,26 +233,25 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         }
 
         // Update overall progress
-        setUploadProgress(Math.round(((i + 1) / files.length) * 100));
+        dispatch({ type: 'SET_PROGRESS', progress: Math.round(((i + 1) / files.length) * 100) });
 
         // Notify parent component
         onUploadComplete(documentData);
       }
 
       // Clear files on successful upload
-      setFiles([]);
-      setError(null);
+      dispatch({ type: 'UPLOAD_SUCCESS' });
     } catch (error) {
       console.error("Error uploading document:", error);
       const errorMessage =
         error instanceof Error
           ? error.message
           : "Failed to upload document. Please try again.";
-      setError(errorMessage);
+      dispatch({ type: 'SET_ERROR', error: errorMessage });
       onUploadError(errorMessage);
     } finally {
-      setUploading(false);
-      setUploadProgress(0);
+      dispatch({ type: 'SET_UPLOADING', uploading: false });
+      dispatch({ type: 'SET_PROGRESS', progress: 0 });
     }
   };
 
@@ -392,7 +435,10 @@ const FileUploader: React.FC<FileUploaderProps> = ({
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => setFiles([])}
+              onClick={() => {
+                dispatch({ type: 'SET_FILES', files: [] });
+                dispatch({ type: 'SET_ERROR', error: null });
+              }}
               disabled={uploading}
               className="w-full sm:w-auto order-2 sm:order-1"
             >

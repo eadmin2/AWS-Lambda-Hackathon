@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import DocumentsTable, { DocumentRow } from "../components/documents/DocumentsTable";
 import PaymentOptions from "../components/payment/PaymentOptions";
 import FileUploader from "../components/documents/FileUploader";
@@ -97,9 +97,9 @@ const DocumentsPage: React.FC = () => {
       setRenameError("Failed to rename document.");
     }
   };
-  const handleUploadError = (err: string) => {
+  const handleUploadError = useCallback((err: string) => {
     setDeleteError(err);
-  };
+  }, []);
 
   const handleUploadComplete = (newDocument: DocumentRow) => {
     setDocuments((prev) => [newDocument, ...prev]);
