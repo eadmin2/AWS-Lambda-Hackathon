@@ -30,7 +30,7 @@ BEGIN
     RETURN QUERY
     SELECT
         u.id,
-        u.email,
+        u.email::text,
         p.full_name,
         p.role,
         u.created_at,

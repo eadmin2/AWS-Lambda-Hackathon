@@ -24,6 +24,18 @@ export type Profile = {
   full_name: string | null;
   created_at: string;
   role: "veteran" | "admin";
+  payments?: Payment[];
+};
+
+export type Payment = {
+  id: string;
+  user_id: string;
+  stripe_customer_id: string | null;
+  subscription_status: string | null;
+  subscription_end_date: string | null;
+  upload_credits: number;
+  created_at: string;
+  updated_at: string;
 };
 
 export type Document = {
@@ -51,7 +63,7 @@ export async function getProfile(user: User): Promise<Profile | null> {
   try {
     const { data, error } = await supabase
       .from("profiles")
-      .select("*")
+      .select("*, payments(*)")
       .eq("id", user.id)
       .single();
 

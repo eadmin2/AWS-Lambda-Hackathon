@@ -11,13 +11,28 @@ import DocumentViewer from "../components/documents/DocumentViewer";
 import Modal from "../components/ui/Modal";
 
 const DocumentsPage: React.FC = () => {
-  const { user, session } = useAuth();
+  const { user, session, profile } = useAuth();
   const [documents, setDocuments] = useState<DocumentRow[]>([]);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [renameError, setRenameError] = useState<string | null>(null);
-  const [hasSubscription] = useState<boolean>(true); // Set logic as needed
-  const [canUpload] = useState<boolean>(true); // Set logic as needed
+  const [hasSubscription, setHasSubscription] = useState<boolean>(false);
+  const [canUpload, setCanUpload] = useState<boolean>(false);
   const [selectedDocument, setSelectedDocument] = useState<DocumentRow | null>(null);
+
+  useEffect(() => {
+    if (profile) {
+      const payments = profile.payments || [];
+      const activeSubscription = payments.some(p => p.subscription_status === 'active');
+      const hasCredits = payments.some(p => p.upload_credits > 0);
+      const isTrialing = payments.some(p => p.subscription_status === 'trialing' && p.subscription_end_date && new Date(p.subscription_end_date) > new Date());
+      
+      const userCanUpload = activeSubscription || hasCredits || isTrialing || profile.role === 'admin';
+      const userHasSubscription = activeSubscription || isTrialing || profile.role === 'admin';
+
+      setCanUpload(userCanUpload);
+      setHasSubscription(userHasSubscription);
+    }
+  }, [profile]);
 
   // Fetch documents
   const fetchDocuments = () => {
