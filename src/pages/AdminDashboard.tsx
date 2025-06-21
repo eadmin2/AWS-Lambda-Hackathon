@@ -151,53 +151,42 @@ const AdminDashboard = () => {
       try {
         setIsLoadingData(true);
         
-        // Fetch stats
-        const [usersData, docsData, paymentsData] = await Promise.all([
-          supabase.from("profiles").select("*"),
-          supabase.from("documents").select("*"),
-          supabase.from("payments").select("*").eq("subscription_status", "active")
-        ]);
+        // Fetch all admin data from the new, unified function
+        const { data: adminData, error } = await supabase.rpc("get_admin_dashboard_data");
 
         if (!mounted) return;
+
+        if (error) {
+          console.error("Error fetching admin data:", error);
+          // Handle error state in UI if needed
+          return;
+        }
+
+        const activeSubscriptions = adminData.filter((d: any) => d.subscription_status === 'active').length;
+        const totalDocuments = adminData.reduce((sum: number, user: any) => sum + (user.document_count || 0), 0);
+        const revenueThisMonth = activeSubscriptions * 49;
 
         setStats({
-          totalUsers: usersData.data?.length || 0,
-          totalDocuments: docsData.data?.length || 0,
-          activeSubscriptions: paymentsData.data?.length || 0,
-          revenueThisMonth: paymentsData.data?.reduce((acc) => acc + 49, 0) || 0,
+          totalUsers: adminData.length || 0,
+          totalDocuments: totalDocuments,
+          activeSubscriptions: activeSubscriptions,
+          revenueThisMonth: revenueThisMonth,
         });
 
-        // Fetch users with their documents and payments
-        const { data: userData } = await supabase.from("profiles").select(`
-          *,
-          documents (count),
-          payments (
-            subscription_status,
-            subscription_end_date,
-            upload_credits
-          )
-        `);
+        const transformedUsers = adminData.map((u: any) => ({
+          id: u.id,
+          email: u.email,
+          full_name: u.full_name,
+          role: u.role,
+          documents: [{ count: u.document_count || 0 }],
+          payments: [{ 
+            subscription_status: u.subscription_status,
+            upload_credits: u.upload_credits 
+          }],
+        }));
 
-        if (!mounted) return;
-        setUsers(userData || []);
+        setUsers(transformedUsers as AdminUser[]);
 
-        // Fetch recent documents
-        const { data: recentDocs } = await supabase
-          .from("documents")
-          .select(`
-            *,
-            profiles (email, full_name),
-            disability_estimates (
-              condition,
-              estimated_rating,
-              combined_rating
-            )
-          `)
-          .order("uploaded_at", { ascending: false })
-          .limit(10);
-
-        if (!mounted) return;
-        setDocuments(recentDocs || []);
       } catch (error) {
         console.error("Error fetching admin data:", error);
       } finally {
