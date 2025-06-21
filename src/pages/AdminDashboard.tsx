@@ -43,22 +43,6 @@ interface AdminUser {
   }[];
 }
 
-interface AdminDocument {
-  id: string;
-  file_name: string;
-  file_url?: string;
-  uploaded_at?: string;
-  profiles?: {
-    email?: string;
-    full_name?: string;
-  };
-  disability_estimates?: {
-    condition?: string;
-    estimated_rating?: number;
-    combined_rating?: number;
-  }[];
-}
-
 interface AdminActivityLog {
   id: string;
   admin_id: string;
@@ -119,7 +103,6 @@ const AdminDashboard = () => {
     revenueThisMonth: 0,
   });
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [documents, setDocuments] = useState<AdminDocument[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [activityLogs, setActivityLogs] = useState<AdminActivityLog[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -739,79 +722,6 @@ const AdminDashboard = () => {
                         No recent admin activity.
                       </div>
                     )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Recent Documents */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Documents</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Document
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            User
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Upload Date
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Rating
-                          </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Actions
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {documents.map((doc) => (
-                          <tr key={doc.id}>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm font-medium text-gray-900">
-                                {doc.file_name}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
-                                {doc.profiles?.full_name || "N/A"}
-                              </div>
-                              <div className="text-sm text-gray-500">
-                                {doc.profiles?.email}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {doc.uploaded_at ? formatDate(doc.uploaded_at) : ""}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              {doc.disability_estimates?.[0] ? (
-                                <div>
-                                  <div className="text-sm font-medium text-gray-900">
-                                    {doc.disability_estimates[0].combined_rating}%
-                                  </div>
-                                  <div className="text-xs text-gray-500">
-                                    Combined Rating
-                                  </div>
-                                </div>
-                              ) : (
-                                <span className="text-sm text-gray-500">
-                                  Processing
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                              {/* Remove the View button from the Actions column */}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
                   </div>
                 </CardContent>
               </Card>
