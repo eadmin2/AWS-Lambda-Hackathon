@@ -1,6 +1,14 @@
 import { createClient, User } from "@supabase/supabase-js";
 import { ConditionData } from "../components/ui/ConditionItem";
 
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
 // Initialize Supabase client with environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -46,6 +54,19 @@ export type Document = {
   file_name: string;
   file_url: string;
   uploaded_at: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  error_message: string | null;
+  storage_path: string;
+};
+
+export type DisabilityEstimate = {
+  id: number;
+  document_id: string;
+  condition: string;
+  disability_rating: number;
+  diagnostic_code: string;
+  created_at: string;
+  combined_rating: number;
 };
 
 export type UserCondition = {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   FileText,
@@ -6,26 +6,95 @@ import {
   Eye,
   AlertCircle,
   MoreVertical,
+  Trash2,
 } from "lucide-react";
 import { formatDate } from "../../lib/utils";
-import { Document, DisabilityEstimate } from "../../lib/supabase";
+import { supabase, Document, DisabilityEstimate } from "../../lib/supabase";
 import Button from "../ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/Card";
+import { useAuth } from "../../contexts/AuthContext";
+import Modal from "../ui/Modal";
 
-interface DocumentsListProps {
-  documents: Document[];
-  estimates: Record<string, DisabilityEstimate[]>;
-  isLoading: boolean;
-}
-
-const DocumentsList: React.FC<DocumentsListProps> = ({
-  documents,
-  estimates,
-  isLoading,
-}) => {
+const DocumentsList: React.FC = () => {
+  const { user } = useAuth();
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [estimates, setEstimates] = useState<
+    Record<string, DisabilityEstimate[]>
+  >({});
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [documentToDelete, setDocumentToDelete] = useState<Document | null>(
+    null,
+  );
 
-  // Handle download with proper document object reference
+  const fetchDocumentsAndEstimates = async () => {
+    if (!user) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Fetch documents
+      const { data: documentsData, error: documentsError } = await supabase
+        .from("documents")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("uploaded_at", { ascending: false });
+
+      if (documentsError) throw documentsError;
+
+      // Fetch estimates for all documents
+      const documentIds = documentsData.map((d) => d.id);
+      const { data: estimatesData, error: estimatesError } = await supabase
+        .from("disability_estimates")
+        .select("*")
+        .in("document_id", documentIds);
+
+      if (estimatesError) throw estimatesError;
+
+      // Group estimates by document ID
+      const estimatesByDocId = estimatesData.reduce((acc, est) => {
+        if (!acc[est.document_id]) {
+          acc[est.document_id] = [];
+        }
+        acc[est.document_id].push(est);
+        return acc;
+      }, {} as Record<string, DisabilityEstimate[]>);
+
+      setDocuments(documentsData);
+      setEstimates(estimatesByDocId);
+    } catch (err: any) {
+      setError(
+        "Failed to load documents. Please check your connection and try again.",
+      );
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDocumentsAndEstimates();
+  }, [user]);
+
+  const handleDelete = async () => {
+    if (!documentToDelete) return;
+    try {
+      const { error } = await supabase.functions.invoke("delete-document", {
+        body: { documentId: documentToDelete.id },
+      });
+      if (error) throw new Error(error.message);
+      // Refresh list on success
+      fetchDocumentsAndEstimates();
+    } catch (err: any) {
+      console.error("Deletion error:", err);
+      setError("Failed to delete the document.");
+    } finally {
+      setDocumentToDelete(null); // Close modal
+    }
+  };
+
   const handleDownload = async (document: Document) => {
     let fileKey = document.file_url.split(`/${document.user_id}/`).pop();
     if (!fileKey) fileKey = document.file_name;
@@ -62,16 +131,14 @@ const DocumentsList: React.FC<DocumentsListProps> = ({
   };
 
   // Close dropdown when clicking outside
-  React.useEffect(() => {
+  useEffect(() => {
     const handleClickOutside = (_event: MouseEvent) => {
       if (activeDropdown) {
         setActiveDropdown(null);
       }
     };
-
-    window.document.addEventListener("click", handleClickOutside);
-    return () =>
-      window.document.removeEventListener("click", handleClickOutside);
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
   }, [activeDropdown]);
 
   if (isLoading) {
@@ -106,6 +173,21 @@ const DocumentsList: React.FC<DocumentsListProps> = ({
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {error && (
+        <div className="rounded-md bg-red-50 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <AlertCircle
+                className="h-5 w-5 text-red-400"
+                aria-hidden="true"
+              />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-red-800">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
       {documents.map((document) => {
         const documentEstimates = estimates[document.id] || [];
         const combinedRating =
@@ -166,6 +248,18 @@ const DocumentsList: React.FC<DocumentsListProps> = ({
                           <Download className="h-4 w-4" />
                           Download
                         </button>
+                        <div className="border-t border-gray-100"></div>
+                        <button
+                          className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDocumentToDelete(document);
+                            setActiveDropdown(null);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </button>
                       </div>
                     )}
                   </div>
@@ -219,14 +313,18 @@ const DocumentsList: React.FC<DocumentsListProps> = ({
                       variant="ghost"
                       size="sm"
                       leftIcon={<Download className="h-4 w-4" />}
-                      onClick={() => {
-                        const link = window.document.createElement("a");
-                        link.href = document.file_url;
-                        link.download = document.file_name;
-                        link.click();
-                      }}
+                      onClick={() => handleDownload(document)}
                     >
                       Download
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      leftIcon={<Trash2 className="h-4 w-4" />}
+                      onClick={() => setDocumentToDelete(document)}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      Delete
                     </Button>
                   </div>
                 </div>
@@ -269,7 +367,7 @@ const DocumentsList: React.FC<DocumentsListProps> = ({
                           {estimate.condition}
                         </span>
                         <span className="font-semibold text-sm bg-primary-100 text-primary-800 px-2 py-1 rounded">
-                          {estimate.estimated_rating}%
+                          {estimate.disability_rating}%
                         </span>
                       </div>
                     ))}
@@ -286,7 +384,7 @@ const DocumentsList: React.FC<DocumentsListProps> = ({
                           {estimate.condition}
                         </span>
                         <span className="font-semibold text-sm bg-primary-100 text-primary-800 px-2 py-1 rounded">
-                          {estimate.estimated_rating}%
+                          {estimate.disability_rating}%
                         </span>
                       </div>
                     ))}
@@ -319,6 +417,31 @@ const DocumentsList: React.FC<DocumentsListProps> = ({
           </Card>
         );
       })}
+      {documentToDelete && (
+        <Modal
+          isOpen={!!documentToDelete}
+          onClose={() => setDocumentToDelete(null)}
+        >
+          <h3 className="text-lg font-medium leading-6 text-gray-900">
+            Confirm Deletion
+          </h3>
+          <p className="text-sm text-gray-500 my-4">
+            Are you sure you want to delete the document "
+            {documentToDelete.file_name}"? This action cannot be undone.
+          </p>
+          <div className="flex justify-end space-x-2">
+            <Button
+              variant="ghost"
+              onClick={() => setDocumentToDelete(null)}
+            >
+              Cancel
+            </Button>
+            <Button variant="danger" onClick={handleDelete}>
+              Delete
+            </Button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 };
