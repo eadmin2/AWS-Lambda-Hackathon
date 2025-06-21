@@ -476,10 +476,22 @@ async function processDocument(userId, documentId) {
     const finalConditionCount = uniqueConditions.length;
     console.log(`Resulting in ${finalConditionCount} unique conditions after deduplication.`);
     
-    // Now, let's enrich all unique conditions, not just modified ones.
-    // This ensures existing records get enriched if they are missing data.
-    const conditionsToProcess = uniqueConditions;
-    console.log(`Enriching all ${conditionsToProcess.length} unique conditions.`);
+    // Filter for conditions that are new or have been modified to be upserted.
+    const conditionsToProcess = uniqueConditions.filter(c => c.isModified);
+    console.log(`Found ${conditionsToProcess.length} new or modified conditions to enrich and save.`);
+
+    if (conditionsToProcess.length === 0) {
+        console.log("No new or modified conditions to save. Document processing is complete.");
+        // Update document status to 'completed'
+        await supabase
+            .from("documents")
+            .update({ processing_status: 'completed', rag_status: 'completed' })
+            .eq("id", documentId);
+        return createSuccessResponse({
+            message: "Document processed. No new or updated conditions found.",
+            uniqueConditionsFound: finalConditionCount,
+        });
+    }
 
     const finalConditions = [];
     for (const condition of conditionsToProcess) {
