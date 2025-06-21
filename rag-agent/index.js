@@ -439,15 +439,25 @@ async function processDocument(userId, documentId) {
 
         if (!existing) {
             // First time seeing this normalized condition
-            conditionMap.set(normalizedName, {
+            const newCondition = {
                 ...condition,
-                isModified: condition.isNew || false,
                 name_normalized: normalizedName,
-            });
+            };
+            // A condition is modified if it's new, or if it's an existing one that has been updated.
+            // The `isModified` property will be added during the merge logic if needed.
+            if (condition.isNew) {
+                newCondition.isModified = true;
+            }
+            conditionMap.set(normalizedName, newCondition);
         } else {
             // This is a duplicate, merge it into the existing entry
             console.log(`Deduplicating: "${condition.name}" is a variant of "${existing.name}". Merging.`);
             
+            // If we are merging a new condition into an existing one, mark the master as modified.
+            if (condition.isNew) {
+                existing.isModified = true;
+            }
+
             // Merge logic: Combine summaries, keywords, and take the highest rating
             if (condition.summary && !(existing.summary || '').includes(condition.summary)) {
                 existing.summary = (existing.summary ? existing.summary + ' | ' : '') + condition.summary;
@@ -462,11 +472,6 @@ async function processDocument(userId, documentId) {
             }
             if ((condition.rating || 0) > (existing.rating || 0)) {
                 existing.rating = condition.rating;
-                existing.isModified = true;
-            }
-            
-            // If we are merging a new condition into an existing one, mark the master as modified.
-            if (condition.isNew) {
                 existing.isModified = true;
             }
         }
