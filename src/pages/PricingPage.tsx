@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useSearchParams, useLocation } from "react-router-dom";
 import {
   FileText,
@@ -16,15 +16,22 @@ import {
   createUploadCheckoutSession,
   createSubscriptionCheckoutSession,
 } from "../lib/stripe";
+import { getUserPermissions } from "../lib/supabase";
 
-const PricingPage = () => {
-  const { user } = useAuth();
+const PricingPage: React.FC = () => {
+  const { user, profile } = useAuth();
   const [searchParams] = useSearchParams();
   const location = useLocation();
-  const checkoutStatus = searchParams.get("checkout");
-  const [isLoading, setIsLoading] = React.useState<
+  const [isLoading, setIsLoading] = useState<
     "single" | "subscription" | null
   >(null);
+
+  const checkoutSuccess = searchParams.get("checkout") === "success";
+  const checkoutCanceled = searchParams.get("checkout") === "canceled";
+  const subscriptionSuccess = searchParams.get("subscription") === "success";
+  const subscriptionCanceled = searchParams.get("subscription") === "canceled";
+
+  const permissions = getUserPermissions(profile);
 
   useEffect(() => {
     if (location.hash) {
@@ -36,9 +43,25 @@ const PricingPage = () => {
     }
   }, [location]);
 
+  useEffect(() => {
+    if (checkoutSuccess || subscriptionSuccess) {
+      const timer = setTimeout(() => {
+        window.history.replaceState({}, document.title, location.pathname);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [checkoutSuccess, subscriptionSuccess, location.pathname]);
+
   const handlePurchase = async (type: "single" | "subscription") => {
-    setIsLoading(type);
+    if (!user) {
+      // Redirect unregistered users to registration with payment intent
+      const redirectUrl = `/auth?next=checkout&type=${type}`;
+      window.location.href = redirectUrl;
+      return;
+    }
+
     try {
+      setIsLoading(type);
       if (type === "single") {
         await createUploadCheckoutSession(user?.id);
       } else {
@@ -46,6 +69,7 @@ const PricingPage = () => {
       }
     } catch (error) {
       console.error("Error creating checkout session:", error);
+      // Handle error appropriately
     } finally {
       setIsLoading(null);
     }
@@ -113,18 +137,63 @@ const PricingPage = () => {
       {/* Pricing Section */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {checkoutStatus === "canceled" && (
-            <div className="mb-8 bg-error-100 border border-error-200 p-4 rounded-md flex items-start max-w-2xl mx-auto">
-              <AlertCircle className="h-5 w-5 text-error-500 mr-2 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-error-700 text-sm font-medium">
-                  Payment canceled
-                </p>
-                <p className="text-error-600 text-xs mt-1">
-                  Your payment was not processed. Please try again or contact
-                  support if you need assistance.
-                </p>
-              </div>
+          {checkoutSuccess && (
+            <div className="mb-8 max-w-md mx-auto bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+              <strong className="font-bold">Payment Successful!</strong>
+              <span className="block sm:inline">
+                {" "}
+                Your single upload credit has been added to your account.
+              </span>
+            </div>
+          )}
+          {subscriptionSuccess && (
+            <div className="mb-8 max-w-md mx-auto bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+              <strong className="font-bold">Subscription Active!</strong>
+              <span className="block sm:inline">
+                {" "}
+                Welcome to unlimited uploads. You can start using the service
+                immediately.
+              </span>
+            </div>
+          )}
+          {checkoutCanceled && (
+            <div className="mb-8 max-w-md mx-auto bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+              <strong className="font-bold">Payment canceled</strong>
+              <span className="block sm:inline">
+                {" "}
+                Your payment was not processed. Please try again or contact
+                support if you need assistance.
+              </span>
+            </div>
+          )}
+          {subscriptionCanceled && (
+            <div className="mb-8 max-w-md mx-auto bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+              <strong className="font-bold">Subscription canceled</strong>
+              <span className="block sm:inline">
+                {" "}
+                Your subscription was not activated. Please try again or contact
+                support if you need assistance.
+              </span>
+            </div>
+          )}
+
+          {user && (
+            <div className="mt-8 max-w-md mx-auto">
+              {permissions.hasActiveSubscription && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                  <CheckCircle className="h-6 w-6 text-green-500 mx-auto mb-2" />
+                  <p className="text-green-800 font-medium">Active Subscription</p>
+                  <p className="text-green-600 text-sm">You have unlimited uploads</p>
+                </div>
+              )}
+              {permissions.hasUploadCredits && !permissions.hasActiveSubscription && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                  <p className="text-blue-800 font-medium">Upload Credits Available</p>
+                  <p className="text-blue-600 text-sm">
+                    {permissions.uploadCreditsRemaining} uploads remaining
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

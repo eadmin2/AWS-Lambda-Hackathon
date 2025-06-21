@@ -25,6 +25,7 @@ export type Profile = {
   full_name: string | null;
   created_at: string;
   role: "veteran" | "admin";
+  payment_status?: "registered" | "paid" | "admin";
   payments?: Payment[];
 };
 
@@ -66,6 +67,18 @@ export type Subscription = {
   price_id: string;
   created_at: string;
 };
+
+// User status management
+export type UserStatus = "registered" | "paid" | "admin";
+
+export interface UserPermissions {
+  canUpload: boolean;
+  canAccessPaidFeatures: boolean;
+  canAccessAdminFeatures: boolean;
+  hasActiveSubscription: boolean;
+  hasUploadCredits: boolean;
+  uploadCreditsRemaining: number;
+}
 
 // Helper functions for database operations
 export async function getProfile(user: User): Promise<Profile | null> {
@@ -121,6 +134,72 @@ export async function getUserConditions(userId: string) {
 
   if (error) throw error;
   return data as UserCondition[];
+}
+
+// User permission checking functions
+export function getUserStatus(profile: Profile | null): UserStatus {
+  if (!profile) return "registered";
+  
+  // Use database payment_status if available, otherwise calculate
+  if (profile.payment_status) {
+    return profile.payment_status;
+  }
+  
+  // Fallback calculation for backward compatibility
+  if (profile.role === "admin") return "admin";
+  
+  const payments = Array.isArray(profile.payments) ? profile.payments : [];
+  const hasActiveSubscription = payments.some(p => p.subscription_status === 'active');
+  const hasCredits = payments.some(p => p.upload_credits > 0);
+  const isTrialing = payments.some(p => 
+    p.subscription_status === 'trialing' && 
+    p.subscription_end_date && 
+    new Date(p.subscription_end_date) > new Date()
+  );
+  
+  if (hasActiveSubscription || hasCredits || isTrialing) {
+    return "paid";
+  }
+  
+  return "registered";
+}
+
+export function getUserPermissions(profile: Profile | null): UserPermissions {
+  const defaultPermissions: UserPermissions = {
+    canUpload: false,
+    canAccessPaidFeatures: false,
+    canAccessAdminFeatures: false,
+    hasActiveSubscription: false,
+    hasUploadCredits: false,
+    uploadCreditsRemaining: 0,
+  };
+
+  if (!profile) return defaultPermissions;
+
+  const isAdmin = profile.role === 'admin';
+  const payments = Array.isArray(profile.payments) ? profile.payments : [];
+  
+  const activeSubscription = payments.some(p => p.subscription_status === 'active');
+  const hasCredits = payments.some(p => p.upload_credits > 0);
+  const uploadCreditsRemaining = payments.reduce((total, p) => total + (p.upload_credits || 0), 0);
+  const isTrialing = payments.some(p => 
+    p.subscription_status === 'trialing' && 
+    p.subscription_end_date && 
+    new Date(p.subscription_end_date) > new Date()
+  );
+
+  const hasActiveSubscription = activeSubscription || isTrialing;
+  const canUpload = isAdmin || hasActiveSubscription || hasCredits;
+  const canAccessPaidFeatures = isAdmin || hasActiveSubscription || hasCredits;
+
+  return {
+    canUpload,
+    canAccessPaidFeatures,
+    canAccessAdminFeatures: isAdmin,
+    hasActiveSubscription,
+    hasUploadCredits: hasCredits,
+    uploadCreditsRemaining,
+  };
 }
 
 export { supabaseAnonKey };

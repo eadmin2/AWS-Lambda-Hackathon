@@ -1,219 +1,137 @@
-import React, { useEffect, useState, useCallback } from "react";
-import DocumentsTable, { DocumentRow } from "../components/documents/DocumentsTable";
+import React, { useState, useEffect } from "react";
 import PaymentOptions from "../components/payment/PaymentOptions";
+import DocumentsList from "../components/documents/DocumentsList";
 import FileUploader from "../components/documents/FileUploader";
-import { AlertCircle, CheckCircle2 } from "lucide-react";
-import { getUserDocuments } from "../lib/supabase";
-import { useAuth } from "../contexts/AuthContext";
 import PageLayout from "../components/layout/PageLayout";
-import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/Card";
-import DocumentViewer from "../components/documents/DocumentViewer";
-import Modal from "../components/ui/Modal";
+import { useAuth } from "../contexts/AuthContext";
+import { getUserPermissions } from "../lib/supabase";
+import { UploadRequired } from "../components/ui/AccessControl";
 
 const DocumentsPage: React.FC = () => {
-  const { user, session, profile } = useAuth();
-  const [documents, setDocuments] = useState<DocumentRow[]>([]);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [renameError, setRenameError] = useState<string | null>(null);
-  const [hasSubscription, setHasSubscription] = useState<boolean>(false);
-  const [canUpload, setCanUpload] = useState<boolean>(false);
-  const [selectedDocument, setSelectedDocument] = useState<DocumentRow | null>(null);
+  const { profile } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  useEffect(() => {
-    if (profile) {
-      const payments = Array.isArray(profile.payments) ? profile.payments : [];
-      const activeSubscription = payments.some(p => p.subscription_status === 'active');
-      const hasCredits = payments.some(p => p.upload_credits > 0);
-      const isTrialing = payments.some(p => p.subscription_status === 'trialing' && p.subscription_end_date && new Date(p.subscription_end_date) > new Date());
-      
-      const userCanUpload = activeSubscription || hasCredits || isTrialing || profile.role === 'admin';
-      const userHasSubscription = activeSubscription || isTrialing || profile.role === 'admin';
+  const permissions = getUserPermissions(profile);
 
-      setCanUpload(userCanUpload);
-      setHasSubscription(userHasSubscription);
-    }
-  }, [profile]);
-
-  // Fetch documents
-  const fetchDocuments = () => {
-    if (!user) return;
-    getUserDocuments(user.id).then((docs) => setDocuments(docs));
+  const handleUploadSuccess = () => {
+    setRefreshKey(prev => prev + 1);
   };
 
-  useEffect(() => {
-    fetchDocuments();
-    // eslint-disable-next-line
-  }, [user]);
-
-  // Handler for viewing a document (opens modal)
-  const handleViewDocument = (doc: DocumentRow) => {
-    setSelectedDocument(doc);
+  const handleError = (errorMessage: string) => {
+    setError(errorMessage);
   };
 
-  // Handler for secure download using proxied endpoint
-  const handleDownloadDocument = async (doc: DocumentRow) => {
-    // Extract only the S3 object key from file_url
-    const url = doc.file_url;
-    const match = url.match(/https?:\/\/[^/]+\/(.+)/);
-    const objectKey = match ? match[1] : url;
-
-    // Use the proxied endpoint and send both key and userId in the POST body
-    const res = await fetch('/get-s3-url', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key: objectKey, userId: doc.user_id })
-    });
-    const data = await res.json();
-    if (res.ok && data.url) {
-      const link = document.createElement('a');
-      link.href = data.url;
-      link.download = doc.file_name;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } else {
-      setDeleteError('Failed to get signed URL for download.');
-    }
+  const clearError = () => {
+    setError(null);
   };
 
-  const handleDeleteDocument = async (doc: DocumentRow) => {
-    try {
-      // TODO: Call delete API
-      setDeleteError(null);
-      // Remove from UI
-      setDocuments((prev) => prev.filter((d) => d.id !== doc.id));
-    } catch (err) {
-      setDeleteError("Failed to delete document.");
-    }
-  };
-  const handleRenameDocument = async (doc: DocumentRow, newName: string) => {
-    try {
-      // TODO: Call rename API
-      setRenameError(null);
-      setDocuments((prev) =>
-        prev.map((d) => (d.id === doc.id ? { ...d, file_name: newName + d.file_name.substring(d.file_name.lastIndexOf(".")) } : d))
-      );
-    } catch (err) {
-      setRenameError("Failed to rename document.");
-    }
-  };
-  const handleUploadError = useCallback((err: string) => {
-    setDeleteError(err);
-  }, []);
-
-  const handleUploadComplete = (newDocument: DocumentRow) => {
-    setDocuments((prev) => [newDocument, ...prev]);
-    // Optionally, you can still fetch to ensure data consistency,
-    // but the immediate UI update is better for UX.
-    // fetchDocuments(); 
-  };
+  if (!profile) {
+    return (
+      <PageLayout>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <div>Loading...</div>
+        </div>
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout>
-      <div className="max-w-5xl mx-auto py-8 px-2 sm:px-4">
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle>Upload Medical Document</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!canUpload ? (
-                <div className="bg-amber-50 border border-amber-200 rounded-md p-4 mb-4 flex items-start">
-                  <AlertCircle className="h-5 w-5 text-amber-500 mr-2 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-amber-700 text-sm font-medium">
-                      Payment Required
-                    </p>
-                    <p className="text-amber-600 text-xs mt-1">
-                      You need to purchase a subscription or single upload
-                      credit before you can upload documents.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <FileUploader
-                  userId={user?.id || ""}
-                  onUploadComplete={handleUploadComplete}
-                  onUploadError={handleUploadError}
-                  canUpload={canUpload}
-                />
-              )}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Instructions & Tips</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-3 text-sm text-gray-600">
-                <li className="flex items-start">
-                  <CheckCircle2 className="h-4 w-4 mr-2 mt-1 text-green-500 flex-shrink-0" />
-                  <span>
-                    <strong>Supported Files:</strong> PDF, JPEG, PNG, or TIFF.
-                  </span>
-                </li>
-                <li className="flex items-start">
-                  <div className="flex items-center">
-                    <CheckCircle2 className="h-5 w-5 text-green-500 mr-2" />
-                    <span>
-                      <strong>Max Size:</strong> Up to 30MB per file.
-                    </span>
-                  </div>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle2 className="h-4 w-4 mr-2 mt-1 text-green-500 flex-shrink-0" />
-                  <span>
-                    After selecting files, you can rename them before clicking 'Upload'.
-                  </span>
-                </li>
-                <li className="flex items-start">
-                  <CheckCircle2 className="h-4 w-4 mr-2 mt-1 text-green-500 flex-shrink-0" />
-                  <span>
-                    Uploaded documents will appear in the 'Your Documents' table below.
-                  </span>
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            Document Management
+          </h1>
+          <p className="text-gray-600">
+            Upload and manage your VA-related documents for analysis.
+          </p>
         </div>
-        <h2 className="text-2xl font-bold mb-6">Your Documents</h2>
-        <DocumentsTable
-          documents={documents as DocumentRow[]}
-          onView={handleViewDocument}
-          onDownload={handleDownloadDocument}
-          onDelete={handleDeleteDocument}
-          onRename={handleRenameDocument}
-        />
-        {selectedDocument && (
-          <Modal isOpen={!!selectedDocument} onClose={() => setSelectedDocument(null)}>
-            <DocumentViewer 
-              documentKey={(() => {
-                // Remove the bucket URL prefix if present
-                const url = selectedDocument.file_url;
-                const match = url.match(/https?:\/\/[^/]+\/(.+)/);
-                return match ? match[1] : url;
-              })()}
-              userToken={session?.access_token || ""}
-              userId={selectedDocument.user_id}
+
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg
+                  className="h-5 w-5 text-red-400"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">Error</h3>
+                <p className="mt-2 text-sm text-red-700">{error}</p>
+                <button
+                  onClick={clearError}
+                  className="mt-2 text-sm text-red-600 hover:text-red-500 underline"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Document Upload Section */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Upload Documents
+          </h2>
+          <UploadRequired message="You need an active subscription or upload credits to upload documents.">
+            <FileUploader 
+              onUploadSuccess={handleUploadSuccess}
+              onError={handleError}
             />
-          </Modal>
-        )}
-        {deleteError && (
-          <div className="mt-4 bg-error-100 border border-error-200 p-3 rounded-md flex items-start">
-            <AlertCircle className="h-5 w-5 text-error-500 mr-2 flex-shrink-0 mt-0.5" />
-            <p className="text-error-700 text-sm">{deleteError}</p>
-          </div>
-        )}
-        {renameError && (
-          <div className="mt-4 bg-error-100 border border-error-200 p-3 rounded-md flex items-start">
-            <AlertCircle className="h-5 w-5 text-error-500 mr-2 flex-shrink-0 mt-0.5" />
-            <p className="text-error-700 text-sm">{renameError}</p>
-          </div>
-        )}
-        {!hasSubscription && (
+          </UploadRequired>
+        </div>
+
+        {/* Payment Options for Non-Paid Users */}
+        {!permissions.canUpload && (
           <div id="payment-options" className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Payment Options</h2>
-            <PaymentOptions userId={user?.id || ""} onError={handleUploadError} />
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
+              Choose Your Plan
+            </h2>
+            <PaymentOptions 
+              userId={profile.id} 
+              onError={handleError}
+            />
+          </div>
+        )}
+
+        {/* Document List Section */}
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Your Documents
+          </h2>
+          <DocumentsList key={refreshKey} />
+        </div>
+
+        {/* User Status Information */}
+        {permissions.hasUploadCredits && (
+          <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-blue-800 mb-1">
+              Upload Credits
+            </h3>
+            <p className="text-sm text-blue-700">
+              You have {permissions.uploadCreditsRemaining} upload credits remaining.
+            </p>
+          </div>
+        )}
+
+        {permissions.hasActiveSubscription && (
+          <div className="mt-8 bg-green-50 border border-green-200 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-green-800 mb-1">
+              Active Subscription
+            </h3>
+            <p className="text-sm text-green-700">
+              You have unlimited uploads with your active subscription.
+            </p>
           </div>
         )}
       </div>

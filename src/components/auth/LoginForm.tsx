@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
-import { supabase } from "../../lib/supabase";
+import { useSearchParams } from "react-router-dom";
 import Button from "../ui/Button";
 import { Mail, AlertCircle } from "lucide-react";
+import { supabase } from "../../lib/supabase";
 
 interface LoginFormProps {
   onSuccess?: () => void;
@@ -19,9 +20,13 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
     handleSubmit,
     formState: { errors, isSubmitting },
     setError,
-    reset,
   } = useForm<LoginFormData>();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+
+  // Capture redirect parameters
+  const next = searchParams.get("next");
+  const type = searchParams.get("type");
 
   const onSubmit = async (data: LoginFormData) => {
     setSuccessMessage(null);
@@ -30,42 +35,74 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
         email: data.email,
         password: data.password,
       });
+
       if (error) {
         setError("root", {
           type: "manual",
-          message: error.message || "Login failed. Please try again.",
+          message: error.message,
         });
         return;
       }
+
       setSuccessMessage("Login successful! Redirecting...");
-      reset();
-      if (onSuccess) onSuccess();
-    } catch (_error) {
+      
+      // Handle redirect logic
+      setTimeout(() => {
+        // Check for pending redirect from registration
+        const pendingRedirect = sessionStorage.getItem("pendingRedirect");
+        if (pendingRedirect) {
+          sessionStorage.removeItem("pendingRedirect");
+          if (pendingRedirect.includes("checkout")) {
+            window.location.href = pendingRedirect.startsWith("/") ? pendingRedirect : `/${pendingRedirect}`;
+            return;
+          }
+        }
+        
+        // Check for URL parameters
+        if (next === "checkout" && type) {
+          window.location.href = `/checkout?type=${type}`;
+          return;
+        }
+        
+        // Default redirect or call onSuccess
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          window.location.href = "/dashboard";
+        }
+      }, 1000);
+    } catch (error: any) {
       setError("root", {
         type: "manual",
-        message: "An unexpected error occurred. Please try again.",
+        message: error.message || "Login failed. Please try again.",
       });
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleSignIn = async () => {
     try {
+      // Build redirect URL with parameters
+      let redirectTo = window.location.origin + "/dashboard";
+      if (next && type) {
+        redirectTo = window.location.origin + `/checkout?type=${type}`;
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: window.location.origin + "/dashboard",
+          redirectTo,
         },
       });
       if (error) {
         setError("root", {
           type: "manual",
-          message: error.message || "Google login failed.",
+          message: error.message || "Google sign in failed.",
         });
       }
     } catch (error: any) {
       setError("root", {
         type: "manual",
-        message: error.message || "Google login failed.",
+        message: error.message || "Google sign in failed.",
       });
     }
   };
@@ -86,7 +123,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
         )}
         <div className="space-y-1">
           <label
-            htmlFor="email"
+            htmlFor="login-email"
             className="block text-sm font-medium text-gray-700"
           >
             Email
@@ -96,7 +133,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
               <Mail className="h-5 w-5 text-gray-400" />
             </div>
             <input
-              id="email"
+              id="login-email"
               type="email"
               className={`input pl-10 ${errors.email ? "border-error-500 focus:border-error-500 focus:ring-error-500" : ""}`}
               placeholder="veteran@example.com"
@@ -117,13 +154,13 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
         </div>
         <div className="space-y-1">
           <label
-            htmlFor="password"
+            htmlFor="login-password"
             className="block text-sm font-medium text-gray-700"
           >
             Password
           </label>
           <input
-            id="password"
+            id="login-password"
             type="password"
             className={`input ${errors.password ? "border-error-500 focus:border-error-500 focus:ring-error-500" : ""}`}
             placeholder="Enter your password"
@@ -142,6 +179,16 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
           Sign In
         </Button>
       </form>
+
+      {/* Show payment redirect message */}
+      {next === "checkout" && type && (
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mt-4">
+          <p className="text-blue-700 text-sm">
+            After login, you'll be redirected to complete your payment.
+          </p>
+        </div>
+      )}
+
       <div className="flex items-center my-4">
         <div className="flex-grow border-t border-gray-200" />
         <span className="mx-2 text-gray-400 text-xs">OR</span>
@@ -150,7 +197,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       <Button
         type="button"
         className="w-full bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center justify-center gap-2"
-        onClick={handleGoogleLogin}
+        onClick={handleGoogleSignIn}
         isLoading={false}
       >
         <svg
