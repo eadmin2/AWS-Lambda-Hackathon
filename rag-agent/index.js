@@ -10,6 +10,7 @@ import {
     createErrorResponse, 
     createSuccessResponse 
 } from './utils/helpers.js';
+import { SQSClient } from "@aws-sdk/client-sqs";
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -20,8 +21,18 @@ const bedrock = new BedrockRuntimeClient({ region: "us-east-1" });
 
 // Bedrock Agent configuration
 const bedrockAgentClient = new BedrockAgentRuntimeClient({ region: "us-east-2" });
-const AGENT_ID = process.env.BEDROCK_AGENT_ID || "S9KQ4LEVEI";
-const AGENT_ALIAS_ID = process.env.BEDROCK_AGENT_ALIAS_ID || "YKOOLY6ZHJ";
+const AWS_REGION = process.env.AWS_REGION || "us-east-1";
+
+const AGENT_ID = process.env.BEDROCK_AGENT_ID;
+const AGENT_ALIAS_ID = process.env.BEDROCK_AGENT_ALIAS_ID;
+
+if (!AGENT_ID || !AGENT_ALIAS_ID) {
+  throw new Error(
+    "Missing required environment variables: BEDROCK_AGENT_ID and/or BEDROCK_AGENT_ALIAS_ID must be set."
+  );
+}
+
+const sqs = new SQSClient({ region: AWS_REGION });
 
 // Configuration for batch processing
 const CHUNK_BATCH_SIZE = 3; // Process 3 chunks per Bedrock call for efficiency
@@ -42,12 +53,27 @@ const parseBedrockResponse = (response) => {
 // Enhanced helper function to parse Bedrock Agent responses and extract conditions
 const parseAgentResponse = (response) => {
   try {
-    // The agent might return JSON directly or wrapped in markdown
-    // First, try to find JSON in the response
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      // Ensure conditions is always an array
+    let jsonStr = null;
+
+    // 1. Try to find a JSON markdown block first
+    const markdownMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
+    if (markdownMatch && markdownMatch[1]) {
+      jsonStr = markdownMatch[1];
+      console.log("Found JSON in markdown block.");
+    } else {
+      // 2. If not found, try to find a raw JSON object
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        jsonStr = jsonMatch[0];
+        console.log("Found raw JSON object.");
+      }
+    }
+
+    if (jsonStr) {
+      // Clean the string to remove potential non-standard characters (like trailing commas)
+      const cleanedJsonStr = jsonStr.replace(/,\s*([\]}])/g, '$1');
+      
+      const parsed = JSON.parse(cleanedJsonStr);
       if (parsed.conditions && Array.isArray(parsed.conditions)) {
         return parsed;
       }
@@ -55,6 +81,7 @@ const parseAgentResponse = (response) => {
     
     // If no JSON found, try to extract conditions from text
     // This is a fallback for when the agent doesn't return structured JSON
+    console.warn("Could not find valid JSON in agent response. Falling back to text parsing.", { response });
     const conditions = [];
     const lines = response.split('\n');
     let currentCondition = null;
@@ -86,6 +113,7 @@ const parseAgentResponse = (response) => {
     return { conditions };
   } catch (error) {
     console.error("Error parsing agent response:", error);
+    console.error("Original response that failed parsing:", response); // Log the problematic response
     return { conditions: [] }; // Return empty array instead of null
   }
 };
@@ -183,6 +211,12 @@ export const handler = async (event) => {
       return await processDocument(user_id, document_id);
     }
 
+    // 🆕 ADD THIS: Handle Bedrock Agent function calls
+    if (event.messageVersion && event.function && event.agent) {
+      console.log("🤖 Bedrock Agent function call detected");
+      return await handleBedrockAgentCall(event);
+    }
+
     // --- Handle API Gateway / Direct Invocation ---
     const httpMethod = event.httpMethod || event.requestContext?.http?.method;
     const routeKey = event.routeKey;
@@ -216,6 +250,82 @@ export const handler = async (event) => {
     return createErrorResponse(500, error.message);
   }
 };
+
+// 🆕 ADD THIS FUNCTION: Handle Bedrock Agent calls
+async function handleBedrockAgentCall(event) {
+  const { function: functionName, parameters, agent, sessionId } = event;
+  
+  console.log(`Bedrock Agent calling function: ${functionName}`);
+  console.log(`Agent ID: ${agent.id}, Alias: ${agent.alias}`);
+  console.log(`Parameters:`, parameters);
+
+  try {
+    if (functionName === 'searchCFR') {
+      // Extract search query from parameters
+      const searchQueryParam = parameters.find(p => p.name === 'searchQuery');
+      const searchQuery = searchQueryParam ? searchQueryParam.value : '';
+      
+      console.log(`Searching CFR for: ${searchQuery}`);
+      
+      // Call your eCFR Lambda function
+      const cfrResult = await getCFRData({
+        name: searchQuery,
+        keywords: searchQuery.split(' ')
+      });
+      
+      // Format response for Bedrock Agent
+      let responseText = '';
+      if (cfrResult && cfrResult.sections) {
+        responseText = `Found ${cfrResult.sections.length} CFR sections related to "${searchQuery}":\n\n`;
+        cfrResult.sections.slice(0, 3).forEach(section => {
+          responseText += `**38 CFR § ${section.identifier}** - ${section.label}\n`;
+          if (section.content) {
+            responseText += `${section.content.substring(0, 200)}...\n\n`;
+          }
+        });
+      } else {
+        responseText = `No specific CFR sections found for "${searchQuery}". This condition may need manual review or may fall under general disability rating criteria.`;
+      }
+
+      // Return in Bedrock Agent format
+      return {
+        messageVersion: "1.0",
+        response: {
+          actionGroup: event.actionGroup,
+          function: functionName,
+          functionResponse: {
+            responseBody: {
+              "TEXT": {
+                "body": responseText
+              }
+            }
+          }
+        }
+      };
+    }
+    
+    // Handle other functions if needed
+    throw new Error(`Unknown function: ${functionName}`);
+    
+  } catch (error) {
+    console.error(`Error in Bedrock Agent function ${functionName}:`, error);
+    
+    return {
+      messageVersion: "1.0",
+      response: {
+        actionGroup: event.actionGroup,
+        function: functionName,
+        functionResponse: {
+          responseBody: {
+            "TEXT": {
+              "body": `Error processing ${functionName}: ${error.message}`
+            }
+          }
+        }
+      }
+    };
+  }
+}
 
 // Enhanced document processing with batch optimization
 async function processDocument(userId, documentId) {
@@ -384,10 +494,10 @@ async function processDocument(userId, documentId) {
 
         const { error: insertError } = await supabase
             .from("user_conditions")
-            .insert(dbPayload);
+            .upsert(dbPayload, { onConflict: 'user_id, name' });
 
         if (insertError) {
-            console.error("Error inserting conditions into DB:", insertError);
+            console.error("Error upserting conditions into DB:", insertError);
             return createErrorResponse(500, "Failed to store analysis results.");
         }
     }
