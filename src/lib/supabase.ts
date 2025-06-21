@@ -1,4 +1,5 @@
 import { createClient, User } from "@supabase/supabase-js";
+import { ConditionData } from "../components/ui/ConditionItem";
 
 // Initialize Supabase client with environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -50,12 +51,20 @@ export type UserCondition = {
   id: string;
   user_id: string;
   name: string;
-  summary: string;
-  body_system: string;
-  keywords: string[];
-  created_at: string;
   rating?: number;
+  summary?: string;
+  body_system?: string;
+  keywords?: string[];
   cfr_criteria?: string;
+  recommendation?: ConditionData;
+};
+
+export type Subscription = {
+  id: string;
+  user_id: string;
+  status: string;
+  price_id: string;
+  created_at: string;
 };
 
 // Helper functions for database operations
@@ -106,7 +115,7 @@ export async function getUserDocuments(userId: string) {
 export async function getUserConditions(userId: string) {
   const { data, error } = await supabase
     .from("user_conditions")
-    .select("*")
+    .select("*, recommendation")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 

@@ -7,7 +7,7 @@ import SummaryCard from "../components/ui/SummaryCard";
 import ConditionItem from "../components/ui/ConditionItem";
 import CombinedRatingChart from "../components/ui/CombinedRatingChart";
 import { useAuth } from "../contexts/AuthContext";
-import { getUserConditions, getUserDocuments } from "../lib/supabase";
+import { getUserConditions, getUserDocuments, UserCondition } from "../lib/supabase";
 
 // Helper function to calculate VA combined rating
 function calculateCombinedRating(ratings: number[]): number {
@@ -35,13 +35,7 @@ interface DashboardData {
   combinedRating: number;
   documentsScanned: number;
   conditionsFound: number;
-  conditions: {
-    name: string;
-    rating: number;
-    excerpt: string;
-    cfrCriteria: string;
-    keywords: string[];
-  }[];
+  conditions: UserCondition[];
   chartData: {
     name: string;
     value: number;
@@ -70,14 +64,6 @@ const DashboardPage: React.FC = () => {
 
         const colors = ['#60a5fa', '#fbbf24', '#34d399', '#f472b6', '#a78bfa'];
 
-        const conditions = conditionsData.map(c => ({
-          name: c.name,
-          rating: c.rating || 0,
-          excerpt: c.summary || 'No excerpt available...',
-          cfrCriteria: c.cfr_criteria || 'No CFR criteria found.',
-          keywords: c.keywords || []
-        }));
-
         const chartData = conditionsData.map((c, index) => ({
           name: c.name,
           value: c.rating || 0,
@@ -90,7 +76,7 @@ const DashboardPage: React.FC = () => {
           combinedRating,
           documentsScanned: documents.length,
           conditionsFound: conditionsData.length,
-          conditions,
+          conditions: conditionsData,
           chartData
         });
       } catch (error) {
@@ -134,14 +120,10 @@ const DashboardPage: React.FC = () => {
           <section className="md:col-span-2">
             <h2 className="text-xl font-semibold mb-4">Condition List</h2>
             <div className="max-h-[400px] overflow-y-auto pr-2">
-              {data.conditions.map((cond) => (
+              {data.conditions.map((condition) => (
                 <ConditionItem
-                  key={cond.name}
-                  name={cond.name}
-                  rating={cond.rating}
-                  excerpt={cond.excerpt}
-                  cfrCriteria={cond.cfrCriteria}
-                  matchedKeywords={cond.keywords}
+                  key={condition.id}
+                  condition={condition}
                 />
               ))}
             </div>

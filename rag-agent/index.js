@@ -516,16 +516,28 @@ async function processDocument(userId, documentId) {
         console.log(`Enriching data for condition: ${condition.name}`);
         try {
             const cfrData = await getCFRData(condition);
+            const recommendation = await generateRecommendation(condition, cfrData);
+            
             const enrichedCondition = {
                 ...condition,
                 body_system: cfrData.bodySystem || 'general',
                 cfr_data: cfrData,
                 cfr_link: generateCFRLink(cfrData),
+                recommendation: recommendation,
             };
             finalConditions.push(enrichedCondition);
-        } catch (cfrError) {
-            console.error(`Could not get CFR data for ${condition.name}:`, cfrError);
-            finalConditions.push({ ...condition, cfr_data: null, cfr_link: null });
+        } catch (err) {
+            console.error(`Could not fully process condition ${condition.name}:`, err);
+            finalConditions.push({ 
+              ...condition, 
+              recommendation: {
+                rating_explanation: "Could not generate a full recommendation due to an error.",
+                cfr_link: "",
+                tooltip_definitions: [],
+                confidence_indicator: { score: "Low", reasoning: `An error occurred during processing: ${err.message}` },
+                disclaimer: "This is a non-medical recommendation based on your documents. Consult a VSO or licensed expert before filing."
+              }
+            });
         }
     }
 
@@ -539,6 +551,7 @@ async function processDocument(userId, documentId) {
             keywords: c.keywords,
             rating: c.rating,
             cfr_criteria: c.cfrCriteria,
+            recommendation: c.recommendation, // Save the detailed recommendation
         }));
 
         // Upsert handles both inserts and updates in one go
