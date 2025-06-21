@@ -50,8 +50,15 @@ const DashboardPage: React.FC = () => {
 
   useEffect(() => {
     async function fetchDashboardData() {
-      if (!user) return;
+      if (!user) {
+        // If there's no user and auth is done loading, stop loading.
+        if (!isAuthLoading) {
+          setIsLoading(false);
+        }
+        return;
+      }
 
+      setIsLoading(true); // Start loading now that we have a user
       try {
         // Fetch user conditions and documents
         const [conditionsData, documents] = await Promise.all([
@@ -87,9 +94,19 @@ const DashboardPage: React.FC = () => {
     }
 
     fetchDashboardData();
-  }, [user]);
+  }, [user, isAuthLoading]);
 
-  if (!isAuthLoading && !user) {
+  if (isAuthLoading) {
+    return (
+      <PageLayout>
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+        </div>
+      </PageLayout>
+    );
+  }
+
+  if (!user) {
     return <Navigate to="/auth" replace />;
   }
 
