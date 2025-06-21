@@ -155,37 +155,6 @@ function normalizeConditionName(name) {
     .trim();
 }
 
-// Enhanced similarity check for better deduplication
-function areConditionsSimilar(name1, name2) {
-  const norm1 = normalizeConditionName(name1);
-  const norm2 = normalizeConditionName(name2);
-  
-  // Exact match after normalization
-  if (norm1 === norm2) return true;
-  
-  // Check if one contains the other (for variants)
-  if (norm1.includes(norm2) || norm2.includes(norm1)) return true;
-  
-  // Check for common medical synonyms
-  const synonyms = {
-    'tinnitus': ['ringing ears', 'ear ringing'],
-    'ptsd': ['post traumatic stress', 'posttraumatic stress'],
-    'anxiety': ['anxious', 'panic'],
-    'depression': ['depressive', 'mood disorder'],
-    'sleep apnea': ['sleep disorder', 'breathing disorder'],
-    'hypertension': ['high blood pressure', 'elevated blood pressure']
-  };
-  
-  for (const [key, values] of Object.entries(synonyms)) {
-    if ((norm1.includes(key) || values.some(v => norm1.includes(v))) &&
-        (norm2.includes(key) || values.some(v => norm2.includes(v)))) {
-      return true;
-    }
-  }
-  
-  return false;
-}
-
 // Simplified RAG Agent Handler - only processes work messages
 export const handler = async (event) => {
   try {
@@ -461,55 +430,56 @@ async function processDocument(userId, documentId) {
 
     console.log(`Analyzing a total of ${combinedConditions.length} conditions (existing + new).`);
 
-    // Enhanced deduplication logic
-    const uniqueConditions = [];
-    const duplicateIdsToDelete = [];
+    // Enhanced deduplication logic using a map for O(n) complexity
+    const conditionMap = new Map();
 
-    combinedConditions.forEach(condition => {
-        const existingMaster = uniqueConditions.find(uc => areConditionsSimilar(uc.name, condition.name));
-        
-        if (!existingMaster) {
-            // This is the first time we see this condition, make it a master.
-            uniqueConditions.push({ ...condition, isModified: condition.isNew || false });
+    for (const condition of combinedConditions) {
+        const normalizedName = normalizeConditionName(condition.name);
+        const existing = conditionMap.get(normalizedName);
+
+        if (!existing) {
+            // First time seeing this normalized condition
+            conditionMap.set(normalizedName, {
+                ...condition,
+                isModified: condition.isNew || false,
+                name_normalized: normalizedName,
+            });
         } else {
-            console.log(`Deduplicating: "${condition.name}" is similar to "${existingMaster.name}". Merging.`);
+            // This is a duplicate, merge it into the existing entry
+            console.log(`Deduplicating: "${condition.name}" is a variant of "${existing.name}". Merging.`);
             
-            // Merge logic: combine info into the master record
-            if (condition.summary && !(existingMaster.summary || '').includes(condition.summary)) {
-              existingMaster.summary = (existingMaster.summary ? existingMaster.summary + ' | ' : '') + condition.summary;
-              existingMaster.isModified = true;
+            // Merge logic: Combine summaries, keywords, and take the highest rating
+            if (condition.summary && !(existing.summary || '').includes(condition.summary)) {
+                existing.summary = (existing.summary ? existing.summary + ' | ' : '') + condition.summary;
+                existing.isModified = true;
             }
             if (condition.keywords && condition.keywords.length > 0) {
-              const originalKeywordCount = (existingMaster.keywords || []).length;
-              existingMaster.keywords = [...new Set([...(existingMaster.keywords || []), ...condition.keywords])];
-              if (existingMaster.keywords.length > originalKeywordCount) {
-                  existingMaster.isModified = true;
-              }
+                const originalKeywordCount = (existing.keywords || []).length;
+                existing.keywords = [...new Set([...(existing.keywords || []), ...condition.keywords])];
+                if (existing.keywords.length > originalKeywordCount) {
+                    existing.isModified = true;
+                }
             }
-            if ((condition.rating || 0) > (existingMaster.rating || 0)) {
-              existingMaster.rating = condition.rating;
-              existingMaster.isModified = true;
+            if ((condition.rating || 0) > (existing.rating || 0)) {
+                existing.rating = condition.rating;
+                existing.isModified = true;
             }
-
-            // If the condition being merged was an existing one, mark it for deletion.
-            // New conditions don't have an ID yet, so we don't need to delete them.
-            if (condition.id) {
-                duplicateIdsToDelete.push(condition.id);
-            }
-            // Mark the master as modified if a new condition was merged into it.
-            if(condition.isNew) {
-                existingMaster.isModified = true;
+            
+            // If we are merging a new condition into an existing one, mark the master as modified.
+            if (condition.isNew) {
+                existing.isModified = true;
             }
         }
-    });
+    }
 
+    const uniqueConditions = Array.from(conditionMap.values());
     const finalConditionCount = uniqueConditions.length;
-    console.log(`Found ${duplicateIdsToDelete.length} duplicate existing records to remove.`);
-    console.log(`Resulting in ${finalConditionCount} unique conditions.`);
-
-    // Final processing and database insertion/updates
-    const conditionsToProcess = uniqueConditions.filter(c => c.isModified);
-    console.log(`${conditionsToProcess.length} conditions require DB insert or update.`);
+    console.log(`Resulting in ${finalConditionCount} unique conditions after deduplication.`);
+    
+    // Now, let's enrich all unique conditions, not just modified ones.
+    // This ensures existing records get enriched if they are missing data.
+    const conditionsToProcess = uniqueConditions;
+    console.log(`Enriching all ${conditionsToProcess.length} unique conditions.`);
 
     const finalConditions = [];
     for (const condition of conditionsToProcess) {
@@ -520,6 +490,7 @@ async function processDocument(userId, documentId) {
             
             const enrichedCondition = {
                 ...condition,
+                name_normalized: normalizeConditionName(condition.name),
                 body_system: cfrData.bodySystem || 'general',
                 cfr_data: cfrData,
                 cfr_link: generateCFRLink(cfrData),
@@ -546,6 +517,7 @@ async function processDocument(userId, documentId) {
             id: c.id, // Will be undefined for new conditions
             user_id: userId,
             name: c.name,
+            name_normalized: c.name_normalized,
             summary: c.summary,
             body_system: c.body_system || 'general',
             keywords: c.keywords,
@@ -558,25 +530,11 @@ async function processDocument(userId, documentId) {
         console.log(`Upserting ${dbPayloads.length} new/modified conditions.`);
         const { error: upsertError } = await supabase
             .from("user_conditions")
-            .upsert(dbPayloads, { onConflict: 'user_id, name' });
+            .upsert(dbPayloads, { onConflict: 'user_id, name_normalized' });
 
         if (upsertError) {
             console.error("Error upserting conditions into DB:", upsertError);
             // Don't halt, still try to delete duplicates
-        }
-    }
-
-    // Delete the identified duplicate records
-    if (duplicateIdsToDelete.length > 0) {
-        console.log(`Deleting ${duplicateIdsToDelete.length} redundant conditions.`);
-        const { error: deleteError } = await supabase
-            .from("user_conditions")
-            .delete()
-            .in('id', duplicateIdsToDelete);
-        
-        if (deleteError) {
-            console.error("Error deleting duplicate conditions:", deleteError);
-            // This is not ideal, but the main operation succeeded.
         }
     }
 
@@ -592,7 +550,6 @@ async function processDocument(userId, documentId) {
     return createSuccessResponse({
         message: "Document processed and conditions consolidated successfully",
         uniqueConditionsFound: finalConditionCount,
-        deletedDuplicates: duplicateIdsToDelete.length,
         conditions: uniqueConditions // Return the final clean list
     });
 }
