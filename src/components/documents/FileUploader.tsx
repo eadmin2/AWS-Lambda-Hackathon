@@ -39,15 +39,15 @@ const uploaderReducer = (state: UploaderState, action: UploaderAction): Uploader
     case 'SET_FILES':
       return { ...state, files: action.files };
     case 'ADD_FILES':
-      return { ...state, files: [...state.files, ...action.files], error: null };
+      return { ...state, files: [...state.files, ...action.files] };
     case 'SET_UPLOADING':
       return { ...state, uploading: action.uploading, error: null };
     case 'SET_PROGRESS':
       return { ...state, uploadProgress: action.progress };
     case 'SET_ERROR':
-      return { ...state, error: action.error, uploading: false, files: [] };
+      return { ...state, error: action.error, uploading: false };
     case 'UPLOAD_SUCCESS':
-      return { ...state, files: [], error: null };
+      return { ...state, files: [], error: null, uploading: false, uploadProgress: 0 };
     default:
       throw new Error('Unhandled action type');
   }
@@ -100,25 +100,43 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   }, [onUploadError]);
 
   const onDrop = useCallback((acceptedFiles: File[], fileRejections: FileRejection[]) => {
+    // Clear any previous errors first
+    dispatch({ type: 'SET_ERROR', error: null });
+
+    // Handle rejected files first
     if (fileRejections.length > 0) {
       const firstRejection = fileRejections[0];
       const firstError = firstRejection.errors[0];
 
       if (firstError.code === 'file-too-large') {
-        dispatch({ type: 'SET_ERROR', error: `File is too large. Maximum size is ${MAX_SIZE_MB}MB.` });
+        const fileName = firstRejection.file.name;
+        const fileSize = formatFileSize(firstRejection.file.size);
+        dispatch({
+          type: 'SET_ERROR',
+          error: `"${fileName}" is too large (${fileSize}). Maximum size is ${MAX_SIZE_MB}MB.`
+        });
       } else if (firstError.code === 'file-invalid-type') {
-        dispatch({ type: 'SET_ERROR', error: 'Invalid file type. Please upload a PDF, JPEG, PNG, or TIFF file.' });
+        dispatch({
+          type: 'SET_ERROR',
+          error: 'Invalid file type. Please upload a PDF, JPEG, PNG, or TIFF file.'
+        });
       } else {
-        dispatch({ type: 'SET_ERROR', error: firstError.message || 'File is invalid.' });
+        dispatch({
+          type: 'SET_ERROR',
+          error: firstError.message || 'File is invalid.'
+        });
       }
-      return;
+      return; // Important: return early to prevent processing accepted files
     }
 
-    const newFiles = acceptedFiles.map((file) => ({
-      file,
-      name: file.name.replace(/\.[^.]+$/, ""),
-    }));
-    dispatch({ type: 'ADD_FILES', files: newFiles });
+    // Only process accepted files if there are no rejections
+    if (acceptedFiles.length > 0) {
+      const newFiles = acceptedFiles.map((file) => ({
+        file,
+        name: file.name.replace(/\.[^.]+$/, ""),
+      }));
+      dispatch({ type: 'ADD_FILES', files: newFiles });
+    }
   }, []);
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
@@ -471,14 +489,14 @@ const FileUploader: React.FC<FileUploaderProps> = ({
               </p>
             </div>
           )}
+        </div>
+      )}
 
-          {/* Error Message */}
-          {error && (
-            <div className="mt-4 bg-error-100 p-3 rounded-md flex items-start">
-              <AlertCircle className="h-5 w-5 text-error-500 mr-2 flex-shrink-0 mt-0.5" />
-              <p className="text-error-700 text-sm">{error}</p>
-            </div>
-          )}
+      {/* Error Message - Always render when there's an error */}
+      {error && (
+        <div className="mt-4 bg-error-100 p-3 rounded-md flex items-start">
+          <AlertCircle className="h-5 w-5 text-error-500 mr-2 flex-shrink-0 mt-0.5" />
+          <p className="text-error-700 text-sm">{error}</p>
         </div>
       )}
     </div>
