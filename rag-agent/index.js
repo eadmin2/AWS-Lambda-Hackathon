@@ -442,63 +442,128 @@ async function processDocument(userId, documentId) {
     }
 
     console.log(`Found a total of ${allConditions.length} conditions across all chunks (before deduplication).`);
+    
+    // Fetch existing conditions for the user to deduplicate against
+    const { data: existingUserConditions, error: fetchError } = await supabase
+      .from("user_conditions")
+      .select("*") // Select all fields to preserve them
+      .eq("user_id", userId)
+      .order('created_at', { ascending: true });
+
+    if (fetchError) {
+      console.error("Warning: Could not fetch existing user conditions. Deduplication will only occur within the document.", fetchError);
+    }
+    
+    const combinedConditions = [
+        ...(existingUserConditions || []), 
+        ...allConditions.map(c => ({...c, isNew: true})) // Tag new conditions
+    ];
+
+    console.log(`Analyzing a total of ${combinedConditions.length} conditions (existing + new).`);
 
     // Enhanced deduplication logic
     const uniqueConditions = [];
-    allConditions.forEach(condition => {
-        const existingCondition = uniqueConditions.find(uc => areConditionsSimilar(uc.name, condition.name));
-        if (!existingCondition) {
-            uniqueConditions.push(condition);
+    const duplicateIdsToDelete = [];
+
+    combinedConditions.forEach(condition => {
+        const existingMaster = uniqueConditions.find(uc => areConditionsSimilar(uc.name, condition.name));
+        
+        if (!existingMaster) {
+            // This is the first time we see this condition, make it a master.
+            uniqueConditions.push({ ...condition, isModified: condition.isNew || false });
         } else {
-            console.log(`Deduplicating: "${condition.name}" (similar to existing condition)`);
-            // Merge excerpts or keywords if desired
-            existingCondition.excerpt += ` | ${condition.excerpt}`;
-            if(condition.keywords) {
-              existingCondition.keywords = [...new Set([...(existingCondition.keywords || []), ...condition.keywords])];
+            console.log(`Deduplicating: "${condition.name}" is similar to "${existingMaster.name}". Merging.`);
+            
+            // Merge logic: combine info into the master record
+            if (condition.summary && !(existingMaster.summary || '').includes(condition.summary)) {
+              existingMaster.summary = (existingMaster.summary ? existingMaster.summary + ' | ' : '') + condition.summary;
+              existingMaster.isModified = true;
+            }
+            if (condition.keywords && condition.keywords.length > 0) {
+              const originalKeywordCount = (existingMaster.keywords || []).length;
+              existingMaster.keywords = [...new Set([...(existingMaster.keywords || []), ...condition.keywords])];
+              if (existingMaster.keywords.length > originalKeywordCount) {
+                  existingMaster.isModified = true;
+              }
+            }
+            if ((condition.rating || 0) > (existingMaster.rating || 0)) {
+              existingMaster.rating = condition.rating;
+              existingMaster.isModified = true;
+            }
+
+            // If the condition being merged was an existing one, mark it for deletion.
+            // New conditions don't have an ID yet, so we don't need to delete them.
+            if (condition.id) {
+                duplicateIdsToDelete.push(condition.id);
+            }
+            // Mark the master as modified if a new condition was merged into it.
+            if(condition.isNew) {
+                existingMaster.isModified = true;
             }
         }
     });
 
-    console.log(`Found ${uniqueConditions.length} unique conditions after enhanced deduplication.`);
+    const finalConditionCount = uniqueConditions.length;
+    console.log(`Found ${duplicateIdsToDelete.length} duplicate existing records to remove.`);
+    console.log(`Resulting in ${finalConditionCount} unique conditions.`);
 
-    // Final processing and database insertion
+    // Final processing and database insertion/updates
+    const conditionsToProcess = uniqueConditions.filter(c => c.isModified);
+    console.log(`${conditionsToProcess.length} conditions require DB insert or update.`);
+
     const finalConditions = [];
-    for (const condition of uniqueConditions) {
-        console.log(`Getting CFR data for condition: ${condition.name}`);
+    for (const condition of conditionsToProcess) {
+        console.log(`Enriching data for condition: ${condition.name}`);
         try {
-            // Pass the full condition object to getCFRData
             const cfrData = await getCFRData(condition);
             const enrichedCondition = {
                 ...condition,
-                body_system: cfrData.bodySystem || 'general', // Get body system from CFR data
+                body_system: cfrData.bodySystem || 'general',
                 cfr_data: cfrData,
                 cfr_link: generateCFRLink(cfrData),
             };
             finalConditions.push(enrichedCondition);
         } catch (cfrError) {
             console.error(`Could not get CFR data for ${condition.name}:`, cfrError);
-            finalConditions.push({ ...condition, cfr_data: null, cfr_link: null }); // Add condition even if CFR lookup fails
+            finalConditions.push({ ...condition, cfr_data: null, cfr_link: null });
         }
     }
 
     if (finalConditions.length > 0) {
-        const dbPayload = finalConditions.map(c => ({
+        const dbPayloads = finalConditions.map(c => ({
+            id: c.id, // Will be undefined for new conditions
             user_id: userId,
             name: c.name,
-            summary: c.excerpt, // Using excerpt as summary
-            body_system: c.body_system || 'general', // Fallback for body_system
+            summary: c.summary,
+            body_system: c.body_system || 'general',
             keywords: c.keywords,
             rating: c.rating,
             cfr_criteria: c.cfrCriteria,
         }));
 
-        const { error: insertError } = await supabase
+        // Upsert handles both inserts and updates in one go
+        console.log(`Upserting ${dbPayloads.length} new/modified conditions.`);
+        const { error: upsertError } = await supabase
             .from("user_conditions")
-            .upsert(dbPayload, { onConflict: 'user_id, name' });
+            .upsert(dbPayloads, { onConflict: 'user_id, name' });
 
-        if (insertError) {
-            console.error("Error upserting conditions into DB:", insertError);
-            return createErrorResponse(500, "Failed to store analysis results.");
+        if (upsertError) {
+            console.error("Error upserting conditions into DB:", upsertError);
+            // Don't halt, still try to delete duplicates
+        }
+    }
+
+    // Delete the identified duplicate records
+    if (duplicateIdsToDelete.length > 0) {
+        console.log(`Deleting ${duplicateIdsToDelete.length} redundant conditions.`);
+        const { error: deleteError } = await supabase
+            .from("user_conditions")
+            .delete()
+            .in('id', duplicateIdsToDelete);
+        
+        if (deleteError) {
+            console.error("Error deleting duplicate conditions:", deleteError);
+            // This is not ideal, but the main operation succeeded.
         }
     }
 
@@ -509,12 +574,13 @@ async function processDocument(userId, documentId) {
         .eq("id", documentId);
 
     const duration = (Date.now() - startTime) / 1000;
-    console.log(`✅ Document processing complete in ${duration}s. Found ${finalConditions.length} unique conditions.`);
+    console.log(`✅ Document processing and consolidation complete in ${duration}s. Final condition count: ${finalConditionCount}.`);
 
     return createSuccessResponse({
-        message: "Document processed successfully",
-        uniqueConditionsFound: finalConditions.length,
-        conditions: finalConditions
+        message: "Document processed and conditions consolidated successfully",
+        uniqueConditionsFound: finalConditionCount,
+        deletedDuplicates: duplicateIdsToDelete.length,
+        conditions: uniqueConditions // Return the final clean list
     });
 }
 

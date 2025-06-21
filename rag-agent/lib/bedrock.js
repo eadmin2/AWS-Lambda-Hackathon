@@ -12,37 +12,28 @@ const AGENT_ALIAS_ID = process.env.BEDROCK_AGENT_ALIAS_ID || "YKOOLY6ZHJ";
 
 export async function generateRecommendation(condition, cfrData) {
     const prompt = `
-    You are a VA disability claims expert. Based on the following information, provide a recommendation:
-    
-    Condition: ${condition.name}
-    Description: ${condition.description || 'No description provided'}
-    Symptoms: ${condition.symptoms || 'No symptoms provided'}
-    
-    CFR Information:
-    ${cfrData.sections && cfrData.sections.length > 0 ? 
-        cfrData.sections.map(section => `
-        Section: ${section.identifier}
-        Title: ${section.label}
-        Content: ${section.content}
-        `).join('\n') : 
-        'No specific CFR sections found for this condition.'
-    }
-    
-    Please provide:
-    1. A brief summary of how this condition relates to VA disability
-    2. The recommended VA percentage rating (0%, 10%, 20%, 30%, 40%, 50%, 60%, 70%, 80%, 90%, or 100%)
-    3. Key factors that support this rating
-    
-    Format your response as JSON:
-    {
-        "summary": "Brief summary here",
-        "recommendedPercentage": 30,
-        "supportingFactors": ["Factor 1", "Factor 2", "Factor 3"]
-    }
+    You are an AI assistant trained to help veterans understand VA disability rating criteria based on 38 CFR Part 4. You are **not a doctor** and must not give medical advice. Instead, you explain how medical records might relate to VA criteria using official guidelines.
+
+    Given the following inputs:
+    - **Condition Name**: ${condition.name}
+    - **Recommended VA Rating**: ${condition.rating}%
+    - **Matched CFR Section**: ${cfrData.sections && cfrData.sections.length > 0 ? `38 CFR §${cfrData.sections[0].identifier}` : 'Not specified'}
+    - **Detected Keywords**: ${JSON.stringify(condition.keywords || [])}
+    - **Summary from Medical Records**: ${condition.summary || condition.excerpt || 'No summary available.'}
+
+    Generate the following output sections in a single JSON object. Do not include any other text.
+
+    1. **rating_explanation**: (String) Explain in clear, human language why this condition matches the suggested rating level according to 38 CFR. Compare all possible ratings for this condition and justify why the selected one is appropriate based on the available data.
+    2. **cfr_link**: (String) Provide the official link to the relevant CFR section. Example: "https://www.ecfr.gov/current/title-38/chapter-I/part-4/section-4.97"
+    3. **tooltip_definitions**: (Array of Objects) For each important medical or legal term, create a tooltip object with "term" and "definition".
+    4. **confidence_indicator**: (Object) Provide a "score" (High, Medium, or Low) and a "reasoning" (String) for that score based on keyword matches and document clarity.
+    5. **disclaimer**: (String) Include the text: "This is a non-medical recommendation based on your documents. Consult a VSO or licensed expert before filing."
+
+    Your entire response must be a single JSON object with the keys: "rating_explanation", "cfr_link", "tooltip_definitions", "confidence_indicator", and "disclaimer".
     `;
 
     try {
-        console.log('Calling Bedrock Agent for recommendation');
+        console.log('Calling Bedrock Agent for recommendation with new prompt');
         
         const commandParams = {
             agentId: AGENT_ID,
@@ -86,13 +77,14 @@ export async function generateRecommendation(condition, cfrData) {
             console.error('Agent validation error. Available agents may have changed.');
             // Return a fallback recommendation
             return {
-                summary: `Based on the condition ${condition.name}, this appears to be a service-connected disability that may qualify for VA benefits.`,
-                recommendedPercentage: 10,
-                supportingFactors: [
-                    "Condition is service-connected",
-                    "May require medical evaluation for specific rating",
-                    "Consult with VA representative for detailed assessment"
-                ]
+                rating_explanation: `Based on the condition ${condition.name}, this appears to be a disability that may qualify for VA benefits. An official rating requires a medical evaluation.`,
+                cfr_link: "https://www.ecfr.gov/current/title-38/chapter-I/part-4",
+                tooltip_definitions: [
+                    { term: "CFR", definition: "Code of Federal Regulations, where VA laws are published." },
+                    { term: "VSO", definition: "A Veterans Service Officer, who can help you with your claim."}
+                ],
+                confidence_indicator: { score: "Low", reasoning: "A system error occurred. This is a fallback response." },
+                disclaimer: "This is a non-medical recommendation based on your documents. Consult a VSO or licensed expert before filing."
             };
         }
         throw error;
