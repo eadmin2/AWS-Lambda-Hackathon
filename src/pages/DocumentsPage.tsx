@@ -153,10 +153,12 @@ const DocumentsPage: React.FC = () => {
                   </span>
                 </li>
                 <li className="flex items-start">
-                  <CheckCircle2 className="h-4 w-4 mr-2 mt-1 text-green-500 flex-shrink-0" />
-                  <span>
-                    <strong>Max Size:</strong> Up to 10MB per file.
-                  </span>
+                  <div className="flex items-center">
+                    <CheckCircle2 className="h-5 w-5 text-green-500 mr-2" />
+                    <span>
+                      <strong>Max Size:</strong> Up to 30MB per file.
+                    </span>
+                  </div>
                 </li>
                 <li className="flex items-start">
                   <CheckCircle2 className="h-4 w-4 mr-2 mt-1 text-green-500 flex-shrink-0" />
