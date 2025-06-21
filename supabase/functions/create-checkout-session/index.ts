@@ -115,7 +115,14 @@ serve(async (req) => {
       ],
       success_url,
       cancel_url,
-      ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
+      ...(Object.keys(metadata).length > 0
+        ? {
+            metadata,
+            ...(mode === "subscription"
+              ? { subscription_data: { metadata } }
+              : { payment_intent_data: { metadata } }),
+          }
+        : {}),
     });
 
     return new Response(JSON.stringify({ url: session.url }), {
