@@ -12,6 +12,8 @@ const DocumentsPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  console.log('User Profile in DocumentsPage:', profile);
+
   const permissions = getUserPermissions(profile);
 
   const handleUploadSuccess = () => {
@@ -85,8 +87,10 @@ const DocumentsPage: React.FC = () => {
           </h2>
           <UploadRequired message="You need an active subscription or upload credits to upload documents.">
             <FileUploader 
-              onUploadSuccess={handleUploadSuccess}
-              onError={handleError}
+              userId={profile.id}
+              canUpload={permissions.canUpload}
+              onUploadComplete={handleUploadSuccess}
+              onUploadError={handleError}
             />
           </UploadRequired>
         </div>
