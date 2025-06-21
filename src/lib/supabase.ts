@@ -25,6 +25,7 @@ export type Profile = {
   full_name: string | null;
   created_at: string;
   role: "veteran" | "admin";
+  payment_status?: "registered" | "paid" | "admin";
   payments?: Payment[];
 };
 
@@ -138,6 +139,13 @@ export async function getUserConditions(userId: string) {
 // User permission checking functions
 export function getUserStatus(profile: Profile | null): UserStatus {
   if (!profile) return "registered";
+  
+  // Use database payment_status if available, otherwise calculate
+  if (profile.payment_status) {
+    return profile.payment_status;
+  }
+  
+  // Fallback calculation for backward compatibility
   if (profile.role === "admin") return "admin";
   
   const payments = Array.isArray(profile.payments) ? profile.payments : [];
