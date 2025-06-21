@@ -53,13 +53,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   async function loadUserProfile(user: User) {
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      const profile = await getProfile(user);
-      setProfile(profile);
+      const userProfile = await getProfile(user);
+      setProfile(userProfile);
     } catch (error) {
       console.error("Error loading user profile:", error);
-      // Don't throw the error - we want to handle it gracefully
       setProfile(null);
     } finally {
       setIsLoading(false);

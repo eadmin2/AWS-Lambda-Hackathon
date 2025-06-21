@@ -47,43 +47,21 @@ export type UserCondition = {
 };
 
 // Helper functions for database operations
-export async function getProfile(user: User): Promise<Profile> {
+export async function getProfile(user: User): Promise<Profile | null> {
   try {
-    // First attempt to get the existing profile
     const { data, error } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", user.id)
       .single();
 
-    // If no profile exists or there's an error
-    if (error || !data) {
-      const newProfile = {
-        id: user.id,
-        email: user.email!,
-        full_name: user.user_metadata.full_name || null,
-        role: "veteran" as const,
-      };
-
-      try {
-        // Use upsert instead of insert to avoid conflicts
-        const { data: upsertedProfile, error: upsertError } = await supabase
-          .from("profiles")
-          .upsert([newProfile], { onConflict: "id" })
-          .select()
-          .single();
-
-        if (upsertError) {
-          throw upsertError;
-        }
-        return upsertedProfile as Profile;
-      } catch (err) {
-        console.error("Error in profile upsert:", err);
-        throw err;
-      }
+    if (error && error.code !== "PGRST116") {
+      // PGRST116 means no rows found, which is not an error in this context.
+      console.error("Error fetching profile:", error);
+      throw error;
     }
 
-    return data as Profile;
+    return data;
   } catch (error) {
     console.error("Error in getProfile:", error);
     throw error;
