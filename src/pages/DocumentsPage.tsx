@@ -21,7 +21,7 @@ const DocumentsPage: React.FC = () => {
 
   useEffect(() => {
     if (profile) {
-      const payments = profile.payments || [];
+      const payments = Array.isArray(profile.payments) ? profile.payments : [];
       const activeSubscription = payments.some(p => p.subscription_status === 'active');
       const hasCredits = payments.some(p => p.upload_credits > 0);
       const isTrialing = payments.some(p => p.subscription_status === 'trialing' && p.subscription_end_date && new Date(p.subscription_end_date) > new Date());
