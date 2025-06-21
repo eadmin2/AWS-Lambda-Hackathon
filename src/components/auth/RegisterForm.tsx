@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
+import { useSearchParams } from "react-router-dom";
 import Button from "../ui/Button";
 import { Mail, User, AlertCircle } from "lucide-react";
 import { supabaseAnonKey } from "../../lib/supabase";
@@ -24,6 +25,11 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
     reset,
   } = useForm<RegisterFormData>();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+
+  // Capture redirect parameters
+  const next = searchParams.get("next");
+  const type = searchParams.get("type");
 
   const onSubmit = async (data: RegisterFormData) => {
     setSuccessMessage(null);
@@ -51,9 +57,15 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
         });
         return;
       }
+      
+      // Store intended destination in session storage for after login
+      if (next && type) {
+        sessionStorage.setItem("pendingRedirect", `${next}?type=${type}`);
+      }
+      
       setSuccessMessage(
         result.message ||
-          "Registration successful! You can now log in with your email and password.",
+          "Registration successful! Please log in to continue.",
       );
       reset();
       if (onSuccess) onSuccess();
@@ -67,10 +79,16 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
 
   const handleGoogleSignUp = async () => {
     try {
+      // Build redirect URL with parameters
+      let redirectTo = window.location.origin + "/dashboard";
+      if (next && type) {
+        redirectTo = window.location.origin + `/auth?next=${next}&type=${type}`;
+      }
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: window.location.origin + "/dashboard",
+          redirectTo,
         },
       });
       if (error) {
@@ -190,6 +208,16 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
           Register
         </Button>
       </form>
+
+      {/* Show payment redirect message */}
+      {next === "checkout" && type && (
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mt-4">
+          <p className="text-blue-700 text-sm">
+            After registration, you'll be redirected to complete your payment.
+          </p>
+        </div>
+      )}
+
       <div className="flex items-center my-4">
         <div className="flex-grow border-t border-gray-200" />
         <span className="mx-2 text-gray-400 text-xs">OR</span>
