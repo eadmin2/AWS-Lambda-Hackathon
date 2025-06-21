@@ -124,7 +124,7 @@ export const PaymentRequired: React.FC<{ children: React.ReactNode; message?: st
   children, 
   message 
 }) => (
-  <AccessControl requiresPayment message={message}>
+  <AccessControl requiresPayment fallbackMessage={message}>
     {children}
   </AccessControl>
 );
@@ -133,7 +133,7 @@ export const UploadRequired: React.FC<{ children: React.ReactNode; message?: str
   children, 
   message 
 }) => (
-  <AccessControl requiresUpload message={message}>
+  <AccessControl requiresUpload fallbackMessage={message}>
     {children}
   </AccessControl>
 );
@@ -142,7 +142,7 @@ export const AdminRequired: React.FC<{ children: React.ReactNode; message?: stri
   children, 
   message 
 }) => (
-  <AccessControl requiresAdmin message={message} showUpgradePrompt={false}>
+  <AccessControl requiresAdmin fallbackMessage={message} showUpgradePrompt={false}>
     {children}
   </AccessControl>
 );

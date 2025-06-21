@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useSearchParams } from "react-router-dom";
 import Button from "../ui/Button";
@@ -23,10 +23,41 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   } = useForm<LoginFormData>();
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   // Capture redirect parameters
   const next = searchParams.get("next");
   const type = searchParams.get("type");
+
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    if (isRedirecting) {
+      timeoutId = setTimeout(() => {
+        const pendingRedirect = sessionStorage.getItem("pendingRedirect");
+        if (pendingRedirect) {
+          sessionStorage.removeItem("pendingRedirect");
+          // Assume pendingRedirect is a full, valid URL
+          window.location.href = pendingRedirect;
+          return;
+        }
+
+        if (next === "checkout" && type) {
+          window.location.href = `/checkout?type=${type}`;
+          return;
+        }
+
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          window.location.href = "/dashboard";
+        }
+      }, 1000);
+    }
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [isRedirecting, next, type, onSuccess]);
 
   const onSubmit = async (data: LoginFormData) => {
     setSuccessMessage(null);
@@ -45,32 +76,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       }
 
       setSuccessMessage("Login successful! Redirecting...");
-      
-      // Handle redirect logic
-      setTimeout(() => {
-        // Check for pending redirect from registration
-        const pendingRedirect = sessionStorage.getItem("pendingRedirect");
-        if (pendingRedirect) {
-          sessionStorage.removeItem("pendingRedirect");
-          if (pendingRedirect.includes("checkout")) {
-            window.location.href = pendingRedirect.startsWith("/") ? pendingRedirect : `/${pendingRedirect}`;
-            return;
-          }
-        }
-        
-        // Check for URL parameters
-        if (next === "checkout" && type) {
-          window.location.href = `/checkout?type=${type}`;
-          return;
-        }
-        
-        // Default redirect or call onSuccess
-        if (onSuccess) {
-          onSuccess();
-        } else {
-          window.location.href = "/dashboard";
-        }
-      }, 1000);
+      setIsRedirecting(true);
     } catch (error: any) {
       setError("root", {
         type: "manual",
