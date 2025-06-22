@@ -112,6 +112,26 @@ async function addTokensWithRetry(userId: string, tokens: number, maxRetries = 3
   }
 }
 
+/**
+ * Logs that an event has been successfully processed for idempotency.
+ */
+async function logEventProcessed(eventId: string, eventType: string) {
+  const { error: logError } = await supabase
+    .from("processed_webhook_events")
+    .insert({
+      stripe_event_id: eventId,
+      event_type: eventType,
+      processed_at: new Date().toISOString()
+    });
+
+  if (logError) {
+    console.error(`Failed to log processed event ${eventId}:`, logError);
+    // This is critical for idempotency - consider throwing or alerting
+  } else {
+    console.log(`Successfully logged event ${eventId} as processed`);
+  }
+}
+
 Deno.serve(async (req) => {
   try {
     // Handle OPTIONS request for CORS preflight
@@ -249,6 +269,8 @@ async function handleEvent(event: Stripe.Event) {
       }
 
       await syncCustomerFromStripe(customerId);
+      
+      await logEventProcessed(event.id, event.type);
       return;
     }
 
@@ -343,6 +365,8 @@ async function handleEvent(event: Stripe.Event) {
             // Add tokens to user account with retry logic
             await addTokensWithRetry(customerMap.user_id, tokensToAdd);
 
+            await logEventProcessed(event.id, event.type);
+            
             // Since we successfully processed a token purchase, we should return
             // to avoid falling through to the legacy credit system.
             return;
@@ -378,6 +402,8 @@ async function handleEvent(event: Stripe.Event) {
             console.info(
               `Successfully incremented upload credits for user ${customerMap.user_id} to ${result.new_credits}`,
             );
+            
+            await logEventProcessed(event.id, event.type);
           } else if (result) {
             console.error(
               "RPC function returned failure:",
@@ -398,21 +424,7 @@ async function handleEvent(event: Stripe.Event) {
 
   // Handle other webhook events if needed
   console.log(`Unhandled event type: ${event.type}`);
-
-  // 3. Log successful processing of the event for idempotency
-  const { error: logError } = await supabase
-    .from("processed_webhook_events")
-    .insert({
-      stripe_event_id: event.id,
-      event_type: event.type,
-      processed_at: new Date().toISOString()
-    });
-
-  if (logError) {
-      console.error(`Failed to log processed event ${event.id}:`, logError);
-      // This is a critical error for idempotency.
-      // You may want to alert or handle this more robustly.
-  }
+  // Don't log unhandled events as "processed" since we didn't actually process them
 }
 
 // based on the excellent https://github.com/t3dotgg/stripe-recommendations
