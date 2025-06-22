@@ -6,13 +6,12 @@ import PageLayout from "../components/layout/PageLayout";
 import { useAuth } from "../contexts/AuthContext";
 import { getUserPermissions } from "../lib/supabase";
 import { UploadRequired } from "../components/ui/AccessControl";
+import { supabase } from "../lib/supabase";
 
 const DocumentsPage: React.FC = () => {
-  const { profile } = useAuth();
+  const { profile, setProfile } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-
-  console.log('User Profile in DocumentsPage:', profile);
 
   const permissions = getUserPermissions(profile);
 
@@ -27,6 +26,21 @@ const DocumentsPage: React.FC = () => {
   const clearError = () => {
     setError(null);
   };
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (profile) {
+        try {
+          const userProfile = await supabase.getUserProfile(profile.id);
+          setProfile(userProfile);
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+        }
+      }
+    };
+
+    fetchProfile();
+  }, [profile, setProfile]);
 
   if (!profile) {
     return (

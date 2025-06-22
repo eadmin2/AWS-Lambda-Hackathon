@@ -250,13 +250,13 @@ CREATE OR REPLACE FUNCTION public.can_upload_document(p_user_id uuid)
 RETURNS boolean
 LANGUAGE plpgsql SET search_path = public AS $$
 BEGIN 
-    RETURN (
-        SELECT upload_credits > 0 
-        FROM public.payments 
-        WHERE user_id = p_user_id
-    ) OR (
-        SELECT public.check_subscription_status(p_user_id)
-    ); 
+    -- Admins can always upload documents regardless of payment status.
+    IF (SELECT role FROM public.profiles WHERE id = p_user_id) = 'admin' THEN
+        RETURN true;
+    END IF;
+
+    -- For all other users, check their subscription status or if they have upload credits.
+    RETURN public.check_subscription_status(p_user_id);
 END; 
 $$;
 

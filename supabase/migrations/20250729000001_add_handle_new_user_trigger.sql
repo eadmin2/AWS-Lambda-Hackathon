@@ -7,6 +7,11 @@ AS $$
 BEGIN
   INSERT INTO public.profiles (id, email, role)
   VALUES (NEW.id, NEW.email, 'veteran');
+  
+  -- Also create a default payments record with free credits
+  INSERT INTO public.payments (user_id, subscription_status, upload_credits)
+  VALUES (NEW.id, 'free_tier', 3);
+  
   RETURN NEW;
 END;
 $$;
