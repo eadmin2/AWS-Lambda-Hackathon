@@ -3,8 +3,11 @@ import { useForm } from "react-hook-form";
 import { useSearchParams } from "react-router-dom";
 import Button from "../ui/Button";
 import { Mail, User, AlertCircle } from "lucide-react";
-import { supabaseAnonKey } from "../../lib/supabase";
 import { supabase } from "../../lib/supabase";
+import {
+  createSubscriptionCheckoutSession,
+  createUploadCheckoutSession,
+} from "../../lib/stripe";
 
 interface RegisterFormProps {
   onSuccess?: () => void;
@@ -34,45 +37,63 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
   const onSubmit = async (data: RegisterFormData) => {
     setSuccessMessage(null);
     try {
-      const registerUrl =
-        "https://algojcmqstokyghijcyc.functions.supabase.co/register";
-      const res = await fetch(registerUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: supabaseAnonKey,
-          Authorization: `Bearer ${supabaseAnonKey}`,
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            full_name: data.fullName,
+          },
         },
-        body: JSON.stringify({
-          email: data.email,
-          password: data.password,
-          fullName: data.fullName,
-        }),
       });
-      const result = await res.json();
-      if (!res.ok) {
-        setError("root", {
-          type: "manual",
-          message: result.error || "Registration failed. Please try again.",
-        });
-        return;
+
+      if (error) {
+        throw new Error(error.message);
       }
-      
-      // Store intended destination in session storage for after login
-      if (next && type) {
-        sessionStorage.setItem("pendingRedirect", `${next}?type=${type}`);
+
+      if (user) {
+        // Explicitly sign in to establish a session immediately
+        const { data: signInData, error: signInError } =
+          await supabase.auth.signInWithPassword({
+            email: data.email,
+            password: data.password,
+          });
+
+        if (signInError) {
+          throw new Error(signInError.message);
+        }
+
+        if (signInData.user) {
+          // Successful registration, now handle redirect
+          if (next === "checkout" && type) {
+            if (type === "single") {
+              await createUploadCheckoutSession(signInData.user.id);
+            } else if (type === "subscription") {
+              await createSubscriptionCheckoutSession(signInData.user.id);
+            }
+          } else {
+            // Default redirect to dashboard if no specific action
+            setSuccessMessage("Registration successful! Redirecting...");
+            if (onSuccess) onSuccess();
+            // or navigate to dashboard
+            window.location.href = "/dashboard";
+          }
+        }
+      } else {
+        // Handle cases where user is null but no error (e.g., email confirmation required)
+        setSuccessMessage(
+          "Registration successful! Please check your email to confirm your account.",
+        );
+        reset();
       }
-      
-      setSuccessMessage(
-        result.message ||
-          "Registration successful! Please log in to continue.",
-      );
-      reset();
-      if (onSuccess) onSuccess();
-    } catch (_error) {
+    } catch (error: any) {
       setError("root", {
         type: "manual",
-        message: "An unexpected error occurred. Please try again.",
+        message:
+          error.message || "Registration failed. Please try again.",
       });
     }
   };

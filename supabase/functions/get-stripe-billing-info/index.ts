@@ -68,7 +68,11 @@ Deno.serve(async (req) => {
       .is("deleted_at", null)
       .maybeSingle();
     if (getCustomerError || !customer?.customer_id) {
-      return corsResponse({ error: "Stripe customer not found for user" }, 404);
+      // If customer is not found, it's not an error, just means they have no billing info.
+      return corsResponse({
+        subscription: null,
+        invoices: [],
+      });
     }
     // Fetch subscription info
     const subscriptions = await stripe.subscriptions.list({

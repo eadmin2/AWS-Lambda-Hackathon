@@ -101,12 +101,17 @@ const ProfilePage: React.FC = () => {
   };
 
   useEffect(() => {
-    setBillingLoading(true);
-    fetchStripeBillingInfo()
-      .then(setBillingInfo)
-      .catch((err) => setBillingError(err.message))
-      .finally(() => setBillingLoading(false));
-  }, []);
+    if (user) {
+      setBillingLoading(true);
+      fetchStripeBillingInfo()
+        .then(setBillingInfo)
+        .catch((err) => {
+          console.error("Error fetching billing info:", err);
+          setBillingError(err.message);
+        })
+        .finally(() => setBillingLoading(false));
+    }
+  }, [user]);
 
   // Redirect if not authenticated
   if (!isAuthLoading && !user) {
@@ -296,11 +301,34 @@ const ProfilePage: React.FC = () => {
                         <h3 className="text-sm font-medium text-gray-500 mb-1">
                           Subscription Status
                         </h3>
-                        <p className="text-base font-medium text-green-600">Active</p>
+                        <p
+                          className={`text-base font-medium ${
+                            billingInfo?.subscription?.status === "active"
+                              ? "text-green-600"
+                              : "text-gray-600"
+                          }`}
+                        >
+                          {billingLoading
+                            ? "Loading..."
+                            : typeof billingInfo?.subscription?.status ===
+                                "string"
+                            ? billingInfo.subscription.status
+                            : "Inactive"}
+                        </p>
                         <h3 className="text-sm font-medium text-gray-500 mb-1 mt-3">
                           Upload Credits
                         </h3>
-                        <p className="text-base font-medium text-green-600">Unlimited</p>
+                        <p
+                          className={`text-base font-medium ${
+                            profile?.upload_credits ?? 0 > 0
+                              ? "text-green-600"
+                              : "text-gray-600"
+                          }`}
+                        >
+                          {billingLoading
+                            ? "Loading..."
+                            : profile?.upload_credits ?? 0}
+                        </p>
                       </div>
                     </div>
                   </CardContent>

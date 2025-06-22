@@ -105,6 +105,36 @@ async function handleEvent(event: Stripe.Event) {
 
     if (mode === "subscription") {
       console.info(`Starting subscription sync for customer: ${customerId}`);
+
+      // Ensure stripe_customers mapping exists
+      if (stripeData.metadata && stripeData.metadata.user_id) {
+        const { error: upsertCustomerError } = await supabase
+          .from("stripe_customers")
+          .upsert(
+            {
+              user_id: stripeData.metadata.user_id,
+              customer_id: customerId,
+            },
+            { onConflict: "user_id" },
+          );
+        if (upsertCustomerError) {
+          console.error(
+            "Failed to upsert stripe_customers mapping for subscription:",
+            upsertCustomerError,
+          );
+          // Optionally, decide if you should stop or continue
+        } else {
+          console.info(
+            "stripe_customers mapping ensured for subscription user:",
+            stripeData.metadata.user_id,
+          );
+        }
+      } else {
+        console.warn(
+          "No user_id in subscription session metadata; cannot upsert stripe_customers.",
+        );
+      }
+
       await syncCustomerFromStripe(customerId);
       return;
     }

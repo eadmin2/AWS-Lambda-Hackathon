@@ -35,6 +35,7 @@ export type Profile = {
   role: "veteran" | "admin";
   payment_status?: "registered" | "paid" | "admin";
   payments?: Payment[];
+  upload_credits?: number;
 };
 
 export type Payment = {
