@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { supabase, Document, DisabilityEstimate } from "../lib/supabase";
 import PageLayout from "../components/layout/PageLayout";
-import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/Card";
+import { Card, CardContent } from "../components/ui/Card";
 import { useAuth } from "../contexts/AuthContext";
 import { formatDate } from "../lib/utils";
 
