@@ -24,13 +24,27 @@ const PricingPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<
     "starter" | "file-review" | "full-review" | "tokens-100" | "tokens-250" | "tokens-500" | null
   >(null);
+  const [permissions, setPermissions] = useState({
+    canUpload: false,
+    canAccessPaidFeatures: false,
+    canAccessAdminFeatures: false,
+    hasActiveSubscription: false,
+    hasUploadCredits: false,
+    uploadCreditsRemaining: 0,
+  });
 
   const checkoutSuccess = searchParams.get("checkout") === "success";
   const checkoutCanceled = searchParams.get("checkout") === "canceled";
   const subscriptionSuccess = searchParams.get("subscription") === "success";
   const subscriptionCanceled = searchParams.get("subscription") === "canceled";
 
-  const permissions = getUserPermissions(profile);
+  useEffect(() => {
+    const loadPermissions = async () => {
+      const perms = await getUserPermissions(profile);
+      setPermissions(perms);
+    };
+    loadPermissions();
+  }, [profile]);
 
   useEffect(() => {
     if (location.hash) {
