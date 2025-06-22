@@ -14,7 +14,6 @@ import { Card, CardContent } from "../components/ui/Card";
 import { useAuth } from "../contexts/AuthContext";
 import {
   createUploadCheckoutSession,
-  createSubscriptionCheckoutSession,
 } from "../lib/stripe";
 import { getUserPermissions } from "../lib/supabase";
 
@@ -197,7 +196,7 @@ const PricingPage: React.FC = () => {
           )}
 
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">
+            <h2 id="pricing-section" className="text-3xl font-bold mb-4">
               Simple, Token-Based Pricing
             </h2>
             <p className="text-xl text-gray-600">
@@ -380,7 +379,7 @@ const PricingPage: React.FC = () => {
           {/* Token Add-ons Section */}
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold mb-4">Need More Tokens?</h2>
+              <h2 id="token-addons" className="text-2xl font-bold mb-4">Need More Tokens?</h2>
               <p className="text-lg text-gray-600">
                 Add more tokens to your account anytime
               </p>

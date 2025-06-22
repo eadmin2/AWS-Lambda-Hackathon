@@ -1,33 +1,35 @@
-import React, { useRef, useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Bell, Menu, X } from "lucide-react";
-import { useAuth } from "../../contexts/AuthContext";
+import { Menu } from "lucide-react";
 import Button from "../ui/Button";
-import { cn } from "../../lib/utils";
+import { useAuth } from "../../contexts/AuthContext";
 
-interface NavbarProps {
-  notifications?: any[];
-  onDismissNotification?: () => void;
-  bellOpen?: boolean;
-  onBellOpenChange?: (open: boolean) => void;
-}
-
-const Navbar: React.FC<NavbarProps> = ({
-  notifications = [],
-  onDismissNotification,
-  bellOpen,
-  onBellOpenChange,
-}) => {
+const Navbar: React.FC = () => {
   const { user, profile, signOut, isLoading } = useAuth();
 
   // Separate state variables for different menus
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
+  
+  // Refs for click outside detection
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
-  const bellRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const userMenuButtonRef = useRef<HTMLButtonElement>(null);
-  const userMenuDropdownRef = useRef<HTMLDivElement>(null);
+  // Handle click outside to close user menu
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    }
+
+    if (isUserMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isUserMenuOpen]);
 
   const handleSignOut = async () => {
     try {
@@ -52,38 +54,6 @@ const Navbar: React.FC<NavbarProps> = ({
       }, 100);
     }
   };
-
-  useEffect(() => {
-    if (!bellOpen) return;
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        bellRef.current &&
-        !bellRef.current.contains(event.target as Node) &&
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
-        onBellOpenChange && onBellOpenChange(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [bellOpen, onBellOpenChange]);
-
-  useEffect(() => {
-    if (!isUserMenuOpen) return;
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        userMenuButtonRef.current &&
-        !userMenuButtonRef.current.contains(event.target as Node) &&
-        userMenuDropdownRef.current &&
-        !userMenuDropdownRef.current.contains(event.target as Node)
-      ) {
-        setIsUserMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isUserMenuOpen]);
 
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200">
@@ -142,72 +112,9 @@ const Navbar: React.FC<NavbarProps> = ({
                         Admin
                       </Link>
                     )}
-                    <div className="relative flex items-center">
-                      <button
-                        ref={bellRef}
-                        className="relative p-1 rounded-full hover:bg-gray-100 focus:outline-none"
-                        onClick={() =>
-                          onBellOpenChange && onBellOpenChange(!bellOpen)
-                        }
-                        aria-label="Notifications"
-                      >
-                        <Bell className="h-5 w-5 text-gray-700" />
-                        {notifications.length > 0 && (
-                          <span className="absolute top-0 right-0 inline-flex items-center justify-center px-1 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full transform translate-x-1/2 -translate-y-1/2">
-                            {notifications.length}
-                          </span>
-                        )}
-                      </button>
-                      {bellOpen && (
-                        <div
-                          ref={dropdownRef}
-                          className="absolute right-0 mt-4 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-[9998]"
-                        >
-                          <div className="p-4 border-b font-semibold text-gray-800">
-                            Notifications
-                          </div>
-                          <ul className="max-h-80 overflow-y-auto divide-y divide-gray-100">
-                            {notifications.length === 0 && (
-                              <li className="p-4 text-gray-500 text-sm">
-                                No notifications
-                              </li>
-                            )}
-                            {notifications.map((notif, idx) => (
-                              <li
-                                key={idx}
-                                className="p-4 text-sm flex justify-between items-start gap-2"
-                              >
-                                <div>
-                                  <div className="font-medium text-gray-900">
-                                    {notif.type}
-                                  </div>
-                                  <div className="text-gray-700">
-                                    {notif.user}
-                                  </div>
-                                  <div className="text-xs text-gray-500 mt-1">
-                                    {notif.date ? notif.date : ""}
-                                  </div>
-                                </div>
-                                <button
-                                  className="ml-2 text-gray-400 hover:text-red-500 text-xs"
-                                  aria-label="Dismiss notification"
-                                  onClick={() =>
-                                    onDismissNotification &&
-                                    onDismissNotification()
-                                  }
-                                >
-                                  ×
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                    <div className="relative ml-3">
+                    <div className="relative ml-3" ref={userMenuRef}>
                       <div>
                         <button
-                          ref={userMenuButtonRef}
                           onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                           className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                         >
@@ -218,10 +125,7 @@ const Navbar: React.FC<NavbarProps> = ({
                         </button>
                       </div>
                       {isUserMenuOpen && (
-                        <div
-                          ref={userMenuDropdownRef}
-                          className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 z-[9998]"
-                        >
+                        <div className="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 z-50">
                           <Link
                             to="/profile"
                             className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

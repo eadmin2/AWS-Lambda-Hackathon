@@ -100,7 +100,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   };
 
   // Load user's token balance
-  const loadTokenBalance = async () => {
+  const loadTokenBalance = useCallback(async () => {
     if (!userId) return;
     
     dispatch({ type: 'SET_CHECKING_TOKENS', checking: true });
@@ -112,7 +112,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     } finally {
       dispatch({ type: 'SET_CHECKING_TOKENS', checking: false });
     }
-  };
+  }, [userId]);
 
   // Calculate total tokens required for all files
   const getTotalTokensRequired = (): number => {
@@ -126,7 +126,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 
   useEffect(() => {
     loadTokenBalance();
-  }, [userId]);
+  }, [userId, loadTokenBalance]);
 
   useEffect(() => {
     workerRef.current = new Worker(new URL('../../workers/upload.worker.ts', import.meta.url));
@@ -260,7 +260,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         dispatch({ type: 'SET_CHECKING_TOKENS', checking: false });
         return;
       }
-    } catch (error) {
+    } catch {
       dispatch({ 
         type: 'SET_ERROR', 
         error: 'Failed to validate token balance. Please try again.'

@@ -143,7 +143,7 @@ const ProfilePage: React.FC = () => {
       .eq("user_id", user?.id)
       .single();
 
-    const { data: purchaseData, error: purchaseError } = await supabase
+    const { data: purchaseData } = await supabase
       .from("token_purchases")
       .select("id, product_type, tokens_purchased, amount_paid, created_at")
       .eq("user_id", user?.id)
@@ -410,7 +410,7 @@ const ProfilePage: React.FC = () => {
                     )}
                     <Button
                       className="w-full"
-                      onClick={() => (window.location.href = "/pricing")}
+                      onClick={() => (window.location.href = "/pricing#token-addons")}
                     >
                       Buy More Tokens
                     </Button>
@@ -549,7 +549,8 @@ const ProfilePage: React.FC = () => {
                         setIsUpdating(true);
                         try {
                           await openStripeCustomerPortal();
-                        } catch {
+                        } catch (error) {
+                          console.error("Failed to open Stripe portal:", error);
                           alert(
                             "Failed to open Stripe portal. Please try again.",
                           );
