@@ -17,6 +17,101 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
 );
 
+const PRODUCT_CONFIG = {
+  starter: {
+    tokens: 50,
+  },
+  "file-review": {
+    tokens: 150,
+  },
+  "full-review": {
+    tokens: 500,
+  },
+  "tokens-100": {
+    tokens: 100,
+  },
+  "tokens-250": {
+    tokens: 250,
+  },
+  "tokens-500": {
+    tokens: 500,
+  },
+};
+
+// --- Helper Functions ---
+
+/**
+ * Validates that the token amount is a reasonable positive integer.
+ * @param tokens The token value to validate.
+ * @returns The parsed and validated token count.
+ * @throws {Error} If the token amount is invalid.
+ */
+function validateTokenAmount(tokens: any): number {
+  const tokenCount = parseInt(String(tokens), 10);
+  if (isNaN(tokenCount) || tokenCount <= 0 || tokenCount > 10000) {
+    throw new Error(`Invalid or out-of-range token amount: ${tokens}`);
+  }
+  return tokenCount;
+}
+
+/**
+ * Determines the number of tokens to add based on webhook metadata.
+ * Priority is given to the 'tokens' value in the metadata.
+ * @param metadata The Stripe session metadata.
+ * @param productType The product type from metadata.
+ * @returns A validated token amount or null if not found.
+ */
+function getTokenAmount(metadata: any, productType: string): number | null {
+  try {
+    if (metadata?.tokens) {
+      return validateTokenAmount(metadata.tokens);
+    }
+    const tokensFromConfig = PRODUCT_CONFIG[productType]?.tokens;
+    if (tokensFromConfig) {
+      return validateTokenAmount(tokensFromConfig);
+    }
+  } catch (error) {
+    console.error(`Token validation failed: ${error.message}`);
+    return null;
+  }
+  return null;
+}
+
+/**
+ * Adds tokens to a user's account with a retry mechanism for resilience.
+ * @param userId The ID of the user.
+ * @param tokens The number of tokens to add.
+ * @param maxRetries The maximum number of retry attempts.
+ */
+async function addTokensWithRetry(userId: string, tokens: number, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`Attempt ${attempt} to add ${tokens} tokens for user ${userId}`);
+      const { error } = await supabase.rpc("add_user_tokens", {
+        p_user_id: userId,
+        p_tokens: tokens,
+      });
+
+      if (!error) {
+        console.log(`Successfully added tokens for user ${userId}`);
+        return { success: true };
+      }
+
+      console.error(`Attempt ${attempt} to add tokens failed:`, error.message);
+      if (attempt === maxRetries) throw error;
+
+      // Exponential backoff
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+    } catch (error) {
+      console.error(`Critical error on attempt ${attempt} of addTokensWithRetry:`, error.message);
+      if (attempt === maxRetries) {
+        console.error(`All ${maxRetries} retries failed for user ${userId}.`);
+        throw error; // Re-throw the error after the final attempt
+      }
+    }
+  }
+}
+
 Deno.serve(async (req) => {
   try {
     // Handle OPTIONS request for CORS preflight
@@ -65,6 +160,24 @@ Deno.serve(async (req) => {
 });
 
 async function handleEvent(event: Stripe.Event) {
+  // 1. Idempotency Check: Ensure we haven't processed this event before.
+  const { data: existingEvent, error: existingEventError } = await supabase
+    .from("processed_webhook_events")
+    .select("id")
+    .eq("stripe_event_id", event.id)
+    .maybeSingle();
+
+  if (existingEventError) {
+    console.error("Error checking for existing webhook event:", existingEventError);
+    // Depending on the desired behavior, you might want to throw here.
+    // For now, we log and continue, which might lead to reprocessing.
+  }
+  
+  if (existingEvent) {
+    console.log(`Webhook event ${event.id} already processed. Skipping.`);
+    return;
+  }
+
   console.log("handleEvent called with event:", event.type, "ID:", event.id);
 
   const stripeData = event?.data?.object ?? {};
@@ -198,83 +311,83 @@ async function handleEvent(event: Stripe.Event) {
         }
 
         // Handle token-based purchases
-        if (stripeData.metadata?.product_type && stripeData.metadata?.tokens) {
+        if (stripeData.metadata?.product_type) {
           const productType = stripeData.metadata.product_type;
-          const tokensToAdd = parseInt(stripeData.metadata.tokens);
-          const amountPaid = stripeData.amount_total || 0;
+          const tokensToAdd = getTokenAmount(stripeData.metadata, productType);
 
-          console.log(
-            `Processing token purchase: ${productType}, ${tokensToAdd} tokens for user:`,
-            customerMap.user_id,
-          );
+          if (tokensToAdd) {
+            const amountPaid = stripeData.amount_total || 0;
 
-          // Record the purchase
-          const { error: purchaseError } = await supabase
-            .from("token_purchases")
-            .insert({
-              user_id: customerMap.user_id,
-              stripe_payment_intent_id: stripeData.payment_intent,
-              product_type: productType,
-              tokens_purchased: tokensToAdd,
-              amount_paid: amountPaid,
-              status: "completed",
-            });
-
-          if (purchaseError) {
-            console.error("Failed to record token purchase:", purchaseError);
-          }
-
-          // Add tokens to user account
-          const { data: addTokensResult, error: addTokensError } = await supabase
-            .rpc("add_user_tokens", {
-              p_user_id: customerMap.user_id,
-              p_tokens: tokensToAdd,
-            });
-
-          if (addTokensError) {
-            console.error("Failed to add tokens to user account:", addTokensError);
-          } else {
-            console.info(
-              `Successfully added ${tokensToAdd} tokens to user ${customerMap.user_id}`,
+            console.log(
+              `Processing token purchase: ${productType}, ${tokensToAdd} tokens for user:`,
+              customerMap.user_id,
             );
+
+            // Record the purchase
+            const { error: purchaseError } = await supabase
+              .from("token_purchases")
+              .insert({
+                user_id: customerMap.user_id,
+                stripe_payment_intent_id: stripeData.payment_intent,
+                product_type: productType,
+                tokens_purchased: tokensToAdd,
+                amount_paid: amountPaid,
+                status: "completed",
+              });
+
+            if (purchaseError) {
+              console.error("Failed to record token purchase:", purchaseError);
+              // Not returning, as we still want to attempt to add tokens.
+            }
+            
+            // Add tokens to user account with retry logic
+            await addTokensWithRetry(customerMap.user_id, tokensToAdd);
+
+            // Since we successfully processed a token purchase, we should return
+            // to avoid falling through to the legacy credit system.
+            return;
+          }
+        }
+        
+        // This can be a fallback or legacy path
+        console.log(
+          "No product_type found in metadata, or token amount could not be determined. Checking for legacy upload credits.",
+        );
+        // Legacy upload credit system
+        console.log(
+          "About to call increment_upload_credits RPC for user:",
+          customerMap.user_id,
+        );
+
+        // Use RPC function for atomic increment
+        const { data, error } = await supabase.rpc("increment_upload_credits", {
+          p_user_id: customerMap.user_id,
+          p_stripe_customer_id: customerId,
+          p_increment_by: 1,
+        });
+
+        console.log("RPC call result:", { data, error });
+
+        if (error) {
+          console.error("Failed to increment upload credits:", error);
+        } else if (data) {
+          // Handle both array and single object responses
+          const result = Array.isArray(data) ? data[0] : data;
+
+          if (result && result.success) {
+            console.info(
+              `Successfully incremented upload credits for user ${customerMap.user_id} to ${result.new_credits}`,
+            );
+          } else if (result) {
+            console.error(
+              "RPC function returned failure:",
+              result.message || "Unknown error",
+            );
+          } else {
+            console.warn("No result data from increment_upload_credits RPC");
           }
         } else {
-          // Legacy upload credit system
-          console.log(
-            "About to call increment_upload_credits RPC for user:",
-            customerMap.user_id,
-          );
-
-          // Use RPC function for atomic increment
-          const { data, error } = await supabase.rpc("increment_upload_credits", {
-            p_user_id: customerMap.user_id,
-            p_stripe_customer_id: customerId,
-            p_increment_by: 1,
-          });
-
-          console.log("RPC call result:", { data, error });
-
-          if (error) {
-            console.error("Failed to increment upload credits:", error);
-          } else if (data) {
-            // Handle both array and single object responses
-            const result = Array.isArray(data) ? data[0] : data;
-
-            if (result && result.success) {
-              console.info(
-                `Successfully incremented upload credits for user ${customerMap.user_id} to ${result.new_credits}`,
-              );
-            } else if (result) {
-              console.error(
-                "RPC function returned failure:",
-                result.message || "Unknown error",
-              );
-            } else {
-              console.warn("No result data from increment_upload_credits RPC");
-            }
-          } else {
-            console.warn("No data returned from increment_upload_credits RPC");
-          }
+          console.warn("No data returned from increment_upload_credits RPC");
         }
       } catch (error) {
         console.error("Error processing one-time payment:", error);
@@ -285,6 +398,21 @@ async function handleEvent(event: Stripe.Event) {
 
   // Handle other webhook events if needed
   console.log(`Unhandled event type: ${event.type}`);
+
+  // 3. Log successful processing of the event for idempotency
+  const { error: logError } = await supabase
+    .from("processed_webhook_events")
+    .insert({
+      stripe_event_id: event.id,
+      event_type: event.type,
+      processed_at: new Date().toISOString()
+    });
+
+  if (logError) {
+      console.error(`Failed to log processed event ${event.id}:`, logError);
+      // This is a critical error for idempotency.
+      // You may want to alert or handle this more robustly.
+  }
 }
 
 // based on the excellent https://github.com/t3dotgg/stripe-recommendations
