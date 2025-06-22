@@ -1,6 +1,6 @@
 import React from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { getUserPermissions, getUserStatus } from "../../lib/supabase";
+import { getUserPermissions, getUserStatus, UserPermissions } from "../../lib/supabase";
 import { Lock, CreditCard, Crown } from "lucide-react";
 import Button from "./Button";
 import { Card, CardHeader, CardTitle, CardContent } from "./Card";
@@ -23,8 +23,23 @@ const AccessControl: React.FC<AccessControlProps> = ({
   showUpgradePrompt = true,
 }) => {
   const { profile } = useAuth();
-  const permissions = getUserPermissions(profile);
+  const [permissions, setPermissions] = React.useState<UserPermissions>({
+    canUpload: false,
+    canAccessPaidFeatures: false,
+    canAccessAdminFeatures: false,
+    hasActiveSubscription: false,
+    hasUploadCredits: false,
+    uploadCreditsRemaining: 0,
+  });
   const userStatus = getUserStatus(profile);
+
+  React.useEffect(() => {
+    const loadPermissions = async () => {
+      const perms = await getUserPermissions(profile);
+      setPermissions(perms);
+    };
+    loadPermissions();
+  }, [profile]);
 
   // Check permissions
   const hasRequiredPermissions = (() => {

@@ -229,7 +229,7 @@ export function getUserStatus(profile: Profile | null): UserStatus {
   return "registered";
 }
 
-export function getUserPermissions(profile: Profile | null): UserPermissions {
+export async function getUserPermissions(profile: Profile | null): Promise<UserPermissions> {
   const defaultPermissions: UserPermissions = {
     canUpload: false,
     canAccessPaidFeatures: false,
@@ -253,17 +253,21 @@ export function getUserPermissions(profile: Profile | null): UserPermissions {
     new Date(p.subscription_end_date) > new Date()
   );
 
+  // Check token balance for additional upload permissions
+  const tokenBalance = await getUserTokenBalance(profile.id);
+  const hasTokens = tokenBalance > 0;
+
   const hasActiveSubscription = activeSubscription || isTrialing;
-  const canUpload = isAdmin || hasActiveSubscription || hasCredits;
-  const canAccessPaidFeatures = isAdmin || hasActiveSubscription || hasCredits;
+  const canUpload = isAdmin || hasActiveSubscription || hasCredits || hasTokens;
+  const canAccessPaidFeatures = isAdmin || hasActiveSubscription || hasCredits || hasTokens;
 
   return {
     canUpload,
     canAccessPaidFeatures,
     canAccessAdminFeatures: isAdmin,
     hasActiveSubscription,
-    hasUploadCredits: hasCredits,
-    uploadCreditsRemaining,
+    hasUploadCredits: hasCredits || hasTokens,
+    uploadCreditsRemaining: uploadCreditsRemaining + tokenBalance,
   };
 }
 

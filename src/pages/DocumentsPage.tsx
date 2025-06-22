@@ -9,8 +9,22 @@ const DocumentsPage: React.FC = () => {
   const { profile } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [permissions, setPermissions] = useState({
+    canUpload: false,
+    canAccessPaidFeatures: false,
+    canAccessAdminFeatures: false,
+    hasActiveSubscription: false,
+    hasUploadCredits: false,
+    uploadCreditsRemaining: 0,
+  });
 
-  const permissions = getUserPermissions(profile);
+  React.useEffect(() => {
+    const loadPermissions = async () => {
+      const perms = await getUserPermissions(profile);
+      setPermissions(perms);
+    };
+    loadPermissions();
+  }, [profile]);
 
   const handleUploadSuccess = (document: any) => {
     setSuccessMessage(
