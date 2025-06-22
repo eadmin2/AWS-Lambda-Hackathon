@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   FileText,
@@ -7,23 +7,42 @@ import {
   Calendar,
   TrendingUp,
 } from "lucide-react";
-import { supabase, Document, DisabilityEstimate } from "../lib/supabase";
+import { supabase } from "../lib/supabase";
 import PageLayout from "../components/layout/PageLayout";
 import { Card, CardContent } from "../components/ui/Card";
 import { useAuth } from "../contexts/AuthContext";
 import { formatDate } from "../lib/utils";
+import { calculateCombinedRating } from '../lib/picaos';
+import { Badge } from "../components/ui";
 
-interface ConditionWithDocument extends DisabilityEstimate {
-  document?: Document;
+interface DisabilityEstimate {
+  id: string;
+  user_id: string;
+  condition: string;
+  estimated_rating: number;
+  combined_rating?: number;
+  created_at: string;
+  document_id: string;
   cfr_criteria?: string;
   excerpt?: string;
   matched_keywords?: string[];
   severity?: string;
+  condition_display?: string;
 }
+
+interface Document {
+  id: string;
+  file_name: string;
+  uploaded_at: string;
+}
+
+type DisabilityEstimateWithDocuments = DisabilityEstimate & {
+  documents: Pick<Document, 'id' | 'file_name' | 'uploaded_at'> | null;
+};
 
 const ConditionsOverviewPage: React.FC = () => {
   const { user } = useAuth();
-  const [conditions, setConditions] = useState<ConditionWithDocument[]>([]);
+  const [conditions, setConditions] = useState<DisabilityEstimateWithDocuments[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,12 +77,21 @@ const ConditionsOverviewPage: React.FC = () => {
     fetchConditions();
   }, [user]);
 
-  // Calculate statistics
-  const totalConditions = conditions.length;
-  const combinedRating = conditions.length > 0 
-    ? Math.max(...conditions.map(c => c.combined_rating || 0))
-    : 0;
-  const uniqueDocuments = new Set(conditions.map(c => c.document_id)).size;
+  // Memoize calculations to avoid re-computing on every render
+  const { totalConditions, combinedRating, uniqueDocuments } = useMemo(() => {
+    if (!conditions || conditions.length === 0) {
+      return { totalConditions: 0, combinedRating: 0, uniqueDocuments: 0 };
+    }
+    const total = conditions.length;
+    const ratings = conditions.map(c => c.estimated_rating || 0);
+    const combined = calculateCombinedRating(ratings);
+    const docs = new Set(conditions.map(c => c.document_id)).size;
+    return {
+      totalConditions: total,
+      combinedRating: combined,
+      uniqueDocuments: docs
+    };
+  }, [conditions]);
 
   if (loading) {
     return (
@@ -137,12 +165,12 @@ const ConditionsOverviewPage: React.FC = () => {
                       <div className="flex items-center text-sm text-gray-600 space-x-4">
                         <span className="flex items-center">
                           <FileText className="w-4 h-4 mr-1" />
-                          {condition.document?.file_name || 'Unknown Document'}
+                          {condition.documents?.file_name || 'Unknown Document'}
                         </span>
                         <span className="flex items-center">
                           <Calendar className="w-4 h-4 mr-1" />
-                          {condition.document?.uploaded_at 
-                            ? formatDate(condition.document.uploaded_at)
+                          {condition.documents?.uploaded_at 
+                            ? formatDate(condition.documents.uploaded_at)
                             : 'Unknown Date'
                           }
                         </span>
@@ -150,7 +178,7 @@ const ConditionsOverviewPage: React.FC = () => {
                     </div>
                     <div className="text-right">
                       <span className="text-2xl font-bold text-primary-700 bg-primary-100 px-3 py-1 rounded-md">
-                        {condition.disability_rating}%
+                        {condition.estimated_rating}%
                       </span>
                     </div>
                   </div>
@@ -165,18 +193,11 @@ const ConditionsOverviewPage: React.FC = () => {
                   
                   <div className="flex justify-between items-center">
                     <div className="flex space-x-2">
-                      {condition.matched_keywords && condition.matched_keywords.slice(0, 3).map((keyword, i) => (
-                        <span
-                          key={i}
-                          className="bg-gray-200 text-gray-700 px-2 py-1 rounded-full text-xs"
-                        >
-                          {keyword}
-                        </span>
+                      {condition.matched_keywords && condition.matched_keywords.slice(0, 4).map((keyword: string, i: number) => (
+                        <Badge key={i} variant="secondary">{keyword}</Badge>
                       ))}
-                      {condition.matched_keywords && condition.matched_keywords.length > 3 && (
-                        <span className="text-xs text-gray-500">
-                          +{condition.matched_keywords.length - 3} more
-                        </span>
+                      {condition.matched_keywords && condition.matched_keywords.length > 4 && (
+                        <Badge variant="outline">+{condition.matched_keywords.length - 4} more</Badge>
                       )}
                     </div>
                     <Link

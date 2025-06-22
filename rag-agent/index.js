@@ -36,6 +36,28 @@ const sqs = new SQSClient({ region: AWS_REGION });
 // Configuration for batch processing
 const CHUNK_BATCH_SIZE = 3; // Process 3 chunks per Bedrock call for efficiency
 
+// Helper function to calculate combined VA disability rating
+function calculateCombinedRating(ratings) {
+  if (ratings.length === 0) return 0;
+  if (ratings.length === 1) return ratings[0];
+
+  // Sort ratings in descending order
+  const sortedRatings = [...ratings].sort((a, b) => b - a);
+
+  // Calculate combined rating
+  let combinedValue = sortedRatings[0];
+
+  for (let i = 1; i < sortedRatings.length; i++) {
+    const rating = sortedRatings[i];
+    const remainingCapacity = 100 - combinedValue;
+    const additionalValue = (remainingCapacity * rating) / 100;
+    combinedValue += additionalValue;
+  }
+
+  // Round to nearest 10
+  return Math.round(combinedValue / 10) * 10;
+}
+
 // Helper function to parse Bedrock Agent responses and extract conditions
 const parseAgentResponse = (response) => {
   try {
@@ -458,6 +480,11 @@ async function processDocument(userId, documentId) {
     }
 
     if (finalConditions.length > 0) {
+        // Calculate combined rating for this document
+        const ratings = finalConditions.map(c => c.rating || 10);
+        const combinedRating = calculateCombinedRating(ratings);
+        console.log(`📊 Calculated combined rating: ${combinedRating}% from individual ratings: [${ratings.join(', ')}]`);
+
         // Insert into user_conditions table (existing functionality)
         const userConditionsPayload = finalConditions.map(c => ({
             user_id: userId,
@@ -487,7 +514,7 @@ async function processDocument(userId, documentId) {
             condition: c.name,
             condition_display: c.name,
             estimated_rating: c.rating || 10,
-            combined_rating: Math.max(...finalConditions.map(cond => cond.rating || 10)),
+            combined_rating: combinedRating, // Add combined rating to each record
             cfr_criteria: c.cfrCriteria,
             excerpt: c.excerpt,
             matched_keywords: c.keywords,

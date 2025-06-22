@@ -23,8 +23,7 @@ Your response must be a single JSON object with this exact structure:
       "severity": "mild",
       "excerpt": "Exact text from document where condition was found",
       "cfrCriteria": "38 CFR §X.XX",
-      "keywords": ["keyword1", "keyword2"],
-      "diagnosticCode": "XXXX"
+      "keywords": ["keyword1", "keyword2"]
     }
   ]
 }
@@ -38,7 +37,6 @@ Your response must be a single JSON object with this exact structure:
 - **excerpt**: The exact text from the document where you found this condition
 - **cfrCriteria**: CFR regulation if you know it, otherwise use "TBD"
 - **keywords**: Array of relevant keywords for this condition
-- **diagnosticCode**: VA diagnostic code if known, otherwise "TBD"
 
 ## What to Extract
 
@@ -63,8 +61,7 @@ If you see "Patient has chronic lower back pain, requires physical therapy" you 
       "severity": "moderate", 
       "excerpt": "Patient has chronic lower back pain, requires physical therapy",
       "cfrCriteria": "38 CFR §4.71a",
-      "keywords": ["back", "pain", "chronic", "spine"],
-      "diagnosticCode": "5237"
+      "keywords": ["back", "pain", "chronic", "spine"]
     }
   ]
 }

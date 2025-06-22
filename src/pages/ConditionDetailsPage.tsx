@@ -4,7 +4,6 @@ import {
   AlertCircle,
   BookOpen,
   CheckCircle,
-  ClipboardList,
   Search,
 } from "lucide-react";
 import { supabase, Document, DisabilityEstimate } from "../lib/supabase";
@@ -16,6 +15,7 @@ interface ConditionEstimate extends DisabilityEstimate {
   excerpt?: string;
   matched_keywords?: string[];
   severity?: string;
+  estimated_rating?: number;
 }
 
 const ConditionDetailsPage: React.FC = () => {
@@ -133,7 +133,7 @@ const ConditionDetailsPage: React.FC = () => {
                     {estimate.condition}
                   </CardTitle>
                   <span className="text-2xl font-bold text-primary-700 bg-primary-100 px-3 py-1 rounded-md">
-                    {estimate.disability_rating}%
+                    {estimate.estimated_rating}%
                   </span>
                 </CardHeader>
                 <CardContent>
@@ -156,17 +156,7 @@ const ConditionDetailsPage: React.FC = () => {
                         <p className="text-gray-600">{estimate.cfr_criteria}</p>
                       </div>
                     )}
-                    {estimate.diagnostic_code && (
-                      <div>
-                        <h4 className="font-semibold text-gray-700 flex items-center mb-1">
-                          <ClipboardList className="w-4 h-4 mr-2" /> Diagnostic
-                          Code
-                        </h4>
-                        <p className="text-gray-600">
-                          {estimate.diagnostic_code}
-                        </p>
-                      </div>
-                    )}
+
                     {estimate.matched_keywords &&
                       estimate.matched_keywords.length > 0 && (
                         <div>
