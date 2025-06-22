@@ -485,9 +485,9 @@ async function processDocument(userId, documentId) {
             document_id: documentId,
             user_id: userId,
             condition: c.name,
-            disability_rating: c.rating || 10,
-            diagnostic_code: c.diagnosticCode || 'TBD', // You may want to add this field to the condition object
-            combined_rating: Math.max(...finalConditions.map(cond => cond.rating || 10)), // Calculate combined rating
+            condition_display: c.name,
+            estimated_rating: c.rating || 10,
+            combined_rating: Math.max(...finalConditions.map(cond => cond.rating || 10)),
             cfr_criteria: c.cfrCriteria,
             excerpt: c.excerpt,
             matched_keywords: c.keywords,
@@ -497,16 +497,23 @@ async function processDocument(userId, documentId) {
 
         console.log("🗃️ Preparing to insert into disability_estimates:", JSON.stringify(disabilityEstimatesPayload, null, 2));
 
-        const { error: disabilityEstimatesError } = await supabase
+        const { data: insertedData, error: disabilityEstimatesError } = await supabase
             .from("disability_estimates")
-            .upsert(disabilityEstimatesPayload, { onConflict: 'user_id, document_id, condition' });
+            .upsert(disabilityEstimatesPayload, { 
+                onConflict: 'user_id, document_id, condition',
+                ignoreDuplicates: false 
+            })
+            .select();
 
         if (disabilityEstimatesError) {
             console.error("❌ Error upserting conditions into disability_estimates:", disabilityEstimatesError);
+            console.error("❌ Failed payload:", JSON.stringify(disabilityEstimatesPayload, null, 2));
             return createErrorResponse(500, "Failed to store detailed analysis results.");
         }
 
-        console.log(`✅ Successfully inserted ${finalConditions.length} conditions into both user_conditions and disability_estimates tables`);
+        console.log(`✅ Successfully inserted ${finalConditions.length} conditions into user_conditions table`);
+        console.log(`✅ Successfully inserted ${insertedData?.length || 0} conditions into disability_estimates table`);
+        console.log(`📊 Inserted data:`, JSON.stringify(insertedData, null, 2));
     }
 
     // Update document status to 'completed'
