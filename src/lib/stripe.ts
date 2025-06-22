@@ -1,6 +1,6 @@
 import { supabase } from "./supabase";
 
-export async function createUploadCheckoutSession(userId?: string) {
+export async function createUploadCheckoutSession(userId?: string, productType?: string) {
   try {
     const body: Record<string, unknown> = {
       mode: "payment",
@@ -8,6 +8,8 @@ export async function createUploadCheckoutSession(userId?: string) {
       cancel_url: `${window.location.origin}/pricing?checkout=canceled`,
     };
     if (userId) body.user_id = userId;
+    if (productType) body.product_type = productType;
+    
     const { data, error } = await supabase.functions.invoke(
       "create-checkout-session",
       {

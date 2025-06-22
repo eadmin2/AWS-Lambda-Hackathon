@@ -23,7 +23,7 @@ const PricingPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const [isLoading, setIsLoading] = useState<
-    "single" | "subscription" | null
+    "starter" | "file-review" | "full-review" | "tokens-100" | "tokens-250" | "tokens-500" | null
   >(null);
 
   const checkoutSuccess = searchParams.get("checkout") === "success";
@@ -52,7 +52,7 @@ const PricingPage: React.FC = () => {
     }
   }, [checkoutSuccess, subscriptionSuccess, location.pathname]);
 
-  const handlePurchase = async (type: "single" | "subscription") => {
+  const handlePurchase = async (type: "starter" | "file-review" | "full-review" | "tokens-100" | "tokens-250" | "tokens-500") => {
     if (!user) {
       // Redirect unregistered users to registration with payment intent
       const redirectUrl = `/auth?next=checkout&type=${type}`;
@@ -62,10 +62,9 @@ const PricingPage: React.FC = () => {
 
     try {
       setIsLoading(type);
-      if (type === "single") {
-        await createUploadCheckoutSession(user?.id);
-      } else {
-        await createSubscriptionCheckoutSession(user?.id);
+      if (type === "starter" || type === "file-review" || type === "full-review" || 
+          type === "tokens-100" || type === "tokens-250" || type === "tokens-500") {
+        await createUploadCheckoutSession(user?.id, type);
       }
     } catch (error) {
       console.error("Error creating checkout session:", error);
@@ -199,10 +198,10 @@ const PricingPage: React.FC = () => {
 
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">
-              Simple, Transparent Pricing
+              Simple, Token-Based Pricing
             </h2>
             <p className="text-xl text-gray-600">
-              Choose the plan that works best for you
+              Pay only for what you need. Each token = 1 page analyzed.
             </p>
             <div className="mt-4 bg-info-100 border border-info-200 p-4 rounded-md flex items-start max-w-2xl mx-auto">
               <AlertCircle className="h-5 w-5 text-info-500 mr-2 flex-shrink-0 mt-0.5" />
@@ -217,24 +216,24 @@ const PricingPage: React.FC = () => {
             </div>
           </div>
 
-          <div
-            className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto"
-            id="pricing-section"
-          >
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-12">
             <Card>
               <CardContent className="p-8">
                 <div className="text-center mb-6">
-                  <h3 className="text-2xl font-bold mb-2">One-Time Upload</h3>
+                  <h3 className="text-2xl font-bold mb-2">Starter Pack</h3>
                   <div className="text-4xl font-bold text-primary-600 mb-2">
-                    $29
+                    $29.99
                   </div>
-                  <p className="text-gray-600">Perfect for a single claim</p>
+                  <p className="text-gray-600">Perfect for small documents</p>
+                  <div className="mt-2 text-lg font-semibold text-primary-600">
+                    50 Tokens (Pages)
+                  </div>
                 </div>
 
                 <ul className="space-y-4 mb-8">
                   <li className="flex items-center">
                     <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
-                    <span>Upload and analyze 1 medical document</span>
+                    <span>Analyze up to 50 pages</span>
                   </li>
                   <li className="flex items-center">
                     <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
@@ -246,7 +245,7 @@ const PricingPage: React.FC = () => {
                   </li>
                   <li className="flex items-center">
                     <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
-                    <span>30-day access to results</span>
+                    <span>90-day access to results</span>
                   </li>
                 </ul>
 
@@ -254,38 +253,40 @@ const PricingPage: React.FC = () => {
                   className="w-full"
                   onClick={() => {
                     if (!user) {
-                      window.location.href = "/auth?next=checkout&type=single";
+                      window.location.href = "/auth?next=checkout&type=starter";
                     } else {
-                      handlePurchase("single");
+                      handlePurchase("starter");
                     }
                   }}
-                  isLoading={isLoading === "single"}
+                  isLoading={isLoading === "starter"}
                 >
                   Get Started
                 </Button>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-2 border-primary-500 relative">
+              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                <span className="bg-primary-500 text-white px-4 py-1 rounded-full text-sm font-medium">
+                  Most Popular
+                </span>
+              </div>
               <CardContent className="p-8">
                 <div className="text-center mb-6">
-                  <h3 className="text-2xl font-bold mb-2">
-                    Monthly Subscription
-                  </h3>
+                  <h3 className="text-2xl font-bold mb-2">File Review Pack</h3>
                   <div className="text-4xl font-bold text-primary-600 mb-2">
-                    $14.99
+                    $49.99
                   </div>
-                  <p className="text-gray-600">
-                    For ongoing claims and updates
-                  </p>
+                  <p className="text-gray-600">Great for medium files</p>
+                  <div className="mt-2 text-lg font-semibold text-primary-600">
+                    150 Tokens (Pages)
+                  </div>
                 </div>
 
                 <ul className="space-y-4 mb-8">
                   <li className="flex items-center">
                     <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
-                    <span className="font-semibold">
-                      Unlimited document uploads
-                    </span>
+                    <span>Analyze up to 150 pages</span>
                   </li>
                   <li className="flex items-center">
                     <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
@@ -293,11 +294,15 @@ const PricingPage: React.FC = () => {
                   </li>
                   <li className="flex items-center">
                     <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
+                    <span>Enhanced condition analysis</span>
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
                     <span>Detailed PDF reports</span>
                   </li>
                   <li className="flex items-center">
                     <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
-                    <span>Cancel anytime</span>
+                    <span>90-day access to results</span>
                   </li>
                 </ul>
 
@@ -305,18 +310,170 @@ const PricingPage: React.FC = () => {
                   className="w-full"
                   onClick={() => {
                     if (!user) {
-                      window.location.href =
-                        "/auth?next=checkout&type=subscription";
+                      window.location.href = "/auth?next=checkout&type=file-review";
                     } else {
-                      handlePurchase("subscription");
+                      handlePurchase("file-review");
                     }
                   }}
-                  isLoading={isLoading === "subscription"}
+                  isLoading={isLoading === "file-review"}
                 >
-                  Start Subscription
+                  Choose File Review
                 </Button>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardContent className="p-8">
+                <div className="text-center mb-6">
+                  <h3 className="text-2xl font-bold mb-2">Full Review Pack</h3>
+                  <div className="text-4xl font-bold text-primary-600 mb-2">
+                    $89.99
+                  </div>
+                  <p className="text-gray-600">For comprehensive reviews</p>
+                  <div className="mt-2 text-lg font-semibold text-primary-600">
+                    500 Tokens (Pages)
+                  </div>
+                </div>
+
+                <ul className="space-y-4 mb-8">
+                  <li className="flex items-center">
+                    <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
+                    <span className="font-semibold">
+                      Analyze up to 500 pages
+                    </span>
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
+                    <span>Highest priority processing</span>
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
+                    <span>Complete medical record analysis</span>
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
+                    <span>Premium PDF reports</span>
+                  </li>
+                  <li className="flex items-center">
+                    <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
+                    <span>180-day access to results</span>
+                  </li>
+                </ul>
+
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    if (!user) {
+                      window.location.href = "/auth?next=checkout&type=full-review";
+                    } else {
+                      handlePurchase("full-review");
+                    }
+                  }}
+                  isLoading={isLoading === "full-review"}
+                >
+                  Choose Full Review
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Token Add-ons Section */}
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold mb-4">Need More Tokens?</h2>
+              <p className="text-lg text-gray-600">
+                Add more tokens to your account anytime
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6">
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <h3 className="text-xl font-bold mb-2">Token Boost</h3>
+                  <div className="text-3xl font-bold text-primary-600 mb-2">
+                    $19.99
+                  </div>
+                  <div className="text-lg font-semibold text-primary-600 mb-4">
+                    100 Tokens
+                  </div>
+                  <p className="text-gray-600 mb-6">
+                    Perfect for additional pages
+                  </p>
+                  <Button
+                    className="w-full"
+                    variant="secondary"
+                    onClick={() => {
+                      if (!user) {
+                        window.location.href = "/auth?next=checkout&type=tokens-100";
+                      } else {
+                        handlePurchase("tokens-100");
+                      }
+                    }}
+                    isLoading={isLoading === "tokens-100"}
+                  >
+                    Buy Tokens
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <h3 className="text-xl font-bold mb-2">Token Pack</h3>
+                  <div className="text-3xl font-bold text-primary-600 mb-2">
+                    $39.99
+                  </div>
+                  <div className="text-lg font-semibold text-primary-600 mb-4">
+                    250 Tokens
+                  </div>
+                  <p className="text-gray-600 mb-6">
+                    Great value for more pages
+                  </p>
+                  <Button
+                    className="w-full"
+                    variant="secondary"
+                    onClick={() => {
+                      if (!user) {
+                        window.location.href = "/auth?next=checkout&type=tokens-250";
+                      } else {
+                        handlePurchase("tokens-250");
+                      }
+                    }}
+                    isLoading={isLoading === "tokens-250"}
+                  >
+                    Buy Tokens
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <h3 className="text-xl font-bold mb-2">Token Bundle</h3>
+                  <div className="text-3xl font-bold text-primary-600 mb-2">
+                    $69.99
+                  </div>
+                  <div className="text-lg font-semibold text-primary-600 mb-4">
+                    500 Tokens
+                  </div>
+                  <p className="text-gray-600 mb-6">
+                    Best value for large projects
+                  </p>
+                  <Button
+                    className="w-full"
+                    variant="secondary"
+                    onClick={() => {
+                      if (!user) {
+                        window.location.href = "/auth?next=checkout&type=tokens-500";
+                      } else {
+                        handlePurchase("tokens-500");
+                      }
+                    }}
+                    isLoading={isLoading === "tokens-500"}
+                  >
+                    Buy Tokens
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </section>

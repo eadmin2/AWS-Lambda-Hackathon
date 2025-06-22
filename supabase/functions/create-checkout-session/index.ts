@@ -5,6 +5,46 @@ import { supabase } from "./_shared/supabase.ts";
 import { corsHeaders } from "./_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// Product configuration mapping
+const PRODUCT_CONFIG = {
+  'starter': {
+    name: 'Starter Pack',
+    description: 'Analyze up to 50 pages with AI-powered condition identification',
+    price: 2999, // $29.99 in cents
+    tokens: 50
+  },
+  'file-review': {
+    name: 'File Review Pack',
+    description: 'Analyze up to 150 pages with priority processing and enhanced analysis',
+    price: 4999, // $49.99 in cents
+    tokens: 150
+  },
+  'full-review': {
+    name: 'Full Review Pack',
+    description: 'Analyze up to 500 pages with comprehensive medical record analysis',
+    price: 8999, // $89.99 in cents
+    tokens: 500
+  },
+  'tokens-100': {
+    name: 'Token Boost',
+    description: '100 additional tokens for document analysis',
+    price: 1999, // $19.99 in cents
+    tokens: 100
+  },
+  'tokens-250': {
+    name: 'Token Pack',
+    description: '250 additional tokens for document analysis',
+    price: 3999, // $39.99 in cents
+    tokens: 250
+  },
+  'tokens-500': {
+    name: 'Token Bundle',
+    description: '500 additional tokens for document analysis',
+    price: 6999, // $69.99 in cents
+    tokens: 500
+  }
+};
+
 serve(async (req) => {
   // Handle CORS
   if (req.method === "OPTIONS") {
@@ -48,16 +88,65 @@ serve(async (req) => {
   }
 
   try {
-    const { mode, success_url, cancel_url } = await req.json();
+    const { mode, success_url, cancel_url, product_type } = await req.json();
 
-    // Get the appropriate price ID based on mode
-    const priceId =
-      mode === "subscription"
-        ? Deno.env.get("STRIPE_SUBSCRIPTION_PRICE_ID")
-        : Deno.env.get("STRIPE_SINGLE_UPLOAD_PRICE_ID");
+    let priceId;
+    let productConfig;
+
+    if (product_type && PRODUCT_CONFIG[product_type]) {
+      // Handle new token-based products
+      productConfig = PRODUCT_CONFIG[product_type];
+      
+      // Create or get existing Stripe product and price
+      const products = await stripe.products.list({
+        limit: 100,
+      });
+      
+      let product = products.data.find(p => p.metadata?.product_type === product_type);
+      
+      if (!product) {
+        // Create new product
+        product = await stripe.products.create({
+          name: productConfig.name,
+          description: productConfig.description,
+          metadata: {
+            product_type: product_type,
+            tokens: productConfig.tokens.toString()
+          }
+        });
+      }
+      
+      // Get or create price for this product
+      const prices = await stripe.prices.list({
+        product: product.id,
+        limit: 10,
+      });
+      
+      let price = prices.data.find(p => p.unit_amount === productConfig.price);
+      
+      if (!price) {
+        price = await stripe.prices.create({
+          product: product.id,
+          unit_amount: productConfig.price,
+          currency: 'usd',
+          metadata: {
+            product_type: product_type,
+            tokens: productConfig.tokens.toString()
+          }
+        });
+      }
+      
+      priceId = price.id;
+    } else {
+      // Fallback to legacy mode-based pricing
+      priceId =
+        mode === "subscription"
+          ? Deno.env.get("STRIPE_SUBSCRIPTION_PRICE_ID")
+          : Deno.env.get("STRIPE_SINGLE_UPLOAD_PRICE_ID");
+    }
 
     if (!priceId) {
-      throw new Error(`Price ID not found for mode: ${mode}`);
+      throw new Error(`Price ID not found for product: ${product_type || mode}`);
     }
 
     let customerId = undefined;
@@ -75,16 +164,18 @@ serve(async (req) => {
         throw new Error("User profile not found");
       }
 
-      // Create or retrieve Stripe customer
-      const { data: payment } = await supabase
-        .from("payments")
-        .select("stripe_customer_id")
+      // Check if user already has a Stripe customer ID
+      const { data: existingCustomer } = await supabase
+        .from("stripe_customers")
+        .select("customer_id")
         .eq("user_id", userId)
+        .is("deleted_at", null)
         .single();
 
-      customerId = payment?.stripe_customer_id;
+      customerId = existingCustomer?.customer_id;
 
       if (!customerId) {
+        // Create new Stripe customer
         const customer = await stripe.customers.create({
           email: profile.email,
           metadata: {
@@ -93,13 +184,18 @@ serve(async (req) => {
         });
         customerId = customer.id;
 
-        // Store Stripe customer ID
-        await supabase.from("payments").insert({
+        // Store Stripe customer mapping
+        await supabase.from("stripe_customers").insert({
           user_id: userId,
-          stripe_customer_id: customerId,
+          customer_id: customerId,
         });
       }
-      metadata = { user_id: userId };
+      
+      metadata = { 
+        user_id: userId,
+        ...(product_type && { product_type: product_type }),
+        ...(productConfig && { tokens: productConfig.tokens.toString() })
+      };
     }
 
     // Create Stripe checkout session

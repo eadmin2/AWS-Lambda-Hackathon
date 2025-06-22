@@ -1012,10 +1012,10 @@ const handleTextractCompletion = async (awsJobId) => {
     }
     documentId = jobData.document_id;
     
-    // Verify document exists before proceeding to prevent race conditions
+    // Verify document exists and get user info for token consumption
     const { data: document, error: docError } = await supabase
       .from('documents')
-      .select('id')
+      .select('id, user_id, estimated_tokens, total_pages')
       .eq('id', documentId)
       .single();
 
@@ -1052,6 +1052,12 @@ const handleTextractCompletion = async (awsJobId) => {
     // Calculate confidence and prepare updates
     const avgConfidence = calculateAverageConfidence(allBlocks);
     const signatures = processedData.signatures;
+    const totalPages = Math.max(...allBlocks.map((b) => b.Page || 1));
+
+    // Calculate tokens to consume based on actual pages processed
+    const tokensToConsume = Math.max(totalPages, document.estimated_tokens || 1);
+    
+    console.log(`[TOKEN] Document ${documentId} processed ${totalPages} pages, consuming ${tokensToConsume} tokens for user ${document.user_id}`);
 
     // Store chunks in database
     if (processedData.chunks.length > 0) {
@@ -1117,6 +1123,39 @@ const handleTextractCompletion = async (awsJobId) => {
       }
     }
 
+    // Consume tokens before marking as completed
+    console.log(`[TOKEN] Attempting to consume ${tokensToConsume} tokens for user ${document.user_id}`);
+    
+    const { data: tokenConsumed, error: tokenError } = await supabase
+      .rpc("use_user_tokens", {
+        p_user_id: document.user_id,
+        p_tokens: tokensToConsume,
+      });
+
+    if (tokenError) {
+      console.error(`[TOKEN] Failed to consume tokens for user ${document.user_id}:`, tokenError);
+      // Don't fail the entire process - log the error and continue
+      // This could happen if user runs out of tokens between validation and processing
+    } else if (tokenConsumed) {
+      console.log(`[TOKEN] Successfully consumed ${tokensToConsume} tokens for user ${document.user_id}`);
+    } else {
+      console.warn(`[TOKEN] Token consumption returned false for user ${document.user_id} - may have insufficient balance`);
+      
+      // Send low token alert
+      try {
+        await supabase.functions.invoke("send-token-alert", {
+          body: {
+            userId: document.user_id,
+            alertType: "insufficient_tokens",
+            tokensRequired: tokensToConsume,
+          },
+        });
+        console.log(`[TOKEN] Sent insufficient tokens alert to user ${document.user_id}`);
+      } catch (alertError) {
+        console.error(`[TOKEN] Failed to send token alert:`, alertError);
+      }
+    }
+
     // Update document and job status
     await Promise.all([
       supabase
@@ -1130,7 +1169,8 @@ const handleTextractCompletion = async (awsJobId) => {
           textract_confidence: avgConfidence,
           has_signatures: signatures.length > 0,
           signature_count: signatures.length,
-          total_pages: Math.max(...allBlocks.map((b) => b.Page || 1)),
+          total_pages: totalPages,
+          tokens_consumed: tokensToConsume,
           updated_at: new Date().toISOString(),
         })
         .eq("id", jobData.document_id),

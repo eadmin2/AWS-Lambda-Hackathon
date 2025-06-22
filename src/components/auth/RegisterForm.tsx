@@ -69,8 +69,9 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
         if (signInData.user) {
           // Successful registration, now handle redirect
           if (next === "checkout" && type) {
-            if (type === "single") {
-              await createUploadCheckoutSession(signInData.user.id);
+            if (type === "starter" || type === "file-review" || type === "full-review" || 
+                type === "tokens-100" || type === "tokens-250" || type === "tokens-500") {
+              await createUploadCheckoutSession(signInData.user.id, type);
             } else if (type === "subscription") {
               await createSubscriptionCheckoutSession(signInData.user.id);
             }

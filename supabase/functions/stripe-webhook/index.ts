@@ -197,40 +197,84 @@ async function handleEvent(event: Stripe.Event) {
           return;
         }
 
-        console.log(
-          "About to call increment_upload_credits RPC for user:",
-          customerMap.user_id,
-        );
+        // Handle token-based purchases
+        if (stripeData.metadata?.product_type && stripeData.metadata?.tokens) {
+          const productType = stripeData.metadata.product_type;
+          const tokensToAdd = parseInt(stripeData.metadata.tokens);
+          const amountPaid = stripeData.amount_total || 0;
 
-        // Use RPC function for atomic increment
-        const { data, error } = await supabase.rpc("increment_upload_credits", {
-          p_user_id: customerMap.user_id,
-          p_stripe_customer_id: customerId,
-          p_increment_by: 1,
-        });
+          console.log(
+            `Processing token purchase: ${productType}, ${tokensToAdd} tokens for user:`,
+            customerMap.user_id,
+          );
 
-        console.log("RPC call result:", { data, error });
+          // Record the purchase
+          const { error: purchaseError } = await supabase
+            .from("token_purchases")
+            .insert({
+              user_id: customerMap.user_id,
+              stripe_payment_intent_id: stripeData.payment_intent,
+              product_type: productType,
+              tokens_purchased: tokensToAdd,
+              amount_paid: amountPaid,
+              status: "completed",
+            });
 
-        if (error) {
-          console.error("Failed to increment upload credits:", error);
-        } else if (data) {
-          // Handle both array and single object responses
-          const result = Array.isArray(data) ? data[0] : data;
+          if (purchaseError) {
+            console.error("Failed to record token purchase:", purchaseError);
+          }
 
-          if (result && result.success) {
-            console.info(
-              `Successfully incremented upload credits for user ${customerMap.user_id} to ${result.new_credits}`,
-            );
-          } else if (result) {
-            console.error(
-              "RPC function returned failure:",
-              result.message || "Unknown error",
-            );
+          // Add tokens to user account
+          const { data: addTokensResult, error: addTokensError } = await supabase
+            .rpc("add_user_tokens", {
+              p_user_id: customerMap.user_id,
+              p_tokens: tokensToAdd,
+            });
+
+          if (addTokensError) {
+            console.error("Failed to add tokens to user account:", addTokensError);
           } else {
-            console.warn("No result data from increment_upload_credits RPC");
+            console.info(
+              `Successfully added ${tokensToAdd} tokens to user ${customerMap.user_id}`,
+            );
           }
         } else {
-          console.warn("No data returned from increment_upload_credits RPC");
+          // Legacy upload credit system
+          console.log(
+            "About to call increment_upload_credits RPC for user:",
+            customerMap.user_id,
+          );
+
+          // Use RPC function for atomic increment
+          const { data, error } = await supabase.rpc("increment_upload_credits", {
+            p_user_id: customerMap.user_id,
+            p_stripe_customer_id: customerId,
+            p_increment_by: 1,
+          });
+
+          console.log("RPC call result:", { data, error });
+
+          if (error) {
+            console.error("Failed to increment upload credits:", error);
+          } else if (data) {
+            // Handle both array and single object responses
+            const result = Array.isArray(data) ? data[0] : data;
+
+            if (result && result.success) {
+              console.info(
+                `Successfully incremented upload credits for user ${customerMap.user_id} to ${result.new_credits}`,
+              );
+            } else if (result) {
+              console.error(
+                "RPC function returned failure:",
+                result.message || "Unknown error",
+              );
+            } else {
+              console.warn("No result data from increment_upload_credits RPC");
+            }
+          } else {
+            console.warn("No data returned from increment_upload_credits RPC");
+          }
         }
       } catch (error) {
         console.error("Error processing one-time payment:", error);

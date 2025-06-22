@@ -25,6 +25,18 @@ interface ProfileFormData {
   email: string;
 }
 
+interface TokenInfo {
+  tokens_available: number;
+  tokens_used: number;
+  recent_purchases: Array<{
+    id: string;
+    product_type: string;
+    tokens_purchased: number;
+    amount_paid: number;
+    created_at: string;
+  }>;
+}
+
 // Utility function to call the delete-account Edge Function
 async function deleteAccountRequest(): Promise<{
   success?: boolean;
@@ -66,6 +78,8 @@ const ProfilePage: React.FC = () => {
   const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
+  const [tokenLoading, setTokenLoading] = useState(false);
   const navigate = useNavigate();
 
   const {
@@ -110,8 +124,42 @@ const ProfilePage: React.FC = () => {
           setBillingError(err.message);
         })
         .finally(() => setBillingLoading(false));
+
+      // Fetch token information
+      setTokenLoading(true);
+      fetchTokenInfo()
+        .then(setTokenInfo)
+        .catch((err) => {
+          console.error("Error fetching token info:", err);
+        })
+        .finally(() => setTokenLoading(false));
     }
   }, [user]);
+
+  const fetchTokenInfo = async (): Promise<TokenInfo> => {
+    const { data: tokenData, error: tokenError } = await supabase
+      .from("user_tokens")
+      .select("tokens_available, tokens_used")
+      .eq("user_id", user?.id)
+      .single();
+
+    const { data: purchaseData, error: purchaseError } = await supabase
+      .from("token_purchases")
+      .select("id, product_type, tokens_purchased, amount_paid, created_at")
+      .eq("user_id", user?.id)
+      .order("created_at", { ascending: false })
+      .limit(5);
+
+    if (tokenError && tokenError.code !== "PGRST116") {
+      throw new Error("Failed to fetch token information");
+    }
+
+    return {
+      tokens_available: tokenData?.tokens_available || 0,
+      tokens_used: tokenData?.tokens_used || 0,
+      recent_purchases: purchaseData || [],
+    };
+  };
 
   // Redirect if not authenticated
   if (!isAuthLoading && !user) {
@@ -299,38 +347,73 @@ const ProfilePage: React.FC = () => {
                       </div>
                       <div className="border-t pt-4 mt-4">
                         <h3 className="text-sm font-medium text-gray-500 mb-1">
-                          Subscription Status
+                          Token Balance
                         </h3>
-                        <p
-                          className={`text-base font-medium ${
-                            billingInfo?.subscription?.status === "active"
-                              ? "text-green-600"
-                              : "text-gray-600"
-                          }`}
-                        >
-                          {billingLoading
+                        <p className="text-base font-medium text-primary-600">
+                          {tokenLoading
                             ? "Loading..."
-                            : typeof billingInfo?.subscription?.status ===
-                                "string"
-                            ? billingInfo.subscription.status
-                            : "Inactive"}
+                            : `${tokenInfo?.tokens_available || 0} tokens`}
                         </p>
                         <h3 className="text-sm font-medium text-gray-500 mb-1 mt-3">
-                          Upload Credits
+                          Tokens Used
                         </h3>
-                        <p
-                          className={`text-base font-medium ${
-                            profile?.upload_credits ?? 0 > 0
-                              ? "text-green-600"
-                              : "text-gray-600"
-                          }`}
-                        >
-                          {billingLoading
+                        <p className="text-base font-medium text-gray-600">
+                          {tokenLoading
                             ? "Loading..."
-                            : profile?.upload_credits ?? 0}
+                            : `${tokenInfo?.tokens_used || 0} tokens`}
                         </p>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+
+                {/* Token Purchase History */}
+                <Card className="mt-6">
+                  <CardHeader>
+                    <CardTitle>Recent Token Purchases</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {tokenLoading ? (
+                      <div className="text-sm text-gray-500 mb-2">
+                        Loading purchase history...
+                      </div>
+                    ) : tokenInfo?.recent_purchases.length === 0 ? (
+                      <div className="text-sm text-gray-500 mb-4">
+                        No token purchases yet.
+                      </div>
+                    ) : (
+                      <div className="space-y-3 mb-4">
+                        {tokenInfo?.recent_purchases.map((purchase) => (
+                          <div
+                            key={purchase.id}
+                            className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
+                          >
+                            <div>
+                              <div className="font-medium">
+                                {purchase.product_type.replace("-", " ").replace(/\b\w/g, l => l.toUpperCase())}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                {new Date(purchase.created_at).toLocaleDateString()}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="font-medium text-primary-600">
+                                +{purchase.tokens_purchased} tokens
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                ${(purchase.amount_paid / 100).toFixed(2)}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <Button
+                      className="w-full"
+                      onClick={() => (window.location.href = "/pricing")}
+                    >
+                      Buy More Tokens
+                    </Button>
                   </CardContent>
                 </Card>
 

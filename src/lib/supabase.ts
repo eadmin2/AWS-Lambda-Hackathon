@@ -82,6 +82,49 @@ export type UserCondition = {
   recommendation?: ConditionData;
 };
 
+export type UserTokens = {
+  id: string;
+  user_id: string;
+  tokens_available: number;
+  tokens_used: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TokenPurchase = {
+  id: string;
+  user_id: string;
+  stripe_payment_intent_id?: string;
+  product_type: string;
+  tokens_purchased: number;
+  amount_paid: number;
+  currency: string;
+  status: "pending" | "completed" | "failed" | "refunded";
+  created_at: string;
+  updated_at: string;
+};
+
+export type PromotionalCode = {
+  id: string;
+  code: string;
+  discount_type: "percentage" | "fixed_amount" | "free_tokens";
+  discount_value: number;
+  max_uses?: number;
+  current_uses: number;
+  valid_from: string;
+  valid_until?: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type UserPromotionalCode = {
+  id: string;
+  user_id: string;
+  promotional_code_id: string;
+  used_at: string;
+};
+
 export type Subscription = {
   id: string;
   user_id: string;
@@ -222,6 +265,57 @@ export function getUserPermissions(profile: Profile | null): UserPermissions {
     hasUploadCredits: hasCredits,
     uploadCreditsRemaining,
   };
+}
+
+// Token-related helper functions
+export async function getUserTokenBalance(userId: string): Promise<number> {
+  const { data, error } = await supabase
+    .rpc("get_user_token_balance", {
+      p_user_id: userId,
+    });
+
+  if (error) {
+    console.error("Error getting token balance:", error);
+    return 0;
+  }
+
+  return data || 0;
+}
+
+export async function validateTokens(userId: string, tokensRequired: number): Promise<{
+  valid: boolean;
+  currentBalance: number;
+  message?: string;
+}> {
+  const currentBalance = await getUserTokenBalance(userId);
+  
+  if (currentBalance >= tokensRequired) {
+    return {
+      valid: true,
+      currentBalance,
+    };
+  }
+
+  return {
+    valid: false,
+    currentBalance,
+    message: `Insufficient tokens. You need ${tokensRequired} tokens but only have ${currentBalance}.`,
+  };
+}
+
+export async function useTokens(userId: string, tokensToUse: number): Promise<boolean> {
+  const { data, error } = await supabase
+    .rpc("use_user_tokens", {
+      p_user_id: userId,
+      p_tokens: tokensToUse,
+    });
+
+  if (error) {
+    console.error("Error using tokens:", error);
+    return false;
+  }
+
+  return data || false;
 }
 
 export { supabaseAnonKey };

@@ -12,6 +12,7 @@ import {
 import Button from "../ui/Button";
 import { supabase } from "../../lib/supabase";
 import { DocumentRow } from "./DocumentsTable";
+import { getUserTokenBalance, validateTokens } from "../../lib/supabase";
 
 // AWS Constants
 const AWS_S3_BUCKET = "my-receipts-app-bucket";
@@ -19,20 +20,28 @@ const AWS_REGION = "us-east-2";
 const MAX_SIZE_MB = 30;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
+// Token estimation constants
+const ESTIMATED_PAGES_PER_MB = 10; // Rough estimate for PDF/image files
+const MIN_TOKENS_PER_FILE = 1; // Minimum tokens required per file
+
 interface UploaderState {
-  files: { file: File; name: string }[];
+  files: { file: File; name: string; estimatedTokens: number }[];
   uploading: boolean;
   uploadProgress: number;
   error: string | null;
+  tokenBalance: number;
+  checkingTokens: boolean;
 }
 
 type UploaderAction =
-  | { type: 'SET_FILES'; files: { file: File; name: string }[] }
-  | { type: 'ADD_FILES'; files: { file: File; name: string }[] }
+  | { type: 'SET_FILES'; files: { file: File; name: string; estimatedTokens: number }[] }
+  | { type: 'ADD_FILES'; files: { file: File; name: string; estimatedTokens: number }[] }
   | { type: 'SET_UPLOADING'; uploading: boolean }
   | { type: 'SET_PROGRESS'; progress: number }
   | { type: 'SET_ERROR'; error: string | null }
-  | { type: 'UPLOAD_SUCCESS' };
+  | { type: 'UPLOAD_SUCCESS' }
+  | { type: 'SET_TOKEN_BALANCE'; balance: number }
+  | { type: 'SET_CHECKING_TOKENS'; checking: boolean };
 
 const uploaderReducer = (state: UploaderState, action: UploaderAction): UploaderState => {
   switch (action.type) {
@@ -48,6 +57,10 @@ const uploaderReducer = (state: UploaderState, action: UploaderAction): Uploader
       return { ...state, error: action.error, uploading: false };
     case 'UPLOAD_SUCCESS':
       return { ...state, files: [], error: null, uploading: false, uploadProgress: 0 };
+    case 'SET_TOKEN_BALANCE':
+      return { ...state, tokenBalance: action.balance };
+    case 'SET_CHECKING_TOKENS':
+      return { ...state, checkingTokens: action.checking };
     default:
       throw new Error('Unhandled action type');
   }
@@ -71,11 +84,49 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     uploading: false,
     uploadProgress: 0,
     error: null,
+    tokenBalance: 0,
+    checkingTokens: false,
   };
 
   const [state, dispatch] = useReducer(uploaderReducer, initialState);
-  const { files, uploading, uploadProgress, error } = state;
+  const { files, uploading, uploadProgress, error, tokenBalance, checkingTokens } = state;
   const workerRef = useRef<Worker | null>(null);
+
+  // Calculate estimated tokens for a file
+  const estimateTokensForFile = (file: File): number => {
+    const fileSizeMB = file.size / (1024 * 1024);
+    const estimatedPages = Math.max(1, Math.ceil(fileSizeMB * ESTIMATED_PAGES_PER_MB));
+    return Math.max(MIN_TOKENS_PER_FILE, estimatedPages);
+  };
+
+  // Load user's token balance
+  const loadTokenBalance = async () => {
+    if (!userId) return;
+    
+    dispatch({ type: 'SET_CHECKING_TOKENS', checking: true });
+    try {
+      const balance = await getUserTokenBalance(userId);
+      dispatch({ type: 'SET_TOKEN_BALANCE', balance });
+    } catch (error) {
+      console.error("Error loading token balance:", error);
+    } finally {
+      dispatch({ type: 'SET_CHECKING_TOKENS', checking: false });
+    }
+  };
+
+  // Calculate total tokens required for all files
+  const getTotalTokensRequired = (): number => {
+    return files.reduce((total, file) => total + file.estimatedTokens, 0);
+  };
+
+  // Check if user has enough tokens
+  const hasEnoughTokens = (): boolean => {
+    return tokenBalance >= getTotalTokensRequired();
+  };
+
+  useEffect(() => {
+    loadTokenBalance();
+  }, [userId]);
 
   useEffect(() => {
     workerRef.current = new Worker(new URL('../../workers/upload.worker.ts', import.meta.url));
@@ -134,6 +185,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
       const newFiles = acceptedFiles.map((file) => ({
         file,
         name: file.name.replace(/\.[^.]+$/, ""),
+        estimatedTokens: estimateTokensForFile(file),
       }));
       dispatch({ type: 'ADD_FILES', files: newFiles });
     }
@@ -193,22 +245,48 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   const handleUpload = async () => {
     if (!files.length || !userId || !canUpload) return;
 
+    // Check token balance before upload
+    const totalTokensRequired = getTotalTokensRequired();
+    
+    dispatch({ type: 'SET_CHECKING_TOKENS', checking: true });
+    try {
+      const validation = await validateTokens(userId, totalTokensRequired);
+      
+      if (!validation.valid) {
+        dispatch({ 
+          type: 'SET_ERROR', 
+          error: `${validation.message} You need ${totalTokensRequired} tokens but only have ${validation.currentBalance}. Please purchase more tokens to continue.`
+        });
+        dispatch({ type: 'SET_CHECKING_TOKENS', checking: false });
+        return;
+      }
+    } catch (error) {
+      dispatch({ 
+        type: 'SET_ERROR', 
+        error: 'Failed to validate token balance. Please try again.'
+      });
+      dispatch({ type: 'SET_CHECKING_TOKENS', checking: false });
+      return;
+    }
+
     dispatch({ type: 'SET_UPLOADING', uploading: true });
     dispatch({ type: 'SET_PROGRESS', progress: 0 });
+    dispatch({ type: 'SET_CHECKING_TOKENS', checking: false });
 
     try {
       for (let i = 0; i < files.length; i++) {
-        const { file, name } = files[i];
+        const { file, name, estimatedTokens } = files[i];
         const ext = file.name.split(".").pop();
         const finalName = `${name}.${ext}`;
 
-        // Step 1: Get presigned URL from Supabase Edge Function
+        // Step 1: Get presigned URL from Supabase Edge Function (includes token validation)
         const { data: urlData, error: urlError } =
           await supabase.functions.invoke("generate-presigned-url", {
             body: {
               fileName: finalName,
               userId: userId,
               fileType: file.type,
+              estimatedTokens: estimatedTokens, // Pass estimated tokens for validation
             },
           });
 
@@ -238,6 +316,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
               document_type: "medical_record",
               mime_type: file.type,
               file_size: file.size,
+              estimated_tokens: estimatedTokens, // Store estimated tokens
             },
           ])
           .select()
@@ -256,6 +335,9 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         // Notify parent component
         onUploadComplete(documentData);
       }
+
+      // Refresh token balance after successful upload
+      await loadTokenBalance();
 
       // Clear files on successful upload
       dispatch({ type: 'UPLOAD_SUCCESS' });
@@ -294,8 +376,43 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
+  const totalTokensRequired = getTotalTokensRequired();
+  const enoughTokens = hasEnoughTokens();
+
   return (
     <div className="w-full">
+      {/* Token Balance Display */}
+      {canUpload && (
+        <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-blue-900">Token Balance</h3>
+              <p className="text-blue-700">
+                {checkingTokens ? "Loading..." : `${tokenBalance} tokens available`}
+              </p>
+            </div>
+            {files.length > 0 && (
+              <div className="text-right">
+                <p className="text-sm text-blue-600">
+                  Required: {totalTokensRequired} tokens
+                </p>
+                <p className={`text-sm font-medium ${enoughTokens ? 'text-green-600' : 'text-red-600'}`}>
+                  {enoughTokens ? '✓ Sufficient tokens' : '⚠ Insufficient tokens'}
+                </p>
+              </div>
+            )}
+          </div>
+          {!enoughTokens && files.length > 0 && (
+            <div className="mt-2 p-2 bg-yellow-100 border border-yellow-300 rounded">
+              <p className="text-yellow-800 text-sm">
+                You need {totalTokensRequired - tokenBalance} more tokens. 
+                <a href="/pricing" className="underline ml-1">Purchase tokens</a>
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {files.length === 0 ? (
         <div
           {...getRootProps()}
@@ -320,7 +437,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
           </p>
 
           <p className="text-xs text-gray-500 mb-4 text-center px-2">
-            Supported formats: PDF, JPEG, PNG, TIFF (max 30MB)
+            Supported formats: PDF, JPEG, PNG, TIFF (max 30MB)<br/>
+            Each file requires tokens based on estimated page count
           </p>
 
           {canUpload ? (
@@ -363,7 +481,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                             {f.file.name}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {formatFileSize(f.file.size)}
+                            {formatFileSize(f.file.size)} • ~{f.estimatedTokens} tokens
                           </p>
                         </div>
                       </div>
@@ -402,7 +520,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                     {getFileIcon(f.file.name)}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-500 truncate">
-                        {f.file.name} ({formatFileSize(f.file.size)})
+                        {f.file.name} ({formatFileSize(f.file.size)}) • ~{f.estimatedTokens} tokens
                       </p>
                     </div>
                     <input
@@ -466,12 +584,14 @@ const FileUploader: React.FC<FileUploaderProps> = ({
               variant="primary"
               size="sm"
               onClick={handleUpload}
-              isLoading={uploading}
-              disabled={uploading}
+              isLoading={uploading || checkingTokens}
+              disabled={uploading || checkingTokens || !enoughTokens}
               leftIcon={<Upload className="h-4 w-4" />}
               className="w-full sm:w-auto order-1 sm:order-2"
             >
-              Upload {files.length > 1 ? `${files.length} Files` : "File"}
+              {checkingTokens ? "Checking Tokens..." : 
+               !enoughTokens ? "Insufficient Tokens" :
+               `Upload ${files.length > 1 ? `${files.length} Files` : "File"}`}
             </Button>
           </div>
 
