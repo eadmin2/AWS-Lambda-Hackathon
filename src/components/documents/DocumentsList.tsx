@@ -392,7 +392,7 @@ const DocumentsList: React.FC = () => {
 
                   <div className="mt-4">
                     <Link
-                      to={`/documents/${document.id}`}
+                      to={`/documents/${document.id}/report`}
                       className="text-primary-600 hover:text-primary-700 text-sm font-medium inline-flex items-center"
                     >
                       View detailed report →

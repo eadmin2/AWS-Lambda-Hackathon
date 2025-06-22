@@ -445,7 +445,8 @@ async function processDocument(userId, documentId) {
     }
 
     if (finalConditions.length > 0) {
-        const dbPayload = finalConditions.map(c => ({
+        // Insert into user_conditions table (existing functionality)
+        const userConditionsPayload = finalConditions.map(c => ({
             user_id: userId,
             name: c.name,
             summary: c.excerpt, // Using excerpt as summary
@@ -457,12 +458,38 @@ async function processDocument(userId, documentId) {
 
         const { error: upsertError } = await supabase
             .from("user_conditions")
-            .upsert(dbPayload, { onConflict: 'user_id, name' });
+            .upsert(userConditionsPayload, { onConflict: 'user_id, name' });
 
         if (upsertError) {
-            console.error("Error upserting conditions into DB:", upsertError);
+            console.error("Error upserting conditions into user_conditions:", upsertError);
             return createErrorResponse(500, "Failed to store analysis results.");
         }
+
+        // ALSO insert into disability_estimates table (for detailed report page)
+        const disabilityEstimatesPayload = finalConditions.map(c => ({
+            document_id: documentId,
+            user_id: userId,
+            condition: c.name,
+            disability_rating: c.rating || 10,
+            diagnostic_code: c.diagnosticCode || 'TBD', // You may want to add this field to the condition object
+            combined_rating: Math.max(...finalConditions.map(cond => cond.rating || 10)), // Calculate combined rating
+            cfr_criteria: c.cfrCriteria,
+            excerpt: c.excerpt,
+            matched_keywords: c.keywords,
+            severity: c.severity || 'mild',
+            created_at: new Date().toISOString()
+        }));
+
+        const { error: disabilityEstimatesError } = await supabase
+            .from("disability_estimates")
+            .upsert(disabilityEstimatesPayload, { onConflict: 'user_id, document_id, condition' });
+
+        if (disabilityEstimatesError) {
+            console.error("Error upserting conditions into disability_estimates:", disabilityEstimatesError);
+            return createErrorResponse(500, "Failed to store detailed analysis results.");
+        }
+
+        console.log(`✅ Inserted ${finalConditions.length} conditions into both user_conditions and disability_estimates tables`);
     }
 
     // Update document status to 'completed'

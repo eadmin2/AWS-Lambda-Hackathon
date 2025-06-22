@@ -23,6 +23,8 @@ import CheckoutPage from "./pages/CheckoutPage";
 import GoodbyePage from "./pages/GoodbyePage";
 import CalculatorPage from "./pages/CalculatorPage";
 import DocumentsPage from "./pages/DocumentsPage";
+import ConditionDetailsPage from "./pages/ConditionDetailsPage";
+import ConditionsOverviewPage from "./pages/ConditionsOverviewPage";
 import { Helmet } from "react-helmet-async";
 
 interface ProtectedRouteProps {
@@ -155,6 +157,18 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <DocumentsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/documents/:documentId/report"
+                element={<ConditionDetailsPage />}
+              />
+              <Route
+                path="/dashboard/conditions"
+                element={
+                  <ProtectedRoute>
+                    <ConditionsOverviewPage />
                   </ProtectedRoute>
                 }
               />
