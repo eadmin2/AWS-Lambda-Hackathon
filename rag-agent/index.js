@@ -39,6 +39,8 @@ const CHUNK_BATCH_SIZE = 3; // Process 3 chunks per Bedrock call for efficiency
 // Helper function to parse Bedrock Agent responses and extract conditions
 const parseAgentResponse = (response) => {
   try {
+    console.log("Raw agent response:", response.substring(0, 1000)); // Log first 1000 chars for debugging
+    
     let jsonStr = null;
 
     // 1. Try to find a JSON markdown block first
@@ -58,48 +60,59 @@ const parseAgentResponse = (response) => {
     if (jsonStr) {
       // Clean the string to remove potential non-standard characters (like trailing commas)
       const cleanedJsonStr = jsonStr.replace(/,\s*([\]}])/g, '$1');
+      console.log("Attempting to parse JSON:", cleanedJsonStr.substring(0, 500));
       
       const parsed = JSON.parse(cleanedJsonStr);
       if (parsed.conditions && Array.isArray(parsed.conditions)) {
+        console.log(`✅ Successfully parsed ${parsed.conditions.length} conditions from JSON`);
         return parsed;
+      } else {
+        console.warn("❌ Parsed JSON but no conditions array found:", Object.keys(parsed));
       }
     }
     
     // If no JSON found, try to extract conditions from text
     // This is a fallback for when the agent doesn't return structured JSON
-    console.warn("Could not find valid JSON in agent response. Falling back to text parsing.", { response: response.substring(0,500) });
-    const conditions = [];
-    const lines = response.split('\n');
-    let currentCondition = null;
+    console.warn("⚠️ Could not find valid JSON in agent response. Falling back to text parsing.");
+    console.log("Response to parse:", response);
     
-    for (const line of lines) {
-      if (line.includes('condition:') || line.includes('name:')) {
-        if (currentCondition) {
-          conditions.push(currentCondition);
+    const conditions = [];
+    
+    // Look for common medical condition patterns in the text
+    const medicalPatterns = [
+      /(?:diagnosed with|diagnosis of|suffering from|treated for|condition:)\s*([^.\n]+)/gi,
+      /(?:pain in|injury to|surgery on|therapy for)\s*([^.\n]+)/gi,
+      /(?:chronic|acute|severe|mild)\s+([a-zA-Z\s]+?)(?:\s|,|\.)/gi
+    ];
+    
+    for (const pattern of medicalPatterns) {
+      let match;
+      while ((match = pattern.exec(response)) !== null) {
+        const conditionName = match[1].trim();
+        if (conditionName.length > 3 && conditionName.length < 100) { // Basic validation
+          conditions.push({
+            name: conditionName,
+            rating: 10,
+            severity: 'mild',
+            excerpt: match[0],
+            cfrCriteria: 'TBD',
+            keywords: conditionName.toLowerCase().split(/\s+/).filter(w => w.length > 2)
+          });
         }
-        currentCondition = { 
-          name: line.split(':')[1]?.trim() || 'Unknown Condition',
-          keywords: [],
-          severity: 'mild'
-        };
-      } else if (line.includes('rating:') && currentCondition) {
-        const ratingMatch = line.match(/(\d+)%?/);
-        currentCondition.rating = ratingMatch ? parseInt(ratingMatch[1]) : 10;
-      } else if (line.includes('severity:') && currentCondition) {
-        currentCondition.severity = line.split(':')[1]?.trim() || 'mild';
-      } else if (line.includes('excerpt:') && currentCondition) {
-        currentCondition.excerpt = line.split(':')[1]?.trim() || '';
       }
     }
     
-    if (currentCondition) {
-      conditions.push(currentCondition);
-    }
+    // Remove duplicates
+    const uniqueConditions = conditions.filter((condition, index, self) => 
+      index === self.findIndex(c => c.name.toLowerCase() === condition.name.toLowerCase())
+    );
     
-    return { conditions };
+    console.log(`📝 Text parsing fallback found ${uniqueConditions.length} potential conditions`);
+    return { conditions: uniqueConditions };
+    
   } catch (error) {
-    console.error("Error parsing agent response:", error);
-    console.error("Original response that failed parsing:", response); // Log the problematic response
+    console.error("💥 Error parsing agent response:", error);
+    console.error("🔍 Original response that failed parsing:", response); // Log the problematic response
     return { conditions: [] }; // Return empty array instead of null
   }
 };
@@ -456,12 +469,14 @@ async function processDocument(userId, documentId) {
             cfr_criteria: c.cfrCriteria,
         }));
 
+        console.log("🗃️ Preparing to insert into user_conditions:", JSON.stringify(userConditionsPayload, null, 2));
+
         const { error: upsertError } = await supabase
             .from("user_conditions")
             .upsert(userConditionsPayload, { onConflict: 'user_id, name' });
 
         if (upsertError) {
-            console.error("Error upserting conditions into user_conditions:", upsertError);
+            console.error("❌ Error upserting conditions into user_conditions:", upsertError);
             return createErrorResponse(500, "Failed to store analysis results.");
         }
 
@@ -480,16 +495,18 @@ async function processDocument(userId, documentId) {
             created_at: new Date().toISOString()
         }));
 
+        console.log("🗃️ Preparing to insert into disability_estimates:", JSON.stringify(disabilityEstimatesPayload, null, 2));
+
         const { error: disabilityEstimatesError } = await supabase
             .from("disability_estimates")
             .upsert(disabilityEstimatesPayload, { onConflict: 'user_id, document_id, condition' });
 
         if (disabilityEstimatesError) {
-            console.error("Error upserting conditions into disability_estimates:", disabilityEstimatesError);
+            console.error("❌ Error upserting conditions into disability_estimates:", disabilityEstimatesError);
             return createErrorResponse(500, "Failed to store detailed analysis results.");
         }
 
-        console.log(`✅ Inserted ${finalConditions.length} conditions into both user_conditions and disability_estimates tables`);
+        console.log(`✅ Successfully inserted ${finalConditions.length} conditions into both user_conditions and disability_estimates tables`);
     }
 
     // Update document status to 'completed'
