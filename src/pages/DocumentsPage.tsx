@@ -1,16 +1,29 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PageLayout from "../components/layout/PageLayout";
 import FileUploader from "../components/documents/FileUploader";
 import { useAuth } from "../contexts/AuthContext";
-import { getUserPermissions } from "../lib/supabase";
+import { getUserPermissions, UserPermissions } from "../lib/supabase";
 import { UploadRequired } from "../components/ui/AccessControl";
 
 const DocumentsPage: React.FC = () => {
   const { profile } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [permissions, setPermissions] = useState<UserPermissions | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const permissions = getUserPermissions(profile);
+  useEffect(() => {
+    const fetchPermissions = async () => {
+      setLoading(true);
+      if (profile) {
+        const perms = await getUserPermissions(profile);
+        setPermissions(perms);
+      }
+      setLoading(false);
+    };
+
+    fetchPermissions();
+  }, [profile]);
 
   const handleUploadSuccess = (document: any) => {
     setSuccessMessage(
@@ -23,6 +36,16 @@ const DocumentsPage: React.FC = () => {
     setError(errorMessage);
     setSuccessMessage(null);
   };
+
+  if (loading) {
+    return (
+      <PageLayout>
+        <div className="text-center py-10">
+          <p>Loading page...</p>
+        </div>
+      </PageLayout>
+    );
+  }
 
   if (!profile) {
     return (
@@ -52,7 +75,7 @@ const DocumentsPage: React.FC = () => {
           <UploadRequired>
             <FileUploader
               userId={profile.id}
-              canUpload={permissions.canUpload}
+              canUpload={permissions?.canUpload || false}
               onUploadComplete={handleUploadSuccess}
               onUploadError={handleUploadError}
             />

@@ -229,7 +229,7 @@ export function getUserStatus(profile: Profile | null): UserStatus {
   return "registered";
 }
 
-export function getUserPermissions(profile: Profile | null): UserPermissions {
+export async function getUserPermissions(profile: Profile | null): Promise<UserPermissions> {
   const defaultPermissions: UserPermissions = {
     canUpload: false,
     canAccessPaidFeatures: false,
@@ -239,47 +239,66 @@ export function getUserPermissions(profile: Profile | null): UserPermissions {
     uploadCreditsRemaining: 0,
   };
 
-  if (!profile) return defaultPermissions;
+  if (!profile) {
+    return defaultPermissions;
+  }
 
-  const isAdmin = profile.role === 'admin';
+  const isAdmin = profile.role === "admin";
   const payments = Array.isArray(profile.payments) ? profile.payments : [];
-  
-  const activeSubscription = payments.some(p => p.subscription_status === 'active');
-  const hasCredits = payments.some(p => p.upload_credits > 0);
-  const uploadCreditsRemaining = payments.reduce((total, p) => total + (p.upload_credits || 0), 0);
-  const isTrialing = payments.some(p => 
-    p.subscription_status === 'trialing' && 
-    p.subscription_end_date && 
-    new Date(p.subscription_end_date) > new Date()
+
+  // Check for subscription and payment-based credits
+  const hasActiveSubscription = payments.some(
+    (p) => p.subscription_status === "active",
+  );
+  const hasPaymentCredits = payments.some((p) => (p.upload_credits || 0) > 0);
+  const uploadCreditsFromPayments = payments.reduce(
+    (total, p) => total + (p.upload_credits || 0),
+    0,
   );
 
-  const hasActiveSubscription = activeSubscription || isTrialing;
-  const canUpload = isAdmin || hasActiveSubscription || hasCredits;
-  const canAccessPaidFeatures = isAdmin || hasActiveSubscription || hasCredits;
+  // Check for token-based credits
+  const tokenBalance = await getUserTokenBalance(profile.id);
+  const hasTokens = tokenBalance > 0;
+
+  // Combine permissions
+  const canUpload = isAdmin || hasActiveSubscription || hasPaymentCredits || hasTokens;
+  const canAccessPaidFeatures = isAdmin || hasActiveSubscription || hasPaymentCredits || hasTokens;
+  const hasUploadCredits = hasPaymentCredits || hasTokens; // Consider both for this flag
+  const uploadCreditsRemaining = uploadCreditsFromPayments + tokenBalance;
 
   return {
     canUpload,
     canAccessPaidFeatures,
     canAccessAdminFeatures: isAdmin,
     hasActiveSubscription,
-    hasUploadCredits: hasCredits,
+    hasUploadCredits,
     uploadCreditsRemaining,
   };
 }
 
 // Token-related helper functions
 export async function getUserTokenBalance(userId: string): Promise<number> {
-  const { data, error } = await supabase
-    .rpc("get_user_token_balance", {
-      p_user_id: userId,
-    });
+  try {
+    const { data, error } = await supabase
+      .from("user_tokens")
+      .select("tokens_available")
+      .eq("user_id", userId)
+      .single();
 
-  if (error) {
-    console.error("Error getting token balance:", error);
-    return 0;
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No token record found, so balance is 0
+        return 0;
+      }
+      console.error("Error fetching user token balance:", error);
+      throw error;
+    }
+
+    return data?.tokens_available || 0;
+  } catch (error) {
+    console.error("Error in getUserTokenBalance:", error);
+    return 0; // Return 0 in case of any other error
   }
-
-  return data || 0;
 }
 
 export async function validateTokens(userId: string, tokensRequired: number): Promise<{

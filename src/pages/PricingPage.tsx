@@ -15,7 +15,7 @@ import { useAuth } from "../contexts/AuthContext";
 import {
   createUploadCheckoutSession,
 } from "../lib/stripe";
-import { getUserPermissions } from "../lib/supabase";
+import { getUserPermissions, UserPermissions } from "../lib/supabase";
 
 const PricingPage: React.FC = () => {
   const { user, profile } = useAuth();
@@ -24,13 +24,26 @@ const PricingPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<
     "starter" | "file-review" | "full-review" | "tokens-100" | "tokens-250" | "tokens-500" | null
   >(null);
+  const [permissions, setPermissions] = useState<UserPermissions | null>(null);
+  const [loadingPermissions, setLoadingPermissions] = useState(true);
 
   const checkoutSuccess = searchParams.get("checkout") === "success";
   const checkoutCanceled = searchParams.get("checkout") === "canceled";
   const subscriptionSuccess = searchParams.get("subscription") === "success";
   const subscriptionCanceled = searchParams.get("subscription") === "canceled";
 
-  const permissions = getUserPermissions(profile);
+  useEffect(() => {
+    const fetchPermissions = async () => {
+      setLoadingPermissions(true);
+      if (profile) {
+        const perms = await getUserPermissions(profile);
+        setPermissions(perms);
+      }
+      setLoadingPermissions(false);
+    };
+
+    fetchPermissions();
+  }, [profile]);
 
   useEffect(() => {
     if (location.hash) {
@@ -175,7 +188,7 @@ const PricingPage: React.FC = () => {
             </div>
           )}
 
-          {user && (
+          {user && !loadingPermissions && permissions && (
             <div className="mt-8 max-w-md mx-auto">
               {permissions.hasActiveSubscription && (
                 <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">

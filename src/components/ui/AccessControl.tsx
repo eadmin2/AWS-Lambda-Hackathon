@@ -1,6 +1,11 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { getUserPermissions, getUserStatus } from "../../lib/supabase";
+import {
+  getUserPermissions,
+  getUserStatus,
+  UserPermissions,
+  UserStatus,
+} from "../../lib/supabase";
 import { Lock, CreditCard, Crown } from "lucide-react";
 import Button from "./Button";
 import { Card, CardHeader, CardTitle, CardContent } from "./Card";
@@ -23,8 +28,37 @@ const AccessControl: React.FC<AccessControlProps> = ({
   showUpgradePrompt = true,
 }) => {
   const { profile } = useAuth();
-  const permissions = getUserPermissions(profile);
-  const userStatus = getUserStatus(profile);
+  const [permissions, setPermissions] = useState<UserPermissions | null>(null);
+  const [userStatus, setUserStatus] = useState<UserStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPermissions = async () => {
+      setLoading(true);
+      const perms = await getUserPermissions(profile);
+      const status = getUserStatus(profile);
+      setPermissions(perms);
+      setUserStatus(status);
+      setLoading(false);
+    };
+
+    fetchPermissions();
+  }, [profile]);
+
+  if (loading) {
+    return (
+      <Card className="max-w-md mx-auto text-center">
+        <CardContent className="p-6">
+          <p>Loading access details...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!permissions || !userStatus) {
+    // This case should ideally not be hit if loading handles correctly
+    return null;
+  }
 
   // Check permissions
   const hasRequiredPermissions = (() => {
