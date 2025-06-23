@@ -42,26 +42,31 @@ async function deleteAccountRequest(): Promise<{
   success?: boolean;
   error?: string;
 }> {
-  const { data } = await supabase.auth.getSession();
-  const accessToken = data.session?.access_token;
-  if (!accessToken) {
-    return { error: "Not authenticated" };
-  }
-  const res = await fetch(
-    "https://algojcmqstokyghijcyc.functions.supabase.co/delete-account",
-    {
+  try {
+    const { error } = await supabase.functions.invoke("delete-account", {
       method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-    },
-  );
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    return { error: data.error || "Failed to delete account" };
+    });
+
+    if (error) {
+      // Try to parse a more specific error message from the response
+      let errorMessage = "Failed to delete account.";
+      if (error instanceof Error) {
+          try {
+              const body = JSON.parse(error.message);
+              errorMessage = body.error || errorMessage;
+          } catch (e) {
+              // Not a JSON error, use the default
+          }
+      }
+      return { error: errorMessage };
+    }
+
+    return { success: true };
+  } catch (err) {
+    const errorMessage =
+      err instanceof Error ? err.message : "An unknown error occurred.";
+    return { error: `Failed to invoke function: ${errorMessage}` };
   }
-  return { success: true };
 }
 
 const ProfilePage: React.FC = () => {
