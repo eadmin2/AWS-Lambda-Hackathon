@@ -72,6 +72,21 @@ const DocumentsPage: React.FC = () => {
             />
           </UploadRequired>
 
+          <div className="mt-6 p-4 border border-gray-200 rounded-lg bg-gray-50">
+            <p className="text-sm text-gray-600">
+              Use this{" "}
+              <a
+                href="https://drive.google.com/file/d/1-x4C5yJxaHD1jGSvjtjGp8vP6uBOtXPQ/view?usp=sharing"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-blue-600 hover:text-blue-500"
+              >
+                Fake medical PDF
+              </a>{" "}
+              to use as an example.
+            </p>
+          </div>
+
           {error && (
             <div
               className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6"
