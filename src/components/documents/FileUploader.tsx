@@ -101,6 +101,10 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   // Use realtime token balance
   const { tokensAvailable, tokensUsed } = useTokenBalance(userId);
 
+  // Use environment variable or hardcode your Supabase project ref
+  const SUPABASE_PROJECT_URL = import.meta.env.VITE_SUPABASE_URL || 'https://algojcmqstokyghijcyc.supabase.co';
+  const apiBase = `${SUPABASE_PROJECT_URL}/functions/v1/upload-sessions`;
+
   // Calculate estimated tokens for a file
   const estimateTokensForFile = (file: File): number => {
     const fileSizeMB = file.size / (1024 * 1024);
@@ -119,7 +123,6 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   };
 
   // --- Session API helpers ---
-  const apiBase = '/functions/v1/upload-sessions';
   const getAuthHeaders = () => ({
     'Authorization': `Bearer ${supabaseSession?.access_token}`,
     'Content-Type': 'application/json',
