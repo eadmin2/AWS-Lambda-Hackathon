@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../compone
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
 import PageLayout from '../components/layout/PageLayout';
+import Select from 'react-select';
 
 const FACILITY_TYPES = [
   { label: 'All', value: '' },
@@ -118,12 +119,6 @@ const FacilitiesPage = () => {
     setPage(1);
   };
 
-  const handleServicesChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    const selected = Array.from(e.target.selectedOptions, option => option.value);
-    setSearch(prev => ({ ...prev, services: selected }));
-    setPage(1);
-  };
-
   return (
     <PageLayout>
       <div className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
@@ -166,15 +161,23 @@ const FacilitiesPage = () => {
             min={1}
             step="any"
           />
-          <select
-            multiple
+          <Select
+            isMulti
             name="services"
-            value={search.services}
-            onChange={handleServicesChange}
-            className="border border-gray-300 p-2 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full h-28"
-          >
-            {SERVICES_LIST.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-          </select>
+            options={SERVICES_LIST}
+            value={SERVICES_LIST.filter(opt => search.services.includes(opt.value))}
+            onChange={selected => {
+              setSearch(prev => ({
+                ...prev,
+                services: selected ? selected.map(opt => opt.value) : []
+              }));
+              setPage(1);
+            }}
+            className="w-full"
+            classNamePrefix="react-select"
+            placeholder="Select services..."
+            closeMenuOnSelect={false}
+          />
           <label className="flex items-center gap-2 border border-gray-300 p-2 rounded-lg w-full bg-white">
             <input
               type="checkbox"
