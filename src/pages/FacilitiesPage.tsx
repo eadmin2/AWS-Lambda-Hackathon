@@ -12,7 +12,17 @@ const FACILITY_TYPES = [
   { label: 'Vet Center', value: 'vet_center' },
 ];
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100, 250, 500, 1000];
+const VISN_OPTIONS = Array.from({ length: 23 }, (_, i) => i + 1);
+// Example services list; in a real app, fetch from API or config
+const SERVICES_LIST = [
+  { label: 'Primary Care', value: 'PrimaryCare' },
+  { label: 'Mental Health', value: 'MentalHealthCare' },
+  { label: 'Pharmacy', value: 'Pharmacy' },
+  { label: 'Emergency Care', value: 'EmergencyCare' },
+  { label: 'Dental', value: 'DentalServices' },
+  // ... add more as needed
+];
 
 // Types for facility data (simplified for now)
 type Facility = {
@@ -41,7 +51,17 @@ const FacilitiesPage = () => {
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [search, setSearch] = useState({ state: '', zip: '', type: '', radius: '' });
+  const [search, setSearch] = useState({
+    state: '',
+    zip: '',
+    type: '',
+    radius: '',
+    services: [] as string[],
+    mobile: false,
+    visn: '',
+    facilityIds: '',
+    per_page: PAGE_SIZE_OPTIONS[0].toString(),
+  });
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
@@ -62,8 +82,20 @@ const FacilitiesPage = () => {
       if (search.zip && search.radius) {
         params.append('radius', search.radius);
       }
+      if (search.services.length > 0) {
+        search.services.forEach(service => params.append('services[]', service));
+      }
+      if (search.mobile) {
+        params.append('mobile', 'true');
+      }
+      if (search.visn) {
+        params.append('visn', search.visn);
+      }
+      if (search.facilityIds) {
+        params.append('facilityIds', search.facilityIds);
+      }
       params.append('page', String(page));
-      params.append('per_page', String(PAGE_SIZE));
+      params.append('per_page', search.per_page);
       const res = await fetch(`https://5yn5essw45.execute-api.us-east-2.amazonaws.com/prod/facilities?${params.toString()}`);
       if (!res.ok) throw new Error('Failed to load facilities.');
       const data = await res.json();
@@ -76,7 +108,19 @@ const FacilitiesPage = () => {
   };
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setSearch({ ...search, [e.target.name]: e.target.value });
+    const target = e.target;
+    const { name, value } = target;
+    if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+      setSearch(prev => ({ ...prev, [name]: target.checked }));
+    } else {
+      setSearch(prev => ({ ...prev, [name]: value }));
+    }
+    setPage(1);
+  };
+
+  const handleServicesChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const selected = Array.from(e.target.selectedOptions, option => option.value);
+    setSearch(prev => ({ ...prev, services: selected }));
     setPage(1);
   };
 
@@ -84,10 +128,32 @@ const FacilitiesPage = () => {
     <PageLayout>
       <div className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">VA Facilities</h1>
-        <div className="flex flex-wrap gap-4 mb-8">
-          <input name="state" placeholder="State (e.g. CO)" value={search.state} onChange={handleInputChange} className="border border-gray-300 p-2 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-28" maxLength={2} />
-          <input name="zip" placeholder="Zip Code" value={search.zip} onChange={handleInputChange} className="border border-gray-300 p-2 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-36" maxLength={10} />
-          <select name="type" value={search.type} onChange={handleInputChange} className="border border-gray-300 p-2 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-40">
+        <form
+          className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8"
+          onSubmit={e => { e.preventDefault(); fetchFacilities(); }}
+        >
+          <input
+            name="state"
+            placeholder="State (e.g. CO)"
+            value={search.state}
+            onChange={handleInputChange}
+            className="border border-gray-300 p-2 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full"
+            maxLength={2}
+          />
+          <input
+            name="zip"
+            placeholder="Zip Code"
+            value={search.zip}
+            onChange={handleInputChange}
+            className="border border-gray-300 p-2 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full"
+            maxLength={10}
+          />
+          <select
+            name="type"
+            value={search.type}
+            onChange={handleInputChange}
+            className="border border-gray-300 p-2 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full"
+          >
             {FACILITY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
           <input
@@ -95,13 +161,61 @@ const FacilitiesPage = () => {
             placeholder="Radius (mi)"
             value={search.radius}
             onChange={handleInputChange}
-            className="border border-gray-300 p-2 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-28"
+            className="border border-gray-300 p-2 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full"
             type="number"
             min={1}
             step="any"
           />
-          <Button onClick={fetchFacilities} className="bg-primary-600 hover:bg-primary-700 text-white font-semibold px-6 py-2 rounded-lg shadow">Search</Button>
-        </div>
+          <select
+            multiple
+            name="services"
+            value={search.services}
+            onChange={handleServicesChange}
+            className="border border-gray-300 p-2 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full h-28"
+          >
+            {SERVICES_LIST.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+          <label className="flex items-center gap-2 border border-gray-300 p-2 rounded-lg w-full bg-white">
+            <input
+              type="checkbox"
+              name="mobile"
+              checked={search.mobile}
+              onChange={handleInputChange}
+              className="form-checkbox h-5 w-5 text-primary-600"
+            />
+            <span>Mobile Only</span>
+          </label>
+          <select
+            name="visn"
+            value={search.visn}
+            onChange={handleInputChange}
+            className="border border-gray-300 p-2 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full"
+          >
+            <option value="">All VISNs</option>
+            {VISN_OPTIONS.map(v => <option key={v} value={v}>{`VISN ${v}`}</option>)}
+          </select>
+          <input
+            name="facilityIds"
+            placeholder="Facility IDs (comma separated)"
+            value={search.facilityIds}
+            onChange={handleInputChange}
+            className="border border-gray-300 p-2 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full"
+          />
+          <select
+            name="per_page"
+            value={search.per_page}
+            onChange={handleInputChange}
+            className="border border-gray-300 p-2 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full"
+          >
+            {PAGE_SIZE_OPTIONS.map(size => <option key={size} value={size}>{size} per page</option>)}
+          </select>
+          <Button
+            type="submit"
+            className="bg-primary-600 hover:bg-primary-700 text-white font-semibold px-6 py-2 rounded-lg shadow w-full"
+          >
+            Search
+          </Button>
+        </form>
         {loading ? <div className="text-center text-lg text-primary-600">Loading...</div> : error ? <div className="text-red-500 text-center">{error}</div> : (
           <div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
