@@ -16,6 +16,7 @@ import { validateTokens } from "../../lib/supabase";
 import { useTokenBalance } from '../../hooks/useTokenBalance';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
 
 // AWS Constants
 const AWS_S3_BUCKET = "my-receipts-app-bucket";
@@ -725,27 +726,35 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 
           {/* Progress Bar */}
           {uploading && (
-            <div className="mt-4">
-              <div className="w-full bg-gray-200 rounded-full h-2.5">
-                <div
-                  className="bg-primary-600 h-2.5 rounded-full transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
-                ></div>
-              </div>
-              <p className="text-sm text-gray-600 mt-2 text-center sm:text-left">
-                Uploading... {uploadProgress}%
-              </p>
-            </div>
+            <motion.div
+              className="w-full h-2 bg-gray-200 rounded overflow-hidden mb-2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            >
+              <motion.div
+                className="h-2 bg-blue-500"
+                initial={{ width: 0 }}
+                animate={{ width: `${uploadProgress}%` }}
+                transition={{ duration: 0.4, ease: 'easeOut' }}
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </motion.div>
           )}
         </div>
       )}
 
       {/* Error Message - Always render when there's an error */}
       {error && (
-        <div className="mt-4 bg-error-100 p-3 rounded-md flex items-start">
+        <motion.div
+          className="bg-error-100 p-3 rounded-md flex items-start mb-2"
+          initial={{ x: 0 }}
+          animate={{ x: [0, -8, 8, -8, 8, 0] }}
+          transition={{ duration: 0.5, ease: 'easeInOut' }}
+        >
           <AlertCircle className="h-5 w-5 text-error-500 mr-2 flex-shrink-0 mt-0.5" />
           <p className="text-error-700 text-sm">{error}</p>
-        </div>
+        </motion.div>
       )}
     </div>
   );

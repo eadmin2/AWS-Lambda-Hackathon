@@ -1,12 +1,13 @@
 import React from "react";
 import { cn } from "../../lib/utils";
+import { motion } from 'framer-motion';
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: "default" | "outline" | "elevated";
 }
 
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
-  ({ className, variant = "default", ...props }, ref) => {
+  ({ className, variant = "default", children, ...props }, ref) => {
     const variantClasses = {
       default: "bg-white border border-gray-200",
       outline: "bg-transparent border border-gray-300",
@@ -14,11 +15,15 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     };
 
     return (
-      <div
+      <motion.div
         ref={ref}
         className={cn("rounded-lg p-6", variantClasses[variant], className)}
-        {...props}
-      />
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
+      >
+        <div {...props}>{children}</div>
+      </motion.div>
     );
   },
 );

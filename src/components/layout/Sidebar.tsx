@@ -1,6 +1,7 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { FileText, ClipboardList, Calculator, MapPin } from "lucide-react";
+import { motion } from 'framer-motion';
 
 const navItems = [
   { label: "Documents", icon: <FileText />, to: "/documents" },
@@ -13,7 +14,12 @@ const navItems = [
 const Sidebar: React.FC = () => {
   const location = useLocation();
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col min-h-screen">
+    <motion.aside
+      initial={{ opacity: 0, x: -24 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+      className="w-64 bg-white border-r border-gray-200 hidden md:flex flex-col min-h-screen"
+    >
       <nav className="flex-1 py-6 px-4 space-y-2">
         {navItems.map((item) => (
           <Link
@@ -27,7 +33,7 @@ const Sidebar: React.FC = () => {
           </Link>
         ))}
       </nav>
-    </aside>
+    </motion.aside>
   );
 };
 

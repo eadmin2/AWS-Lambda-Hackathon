@@ -24,6 +24,8 @@ import {
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import DocumentViewer from "./DocumentViewer";
+import { AnimatePresence, motion } from 'framer-motion';
+import { useAuth } from '../../contexts/AuthContext';
 
 export interface DocumentRow {
   id: string;
@@ -64,6 +66,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
     null,
   );
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const { session } = useAuth();
 
   const handleStartEdit = (row: DocumentRow) => {
     console.log("Starting edit for:", row.id, row.file_name);
@@ -370,7 +373,11 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
         isOpen={!!selectedDocument}
         onClose={() => setSelectedDocument(null)}
       >
-        {selectedDocument && <DocumentViewer document={selectedDocument} />}
+        <DocumentViewer
+          documentKey={selectedDocument?.file_url || ''}
+          userToken={session?.access_token || ''}
+          userId={selectedDocument?.user_id || ''}
+        />
       </Modal>
 
       {/* Search and Controls */}
@@ -456,19 +463,16 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
               </tr>
             ))}
           </thead>
-          <tbody className="divide-y divide-gray-100">
-            {table.getRowModel().rows.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={columns.length}
-                  className="text-center py-8 text-gray-400"
+          <tbody className="bg-white divide-y divide-gray-200">
+            <AnimatePresence>
+              {table.getRowModel().rows.map((row, idx) => (
+                <motion.tr
+                  key={row.id}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 16 }}
+                  transition={{ duration: 0.3, ease: 'easeOut', delay: idx * 0.07 }}
                 >
-                  No documents found.
-                </td>
-              </tr>
-            ) : (
-              table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="hover:bg-gray-50">
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="px-4 py-3 text-sm">
                       {flexRender(
@@ -477,9 +481,9 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
                       )}
                     </td>
                   ))}
-                </tr>
-              ))
-            )}
+                </motion.tr>
+              ))}
+            </AnimatePresence>
           </tbody>
         </table>
       </div>

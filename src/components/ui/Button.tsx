@@ -1,5 +1,6 @@
 import React from "react";
 import { cn } from "../../lib/utils";
+import { motion } from 'framer-motion';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "accent" | "danger" | "ghost";
@@ -39,7 +40,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     };
 
     return (
-      <button
+      <motion.button
         ref={ref}
         className={cn(
           "btn",
@@ -49,7 +50,24 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           className,
         )}
         disabled={isLoading || disabled}
-        {...props}
+        whileHover={!disabled && !isLoading ? { scale: 1.04, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' } : {}}
+        whileTap={!disabled && !isLoading ? { scale: 0.97 } : {}}
+        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+        type={props.type}
+        tabIndex={props.tabIndex}
+        autoFocus={props.autoFocus}
+        name={props.name}
+        value={props.value}
+        form={props.form}
+        formAction={props.formAction}
+        formEncType={props.formEncType}
+        formMethod={props.formMethod}
+        formNoValidate={props.formNoValidate}
+        formTarget={props.formTarget}
+        id={props.id}
+        aria-label={props["aria-label"]}
+        aria-labelledby={props["aria-labelledby"]}
+        aria-describedby={props["aria-describedby"]}
       >
         {isLoading ? (
           <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -58,7 +76,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ) : null}
         {children}
         {rightIcon && !isLoading && <span className="ml-2">{rightIcon}</span>}
-      </button>
+      </motion.button>
     );
   },
 );

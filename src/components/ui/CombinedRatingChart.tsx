@@ -1,5 +1,6 @@
 import React from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { motion } from 'framer-motion';
 
 interface ChartData {
   name: string;
@@ -13,7 +14,12 @@ interface CombinedRatingChartProps {
 
 const CombinedRatingChart: React.FC<CombinedRatingChartProps> = ({ data }) => {
   return (
-    <div className="bg-white rounded-lg shadow p-4 w-full h-72">
+    <motion.div
+      className="bg-white rounded-lg shadow p-4 w-full h-72"
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
+    >
       <h2 className="text-lg font-semibold text-gray-900 mb-4">Condition % Contribution</h2>
       <ResponsiveContainer width="100%" height="90%">
         <PieChart>
@@ -25,7 +31,7 @@ const CombinedRatingChart: React.FC<CombinedRatingChartProps> = ({ data }) => {
           <Tooltip formatter={(value: number, name: string) => [`${value}%`, name]} />
         </PieChart>
       </ResponsiveContainer>
-    </div>
+    </motion.div>
   );
 };
 

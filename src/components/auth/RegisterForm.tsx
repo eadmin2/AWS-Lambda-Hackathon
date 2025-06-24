@@ -8,6 +8,7 @@ import {
   createSubscriptionCheckoutSession,
   createUploadCheckoutSession,
 } from "../../lib/stripe";
+import { motion } from 'framer-motion';
 
 interface RegisterFormProps {
   onSuccess?: () => void;
@@ -131,15 +132,26 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
     <>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {errors.root && (
-          <div className="bg-error-100 p-3 rounded-md flex items-start">
+          <motion.div
+            className="bg-error-100 p-3 rounded-md flex items-start"
+            initial={{ x: 0 }}
+            animate={{ x: [0, -8, 8, -8, 8, 0] }}
+            transition={{ duration: 0.5, ease: 'easeInOut' }}
+          >
             <AlertCircle className="h-5 w-5 text-error-500 mr-2 flex-shrink-0 mt-0.5" />
             <p className="text-error-700 text-sm">{errors.root.message}</p>
-          </div>
+          </motion.div>
         )}
         {successMessage && (
-          <div className="bg-success-100 p-3 rounded-md flex items-start">
+          <motion.div
+            className="bg-success-100 p-3 rounded-md flex items-start"
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+          >
+            <svg className="h-5 w-5 text-success-500 mr-2 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
             <p className="text-success-700 text-sm">{successMessage}</p>
-          </div>
+          </motion.div>
         )}
         <div className="space-y-1">
           <label

@@ -8,8 +8,6 @@ import ConditionItem from "../components/ui/ConditionItem";
 import CombinedRatingChart from "../components/ui/CombinedRatingChart";
 import { useAuth } from "../contexts/AuthContext";
 import { getUserConditions, getUserDocuments, UserCondition } from "../lib/supabase";
-import { supabase } from '../lib/supabase';
-import toast from 'react-hot-toast';
 
 // Helper function to calculate VA combined rating
 function calculateCombinedRating(ratings: number[]): number {
@@ -49,7 +47,6 @@ const DashboardPage: React.FC = () => {
   const { user, isLoading: isAuthLoading } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [highlightedConditionId, setHighlightedConditionId] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -141,7 +138,7 @@ const DashboardPage: React.FC = () => {
             <h2 className="text-xl font-semibold mb-4">Condition List</h2>
             <div className="max-h-[400px] overflow-y-auto pr-2">
               {data.conditions.map((condition) => (
-                <div key={condition.id} className={highlightedConditionId === condition.id ? 'ring-2 ring-blue-400 rounded transition-all duration-300' : ''}>
+                <div key={condition.id}>
                   <ConditionItem
                     condition={condition}
                   />

@@ -1,9 +1,9 @@
 import React from "react";
 import {
-  BrowserRouter as Router,
   Routes,
   Route,
   Navigate,
+  useLocation,
 } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import HomePage from "./pages/HomePage";
@@ -29,6 +29,7 @@ import VAFormsPage from "./pages/VAFormsPage";
 import FacilitiesPage from "./pages/FacilitiesPage";
 import { Helmet } from "react-helmet-async";
 import { Toaster } from 'react-hot-toast';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -56,15 +57,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   return <>{children}</>;
 };
 
-// Add future flags configuration
-const router = {
-  future: {
-    v7_startTransition: true,
-    v7_relativeSplatPath: true
-  }
-};
-
 function App() {
+  const location = useLocation();
   return (
     <>
       <Toaster position="top-right" />
@@ -105,91 +99,99 @@ function App() {
         <meta name="twitter:image" content="/Logo.svg" />
       </Helmet>
       <AuthProvider>
-        <Router future={router.future}>
-          {/* Skip to content link */}
-          <a href="#main-content" className="skip-to-content">
-            Skip to main content
-          </a>
-          
-          <main id="main-content" role="main">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/calculator" element={<CalculatorPage />} />
-              <Route path="/forms" element={<VAFormsPage />} />
-              <Route path="/pricing" element={<PricingPage />} />
-              <Route path="/auth" element={<AuthPage />} />
-              <Route path="/faq" element={<FAQPage />} />
-              <Route path="/contact" element={<ContactPage />} />
-              <Route path="/help" element={<HelpPage />} />
-              <Route path="/privacy" element={<PrivacyPage />} />
-              <Route path="/terms" element={<TermsPage />} />
-              <Route path="/disclaimer" element={<DisclaimerPage />} />
-              <Route path="/goodbye" element={<GoodbyePage />} />
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <DashboardPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute>
-                    <ProfilePage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute adminOnly>
-                    <AdminDashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/checkout"
-                element={
-                  <ProtectedRoute>
-                    <CheckoutPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/documents"
-                element={
-                  <ProtectedRoute>
-                    <DocumentsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/documents/:documentId/report"
-                element={<ConditionDetailsPage />}
-              />
-              <Route
-                path="/dashboard/conditions"
-                element={
-                  <ProtectedRoute>
-                    <ConditionsOverviewPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/dashboard/forms"
-                element={
-                  <ProtectedRoute>
-                    <VAFormsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="/facilities" element={<FacilitiesPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </main>
-        </Router>
+        {/* Skip to content link */}
+        <a href="#main-content" className="skip-to-content">
+          Skip to main content
+        </a>
+        <main id="main-content" role="main">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={location.pathname}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -16 }}
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
+              style={{ minHeight: '100vh' }}
+            >
+              <Routes location={location}>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/calculator" element={<CalculatorPage />} />
+                <Route path="/forms" element={<VAFormsPage />} />
+                <Route path="/pricing" element={<PricingPage />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/faq" element={<FAQPage />} />
+                <Route path="/contact" element={<ContactPage />} />
+                <Route path="/help" element={<HelpPage />} />
+                <Route path="/privacy" element={<PrivacyPage />} />
+                <Route path="/terms" element={<TermsPage />} />
+                <Route path="/disclaimer" element={<DisclaimerPage />} />
+                <Route path="/goodbye" element={<GoodbyePage />} />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute>
+                      <ProfilePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin"
+                  element={
+                    <ProtectedRoute adminOnly>
+                      <AdminDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/checkout"
+                  element={
+                    <ProtectedRoute>
+                      <CheckoutPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/documents"
+                  element={
+                    <ProtectedRoute>
+                      <DocumentsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/documents/:documentId/report"
+                  element={<ConditionDetailsPage />}
+                />
+                <Route
+                  path="/dashboard/conditions"
+                  element={
+                    <ProtectedRoute>
+                      <ConditionsOverviewPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/dashboard/forms"
+                  element={
+                    <ProtectedRoute>
+                      <VAFormsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="/facilities" element={<FacilitiesPage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </motion.div>
+          </AnimatePresence>
+        </main>
       </AuthProvider>
     </>
   );

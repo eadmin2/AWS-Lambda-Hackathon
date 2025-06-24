@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Menu } from "lucide-react";
 import Button from "../ui/Button";
 import { useAuth } from "../../contexts/AuthContext";
+import { motion } from 'framer-motion';
 
 const Navbar: React.FC = () => {
   const { user, profile, signOut, isLoading } = useAuth();
@@ -56,7 +57,12 @@ const Navbar: React.FC = () => {
   };
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
+    <motion.nav
+      initial={{ opacity: 0, y: -24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+      className="bg-white shadow-sm border-b border-gray-200"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           <div className="flex items-center">
@@ -292,7 +298,7 @@ const Navbar: React.FC = () => {
           )}
         </div>
       )}
-    </nav>
+    </motion.nav>
   );
 };
 

@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, FileText, Download, AlertCircle, Filter, ChevronDown, ChevronUp } from 'lucide-react';
-import { ArrowUp, ArrowDown } from 'lucide-react';
 import { searchVAForms } from '../../services/vaFormsApi';
 import type { VAForm, VAFormFilterState, VAFormSuggestion } from '../../../types';
 import Select from 'react-select';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface Props {
   onFormSelect: (form: VAForm) => void;
@@ -26,8 +26,8 @@ function debounce<T extends (...args: any[]) => any>(
 export function VAFormSearch({ onFormSelect }: Props) {
   const [searchQuery, setSearchQuery] = useState('');
   const [forms, setForms] = useState<VAForm[]>([]);
-  const [sortField, setSortField] = useState<'formName' | 'lastRevisionOn'>('formName');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [sortField] = useState<'formName' | 'lastRevisionOn'>('formName');
+  const [sortDirection] = useState<'asc' | 'desc'>('asc');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [suggestions, setSuggestions] = useState<VAFormSuggestion[]>([]);
@@ -53,15 +53,6 @@ export function VAFormSearch({ onFormSelect }: Props) {
       return sortDirection === 'asc' ? aDate - bDate : bDate - aDate;
     }
   });
-
-  const toggleSort = (field: 'formName' | 'lastRevisionOn') => {
-    if (sortField === field) {
-      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortDirection('asc');
-    }
-  };
 
   const generateSuggestions = useCallback((query: string) => {
     if (!query || query.length < 2) {
@@ -311,118 +302,70 @@ export function VAFormSearch({ onFormSelect }: Props) {
 
       {/* Results section */}
       {isLoading ? (
-        <div className="text-center py-8">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-[#003875] border-t-transparent" />
+        <div className="space-y-2">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="animate-pulse bg-gray-200 rounded h-16 w-full" />
+          ))}
         </div>
       ) : error ? (
-        <div className="rounded-lg bg-red-50 p-4">
-          <div className="flex items-center">
-            <AlertCircle className="h-6 w-6 sm:h-5 sm:w-5 text-red-400 flex-shrink-0" />
-            <div className="ml-3">
-              <h3 className="text-base sm:text-sm font-medium text-red-800">{error}</h3>
-            </div>
-          </div>
-        </div>
+        <div className="text-red-500 flex items-center gap-2"><AlertCircle className="w-5 h-5" />{error}</div>
       ) : forms.length > 0 ? (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          {/* Mobile view */}
-          <div className="sm:hidden divide-y divide-gray-200">
-            {sortedForms.map((form) => (
-              <div key={form.id} className="p-4 space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between items-start">
-                    <h3 className="text-lg font-semibold text-gray-900">{form.attributes.form_name}</h3>
-                    <span className="text-sm text-gray-500 whitespace-nowrap ml-4">
-                      {new Date(form.attributes.last_revision_on).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <p className="text-base text-gray-700">{form.attributes.title}</p>
-                </div>
-                <div className="flex flex-col space-y-3">
-                  <button
-                    onClick={() => onFormSelect(form)}
-                    className="w-full inline-flex items-center justify-center px-4 py-2.5 border border-[#003875] text-base font-medium rounded-lg text-white bg-[#003875] hover:bg-[#002855] transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#003875]"
-                  >
-                    View Details
-                  </button>
-                  <a
-                    href={form.attributes.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full inline-flex items-center justify-center px-4 py-2.5 border border-[#003875] text-base font-medium rounded-lg text-[#003875] bg-white hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#003875]"
-                  >
-                    <Download className="h-5 w-5 mr-2" />
-                    Download
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Desktop view */}
-          <div className="hidden sm:block">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => toggleSort('formName')}>
-                    <div className="flex items-center space-x-1">
-                      <span>Form Name</span>
-                      {sortField === 'formName' && (sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />)}
-                    </div>
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <span className="block">Title</span>
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => toggleSort('lastRevisionOn')}>
-                    <div className="flex items-center space-x-1">
-                      <span>Last Updated</span>
-                      {sortField === 'lastRevisionOn' && (sortDirection === 'asc' ? <ArrowUp className="h-4 w-4" /> : <ArrowDown className="h-4 w-4" />)}
-                    </div>
-                  </th>
-                  <th scope="col" className="relative px-6 py-3">
-                    <span className="sr-only">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {sortedForms.map((form) => (
-                  <tr key={form.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-semibold text-gray-900">{form.attributes.form_name}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-700 max-w-xl">{form.attributes.title}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">
+        <AnimatePresence>
+          {sortedForms.length > 0 && (
+            <motion.ul
+              initial="hidden"
+              animate="visible"
+              exit="hidden"
+              variants={{
+                visible: { transition: { staggerChildren: 0.07 } },
+                hidden: {},
+              }}
+              className="divide-y divide-gray-200"
+            >
+              {sortedForms.map((form) => (
+                <motion.li
+                  key={form.id}
+                  variants={{
+                    hidden: { opacity: 0, y: 16 },
+                    visible: { opacity: 1, y: 0 },
+                  }}
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
+                  transition={{ duration: 0.25, ease: 'easeOut' }}
+                  className="py-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                  onClick={() => onFormSelect(form)}
+                >
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-start">
+                      <h3 className="text-lg font-semibold text-gray-900">{form.attributes.form_name}</h3>
+                      <span className="text-sm text-gray-500 whitespace-nowrap ml-4">
                         {new Date(form.attributes.last_revision_on).toLocaleDateString()}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="flex justify-end items-center space-x-4">
-                        <button
-                          onClick={() => onFormSelect(form)}
-                          className="inline-flex items-center px-4 py-2 border border-[#003875] text-sm font-medium rounded-md text-white bg-[#003875] hover:bg-[#002855] transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#003875]"
-                        >
-                          View Details
-                        </button>
-                        <a
-                          href={form.attributes.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center px-4 py-2 border border-[#003875] text-sm font-medium rounded-md text-[#003875] bg-white hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#003875]"
-                        >
-                          <Download className="h-5 w-5 mr-2" />
-                          Download
-                        </a>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                      </span>
+                    </div>
+                    <p className="text-base text-gray-700">{form.attributes.title}</p>
+                  </div>
+                  <div className="flex flex-col space-y-3">
+                    <button
+                      className="w-full inline-flex items-center justify-center px-4 py-2.5 border border-[#003875] text-base font-medium rounded-lg text-white bg-[#003875] hover:bg-[#002855] transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#003875]"
+                    >
+                      View Details
+                    </button>
+                    <a
+                      href={form.attributes.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full inline-flex items-center justify-center px-4 py-2.5 border border-[#003875] text-base font-medium rounded-lg text-[#003875] bg-white hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#003875]"
+                    >
+                      <Download className="h-5 w-5 mr-2" />
+                      Download
+                    </a>
+                  </div>
+                </motion.li>
+              ))}
+            </motion.ul>
+          )}
+        </AnimatePresence>
       ) : searchQuery.length > 0 ? (
         <div className="text-center py-8 text-base sm:text-sm text-gray-500">No forms found matching your search criteria.</div>
       ) : null}
