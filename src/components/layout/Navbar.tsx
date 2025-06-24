@@ -1,11 +1,23 @@
 import React, { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
-import { Menu } from "lucide-react";
+import { Menu, Bell } from "lucide-react";
 import Button from "../ui/Button";
 import { useAuth } from "../../contexts/AuthContext";
 import { motion } from 'framer-motion';
 
-const Navbar: React.FC = () => {
+interface NavbarProps {
+  notifications?: any[];
+  onDismissNotification?: () => void;
+  bellOpen?: boolean;
+  onBellOpenChange?: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+const Navbar: React.FC<NavbarProps> = ({
+  notifications = [],
+  onDismissNotification,
+  bellOpen = false,
+  onBellOpenChange
+}) => {
   const { user, profile, signOut, isLoading } = useAuth();
 
   // Separate state variables for different menus
@@ -14,23 +26,27 @@ const Navbar: React.FC = () => {
   
   // Refs for click outside detection
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const bellMenuRef = useRef<HTMLDivElement>(null);
 
-  // Handle click outside to close user menu
+  // Handle click outside to close menus
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setIsUserMenuOpen(false);
       }
+      if (bellMenuRef.current && !bellMenuRef.current.contains(event.target as Node)) {
+        onBellOpenChange?.(false);
+      }
     }
 
-    if (isUserMenuOpen) {
+    if (isUserMenuOpen || bellOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isUserMenuOpen]);
+  }, [isUserMenuOpen, bellOpen, onBellOpenChange]);
 
   const handleSignOut = async () => {
     try {
@@ -131,6 +147,53 @@ const Navbar: React.FC = () => {
                       >
                         Admin
                       </Link>
+                    )}
+                    {/* Notifications Bell */}
+                    {profile?.role === "admin" && (
+                      <div className="relative" ref={bellMenuRef}>
+                        <button
+                          onClick={() => onBellOpenChange?.(!bellOpen)}
+                          className="relative p-1 rounded-full text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                        >
+                          <span className="sr-only">View notifications</span>
+                          <Bell className="h-6 w-6" />
+                          {notifications.length > 0 && (
+                            <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-400 ring-2 ring-white" />
+                          )}
+                        </button>
+                        
+                        {/* Notifications Dropdown */}
+                        {bellOpen && notifications.length > 0 && (
+                          <div className="origin-top-right absolute right-0 mt-2 w-96 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50 py-1">
+                            <div className="px-4 py-2 border-b border-gray-200">
+                              <h3 className="text-sm font-medium text-gray-900">Notifications</h3>
+                            </div>
+                            <div className="max-h-96 overflow-y-auto">
+                              {notifications.map((notification, index) => (
+                                <div
+                                  key={index}
+                                  className="px-4 py-3 hover:bg-gray-50 border-b border-gray-100 last:border-0"
+                                >
+                                  <p className="text-sm text-gray-900">{notification.message}</p>
+                                  {notification.description && (
+                                    <p className="mt-1 text-sm text-gray-500">{notification.description}</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            {onDismissNotification && (
+                              <div className="px-4 py-2 border-t border-gray-200">
+                                <button
+                                  onClick={onDismissNotification}
+                                  className="text-sm text-primary-600 hover:text-primary-900"
+                                >
+                                  Clear all notifications
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     )}
                     <div className="relative ml-3" ref={userMenuRef}>
                       <div>

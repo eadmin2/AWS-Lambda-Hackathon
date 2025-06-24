@@ -1,69 +1,47 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a2a66" />
+    <meta name="description" content="VA Disability Rating Assistant for U.S. veterans" />
+    <link rel="apple-touch-icon" href="/Logo.png" />
+    <link rel="manifest" href="/manifest.json" />
     
-    <!-- Primary Meta Tags -->
-    <title>VA Disability Rating Assistant | Secure VA Benefits & Document Management</title>
-    <meta
-      name="description"
-      content="VA Disability Rating Assistant: Secure document upload and VA disability rating estimation for U.S. veterans. Instantly calculate your combined VA disability rating and manage your benefit documents online."
-    />
-    <meta
-      name="keywords"
-      content="veteran, VA, disability, rating, assistant, documents, benefits, upload, calculator, U.S. veterans, military, compensation"
-    />
-    <meta name="author" content="VA Disability Rating Assistant Team" />
-    <meta name="robots" content="index, follow" />
+    <!-- Preconnect to critical domains -->
+    <link rel="preconnect" href="https://algojcmqstokyghijcyc.supabase.co" />
+    <link rel="dns-prefetch" href="https://algojcmqstokyghijcyc.supabase.co" />
     
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://varatingassistant.com" />
-    <meta property="og:title" content="VA Disability Rating Assistant" />
-    <meta
-      property="og:description"
-      content="Secure document upload and VA disability rating estimation for U.S. veterans. Instantly calculate your combined VA disability rating and manage your benefit documents online."
-    />
-    <meta
-      property="og:image"
-      content="https://varatingassistant.com/og-image.png"
-    />
+    <!-- Critical CSS -->
+    <style>
+      .loading-spinner {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+      }
+      .loading-spinner::after {
+        content: "";
+        width: 8rem;
+        height: 8rem;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #0a2a66;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
     
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:url" content="https://varatingassistant.com" />
-    <meta name="twitter:title" content="VA Disability Rating Assistant" />
-    <meta
-      name="twitter:description"
-      content="Secure document upload and VA disability rating estimation for U.S. veterans."
-    />
-    <meta
-      name="twitter:image"
-      content="https://varatingassistant.com/twitter-image.png"
-    />
-    
-    <!-- Note: All security headers including CSP are set via Apache .htaccess -->
-    
-    <!-- CSP is handled by Apache headers - see .htaccess file -->
-    
-    <!-- DNS Prefetch for external domains -->
-    <link rel="dns-prefetch" href="//algojcmqstokyghijcyc.supabase.co" />
-    <link rel="dns-prefetch" href="//my-receipts-app-bucket.s3.us-east-2.amazonaws.com" />
+    <title>VA Rating Assistant</title>
   </head>
   <body>
-    <noscript>
-      <div style="text-align: center; padding: 2rem; font-family: Arial, sans-serif;">
-        <h1>JavaScript Required</h1>
-        <p>
-          This application requires JavaScript to function properly. 
-          Please enable JavaScript in your browser settings and reload the page.
-        </p>
-      </div>
-    </noscript>
-    
-    <div id="root"></div>
+    <div id="root">
+      <div class="loading-spinner"></div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

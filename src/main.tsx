@@ -1,9 +1,24 @@
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-import App from "./App.tsx";
-import "./index.css";
+import { lazy, Suspense } from 'react';
+import ReactDOM from 'react-dom/client';
 import { HelmetProvider } from "react-helmet-async";
 import { BrowserRouter } from "react-router-dom";
+import "./index.css";
+import { registerSW } from 'virtual:pwa-register';
+
+// Lazy load the App component
+const App = lazy(() => import("./App.tsx"));
+
+// Register service worker
+const updateSW = registerSW({
+  onNeedRefresh() {
+    if (confirm('New content available. Reload?')) {
+      updateSW(true);
+    }
+  },
+  onOfflineReady() {
+    console.log('App ready to work offline');
+  },
+});
 
 // Suppress extension-related runtime errors
 window.addEventListener('error', function(e) {
@@ -56,12 +71,27 @@ document
     script.setAttribute("nonce", cspNonce);
   });
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
+// Remove loading spinner once app is ready
+const removeLoadingSpinner = () => {
+  const spinner = document.querySelector('.loading-spinner');
+  if (spinner) {
+    spinner.remove();
+  }
+};
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <Suspense fallback={
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-900"></div>
+    </div>
+  }>
     <HelmetProvider>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <App />
       </BrowserRouter>
     </HelmetProvider>
-  </StrictMode>,
+  </Suspense>,
 );
+
+// Remove loading spinner after a short delay to ensure smooth transition
+setTimeout(removeLoadingSpinner, 100);
