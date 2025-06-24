@@ -41,7 +41,7 @@ const FacilitiesPage = () => {
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [search, setSearch] = useState({ state: '', zip: '', type: '', lat: '', long: '' });
+  const [search, setSearch] = useState({ state: '', zip: '', type: '', radius: '' });
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
@@ -59,9 +59,8 @@ const FacilitiesPage = () => {
       if (search.state) params.append('state', search.state);
       if (search.zip) params.append('zip', search.zip);
       if (search.type) params.append('type', search.type);
-      if (search.lat && search.long) {
-        params.append('lat', search.lat);
-        params.append('long', search.long);
+      if (search.zip && search.radius) {
+        params.append('radius', search.radius);
       }
       params.append('page', String(page));
       params.append('per_page', String(PAGE_SIZE));
@@ -91,8 +90,16 @@ const FacilitiesPage = () => {
           <select name="type" value={search.type} onChange={handleInputChange} className="border border-gray-300 p-2 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-40">
             {FACILITY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
-          <input name="lat" placeholder="Latitude" value={search.lat} onChange={handleInputChange} className="border border-gray-300 p-2 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-32" type="number" step="any" />
-          <input name="long" placeholder="Longitude" value={search.long} onChange={handleInputChange} className="border border-gray-300 p-2 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-32" type="number" step="any" />
+          <input
+            name="radius"
+            placeholder="Radius (mi)"
+            value={search.radius}
+            onChange={handleInputChange}
+            className="border border-gray-300 p-2 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-28"
+            type="number"
+            min={1}
+            step="any"
+          />
           <Button onClick={fetchFacilities} className="bg-primary-600 hover:bg-primary-700 text-white font-semibold px-6 py-2 rounded-lg shadow">Search</Button>
         </div>
         {loading ? <div className="text-center text-lg text-primary-600">Loading...</div> : error ? <div className="text-red-500 text-center">{error}</div> : (
