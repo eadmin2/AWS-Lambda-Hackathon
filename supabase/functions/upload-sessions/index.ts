@@ -1,6 +1,11 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL')!,
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
@@ -34,6 +39,11 @@ async function expireOldSessions(userId: string) {
 }
 
 serve(async (req: Request) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   const url = new URL(req.url);
   const method = req.method;
   const pathParts = url.pathname.split('/').filter(Boolean);
@@ -42,12 +52,12 @@ serve(async (req: Request) => {
   // Authenticate user (Supabase JWT)
   const authHeader = req.headers.get('Authorization');
   if (!authHeader) {
-    return new Response('Unauthorized', { status: 401 });
+    return new Response('Unauthorized', { status: 401, headers: corsHeaders });
   }
   const jwt = authHeader.replace('Bearer ', '');
   const { data: { user }, error: userError } = await supabase.auth.getUser(jwt);
   if (userError || !user) {
-    return new Response('Unauthorized', { status: 401 });
+    return new Response('Unauthorized', { status: 401, headers: corsHeaders });
   }
 
   // Expire old sessions for this user
@@ -57,7 +67,7 @@ serve(async (req: Request) => {
   if (method === 'POST' && pathParts[pathParts.length - 1] === 'upload-sessions') {
     const { files } = await req.json();
     if (!Array.isArray(files)) {
-      return new Response('Invalid files metadata', { status: 400 });
+      return new Response('Invalid files metadata', { status: 400, headers: corsHeaders });
     }
     // Check for active session conflict
     const { data: activeSession } = await supabase
@@ -73,7 +83,7 @@ serve(async (req: Request) => {
         message: 'An upload session is already active.',
         sessionId: activeSession.id,
         expiresAt: activeSession.expires_at
-      }), { status: 409, headers: { 'Content-Type': 'application/json' } });
+      }), { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
     const auditLog = appendAuditLog([], 'created', user.id);
@@ -90,7 +100,7 @@ serve(async (req: Request) => {
       .select('id, expires_at')
       .single();
     if (error) {
-      return new Response('Failed to create session', { status: 500 });
+      return new Response('Failed to create session', { status: 500, headers: corsHeaders });
     }
     // Update profiles.active_upload_session_id
     await supabase
@@ -98,7 +108,7 @@ serve(async (req: Request) => {
       .update({ active_upload_session_id: data.id })
       .eq('id', user.id);
     return new Response(JSON.stringify({ sessionId: data.id, expiresAt: data.expires_at }), {
-      headers: { 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 
@@ -110,11 +120,11 @@ serve(async (req: Request) => {
       .eq('id', sessionId)
       .single();
     if (error || !data) {
-      return new Response('Session not found', { status: 404 });
+      return new Response('Session not found', { status: 404, headers: corsHeaders });
     }
     // Only allow session owner
     if (data.user_id !== user.id) {
-      return new Response('Forbidden', { status: 403 });
+      return new Response('Forbidden', { status: 403, headers: corsHeaders });
     }
     // Expire if needed
     if (data.status === 'active' && new Date(data.expires_at) < new Date()) {
@@ -123,7 +133,7 @@ serve(async (req: Request) => {
         .from('upload_sessions')
         .update({ status: 'expired', ended_at: new Date().toISOString(), audit_log: newAudit })
         .eq('id', sessionId);
-      return new Response(JSON.stringify({ error: 'expired', message: 'Session expired.' }), { status: 410 });
+      return new Response(JSON.stringify({ error: 'expired', message: 'Session expired.' }), { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
     return new Response(JSON.stringify({
       id: data.id,
@@ -136,7 +146,7 @@ serve(async (req: Request) => {
       endedAt: data.ended_at,
       auditLog: data.audit_log
     }), {
-      headers: { 'Content-Type': 'application/json' }
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 
@@ -149,10 +159,10 @@ serve(async (req: Request) => {
       .eq('id', sessionId)
       .single();
     if (sessionError || !session) {
-      return new Response('Session not found', { status: 404 });
+      return new Response('Session not found', { status: 404, headers: corsHeaders });
     }
     if (session.user_id !== user.id) {
-      return new Response('Forbidden', { status: 403 });
+      return new Response('Forbidden', { status: 403, headers: corsHeaders });
     }
     let updateFields: any = { updated_at: new Date().toISOString() };
     if (files) updateFields.files = files;
@@ -172,7 +182,7 @@ serve(async (req: Request) => {
       .update(updateFields)
       .eq('id', sessionId);
     if (error) {
-      return new Response('Failed to update session', { status: 500 });
+      return new Response('Failed to update session', { status: 500, headers: corsHeaders });
     }
     // If session is completed/expired/conflict, clear active_upload_session_id
     if (status && ['completed', 'expired', 'conflict'].includes(status)) {
@@ -181,7 +191,7 @@ serve(async (req: Request) => {
         .update({ active_upload_session_id: null })
         .eq('id', user.id);
     }
-    return new Response('Session updated', { status: 200 });
+    return new Response('Session updated', { status: 200, headers: corsHeaders });
   }
 
   // DELETE /upload-sessions/:id - Clean up session
@@ -192,10 +202,10 @@ serve(async (req: Request) => {
       .eq('id', sessionId)
       .single();
     if (sessionError || !session) {
-      return new Response('Session not found', { status: 404 });
+      return new Response('Session not found', { status: 404, headers: corsHeaders });
     }
     if (session.user_id !== user.id) {
-      return new Response('Forbidden', { status: 403 });
+      return new Response('Forbidden', { status: 403, headers: corsHeaders });
     }
     const now = new Date().toISOString();
     const newAudit = appendAuditLog(session.audit_log, 'deleted', user.id);
@@ -207,8 +217,8 @@ serve(async (req: Request) => {
       .from('profiles')
       .update({ active_upload_session_id: null })
       .eq('id', user.id);
-    return new Response('Session deleted', { status: 200 });
+    return new Response('Session deleted', { status: 200, headers: corsHeaders });
   }
 
-  return new Response('Not Found', { status: 404 });
+  return new Response('Not Found', { status: 404, headers: corsHeaders });
 }); 
