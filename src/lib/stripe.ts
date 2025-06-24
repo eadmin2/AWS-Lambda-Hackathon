@@ -2,6 +2,8 @@ import { supabase } from "./supabase";
 
 export async function createUploadCheckoutSession(userId?: string, productType?: string) {
   try {
+    // console.log("Creating checkout session for:", { userId, productType });
+    
     const body: Record<string, unknown> = {
       mode: "payment",
       success_url: `${window.location.origin}/dashboard?checkout=success`,
@@ -10,12 +12,16 @@ export async function createUploadCheckoutSession(userId?: string, productType?:
     if (userId) body.user_id = userId;
     if (productType) body.product_type = productType;
     
+    // console.log("Request body:", body);
+    
     const { data, error } = await supabase.functions.invoke(
       "create-checkout-session",
       {
         body,
       },
     );
+
+    // console.log("Supabase function response:", { data, error });
 
     if (error) {
       throw new Error(error.message || "Failed to create checkout session");

@@ -64,6 +64,8 @@ const PricingPage: React.FC = () => {
   }, [checkoutSuccess, subscriptionSuccess, location.pathname]);
 
   const handlePurchase = async (type: "starter" | "file-review" | "full-review" | "tokens-100" | "tokens-250" | "tokens-500") => {
+    console.log("Button clicked!", { type, user });
+    
     if (!user) {
       // Redirect unregistered users to registration with payment intent
       const redirectUrl = `/auth?next=checkout&type=${type}`;
@@ -73,6 +75,7 @@ const PricingPage: React.FC = () => {
 
     try {
       setIsLoading(type);
+      console.log("About to call createUploadCheckoutSession");
       if (type === "starter" || type === "file-review" || type === "full-review" || 
           type === "tokens-100" || type === "tokens-250" || type === "tokens-500") {
         await createUploadCheckoutSession(user?.id, type);
