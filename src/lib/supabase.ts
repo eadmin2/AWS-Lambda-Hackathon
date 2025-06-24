@@ -152,10 +152,9 @@ export async function getProfile(user: User): Promise<Profile | null> {
       .from("profiles")
       .select("*, payments(*)")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
-    if (error && error.code !== "PGRST116") {
-      // PGRST116 means no rows found, which is not an error in this context.
+    if (error) {
       console.error("Error fetching profile:", error);
       throw error;
     }
