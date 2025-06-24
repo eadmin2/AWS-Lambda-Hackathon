@@ -24,6 +24,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: true,
   },
+  realtime: { enabled: false },
 });
 
 // Database types based on the schema

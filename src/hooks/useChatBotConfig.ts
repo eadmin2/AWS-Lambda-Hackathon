@@ -27,14 +27,12 @@ interface UseChatBotConfigReturn {
   loading: boolean;
   error: string | null;
   updateConfig: (updates: Partial<ChatBotConfig>) => Promise<void>;
-  connectionState: 'connecting' | 'open' | 'closed' | 'error';
 }
 
 export function useChatBotConfig(): UseChatBotConfigReturn {
   const [config, setConfig] = useState<ChatBotConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [connectionState, setConnectionState] = useState<'connecting' | 'open' | 'closed' | 'error'>('closed');
 
   // Fetch config from Supabase
   const fetchConfig = async () => {
@@ -94,80 +92,25 @@ export function useChatBotConfig(): UseChatBotConfigReturn {
     delete updateObj.headerColor;
     delete updateObj.userTextColor;
     delete updateObj.quickReplies;
-    await supabase
+    const { error } = await supabase
       .from('chatbot_config')
       .update(updateObj)
       .eq('id', config.id);
-    // No need to setConfig here, real-time will handle it
+    if (!error) {
+      // Manually update config state
+      setConfig({ ...config, ...updates });
+    }
   };
 
   useEffect(() => {
     fetchConfig();
-    let mounted = true;
-    let retryCount = 0;
-    let channel: any = null;
-    let retryTimeout: any = null;
-    // Use a unique channel name per instance to avoid multiple subscribe errors
-    const channelName = 'chatbot_config_' + (config?.id || 'default');
-    const subscribe = () => {
-      setConnectionState('connecting');
-      channel = supabase
-        .channel(channelName)
-        .on(
-          'postgres_changes',
-          { event: 'UPDATE', schema: 'public', table: 'chatbot_config' },
-          (payload) => {
-            if (!mounted) return;
-            const newConfig = payload.new;
-            setConfig({
-              ...newConfig,
-              quickReplies: typeof newConfig.quick_replies === 'string' ? JSON.parse(newConfig.quick_replies) : newConfig.quick_replies,
-              botName: newConfig.bot_name,
-              welcomeMessage: newConfig.welcome_message,
-              statusMessage: newConfig.status_message,
-              inputPlaceholder: newConfig.input_placeholder,
-              primaryColor: newConfig.primary_color,
-              headerColor: newConfig.header_color,
-              userTextColor: newConfig.user_text_color,
-              position: newConfig.position,
-              created_at: newConfig.created_at,
-              updated_at: newConfig.updated_at,
-              enabled: newConfig.enabled,
-              id: newConfig.id,
-            });
-          }
-        )
-        .subscribe((status: any) => {
-          if (!mounted) return;
-          if (status === 'SUBSCRIBED') {
-            setConnectionState('open');
-            retryCount = 0;
-          } else if (status === 'CLOSED') {
-            setConnectionState('closed');
-            if (retryCount < 3) {
-              retryCount++;
-              retryTimeout = setTimeout(subscribe, 1000 * retryCount);
-            } else {
-              setConnectionState('error');
-            }
-          } else if (status === 'CHANNEL_ERROR') {
-            setConnectionState('error');
-          }
-        });
-    };
-    subscribe();
-    return () => {
-      mounted = false;
-      if (channel) supabase.removeChannel(channel);
-      if (retryTimeout) clearTimeout(retryTimeout);
-    };
-  }, [config?.id]);
+    // No realtime subscription
+  }, []);
 
   return {
     config,
     loading,
     error,
     updateConfig,
-    connectionState,
   };
 }
