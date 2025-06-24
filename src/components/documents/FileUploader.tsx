@@ -15,6 +15,7 @@ import { DocumentRow } from "./DocumentsTable";
 import { validateTokens } from "../../lib/supabase";
 import { useTokenBalance } from '../../hooks/useTokenBalance';
 import { useAuth } from '../../contexts/AuthContext';
+import toast from 'react-hot-toast';
 
 // AWS Constants
 const AWS_S3_BUCKET = "my-receipts-app-bucket";
@@ -394,6 +395,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
           error: `${validation.message} You need ${totalTokensRequired} tokens but only have ${validation.currentBalance}. Please purchase more tokens to continue.`
         });
         dispatch({ type: 'SET_CHECKING_TOKENS', checking: false });
+        toast.error('Not enough tokens to upload.');
         return;
       }
     } catch {
@@ -402,10 +404,12 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         error: 'Failed to validate token balance. Please try again.'
       });
       dispatch({ type: 'SET_CHECKING_TOKENS', checking: false });
+      toast.error('Failed to validate token balance.');
       return;
     }
 
     dispatch({ type: 'SET_UPLOADING', uploading: true });
+    toast('Uploading file(s)...', { id: 'uploading' });
     dispatch({ type: 'SET_PROGRESS', progress: 0 });
     dispatch({ type: 'SET_CHECKING_TOKENS', checking: false });
 
@@ -474,6 +478,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 
       // Clear files on successful upload
       dispatch({ type: 'UPLOAD_SUCCESS' });
+      toast.success('Upload complete! Processing your document...', { id: 'uploading' });
     } catch (error) {
       console.error("Error uploading document:", error);
       const errorMessage =
@@ -482,6 +487,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
           : "Failed to upload document. Please try again.";
       dispatch({ type: 'SET_ERROR', error: errorMessage });
       onUploadError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       dispatch({ type: 'SET_UPLOADING', uploading: false });
       dispatch({ type: 'SET_PROGRESS', progress: 0 });

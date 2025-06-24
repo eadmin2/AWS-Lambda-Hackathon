@@ -4,16 +4,11 @@ import FileUploader from "../components/documents/FileUploader";
 import { useAuth } from "../contexts/AuthContext";
 import { getUserPermissions, UserPermissions } from "../lib/supabase";
 import { UploadRequired } from "../components/ui/AccessControl";
-import { useDocumentStatus } from '../hooks/useDocumentStatus';
 
 const DocumentsPage: React.FC = () => {
   const { profile } = useAuth();
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [permissions, setPermissions] = useState<UserPermissions | null>(null);
   const [loading, setLoading] = useState(true);
-  const [recentDocId, setRecentDocId] = useState<string | null>(null);
-  const recentDocStatus = useDocumentStatus(recentDocId);
 
   useEffect(() => {
     const fetchPermissions = async () => {
@@ -28,19 +23,8 @@ const DocumentsPage: React.FC = () => {
     fetchPermissions();
   }, [profile]);
 
-  const handleUploadSuccess = (document: any) => {
-    setSuccessMessage(
-      `File "${document.file_name}" has been uploaded successfully and is being processed.`,
-    );
-    setError(null);
-    setRecentDocId(document.id);
-  };
-
-  const handleUploadError = (errorMessage: string) => {
-    setError(errorMessage);
-    setSuccessMessage(null);
-    setRecentDocId(null);
-  };
+  const handleUploadSuccess = (_document: any) => {};
+  const handleUploadError = (_errorMessage: string) => {};
 
   if (loading) {
     return (
@@ -66,18 +50,6 @@ const DocumentsPage: React.FC = () => {
     <PageLayout>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="max-w-4xl mx-auto">
-          {/* Status Banner */}
-          {recentDocId && recentDocStatus.status && (
-            <div className="mb-6">
-              <div className={`rounded px-4 py-3 border text-sm font-medium ${recentDocStatus.status === 'complete' ? 'bg-green-100 border-green-400 text-green-800' : recentDocStatus.status === 'error' ? 'bg-red-100 border-red-400 text-red-800' : 'bg-yellow-100 border-yellow-400 text-yellow-800'}`}
-                role="alert">
-                {recentDocStatus.status === 'pending' && 'Upload received. Waiting to start processing...'}
-                {recentDocStatus.status === 'processing' && 'Processing your document. This may take a while...'}
-                {recentDocStatus.status === 'complete' && 'Your document is ready!'}
-                {recentDocStatus.status === 'error' && `Error: ${recentDocStatus.error}`}
-              </div>
-            </div>
-          )}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">
               Upload Document
@@ -112,47 +84,6 @@ const DocumentsPage: React.FC = () => {
               to use as an example.
             </p>
           </div>
-
-          {error && (
-            <div
-              className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6"
-              role="alert"
-            >
-              <strong className="font-bold">Error:</strong>
-              <span className="block sm:inline"> {error}</span>
-            </div>
-          )}
-
-          {successMessage && (
-            <div
-              className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mt-6"
-              role="alert"
-            >
-              <strong className="font-bold">Success!</strong>
-              <span className="block sm:inline"> {successMessage}</span>
-            </div>
-          )}
-
-          {/* Status Card in Documents List Area */}
-          {recentDocId && recentDocStatus.status && (
-            <div className="mt-8 mb-8">
-              <div className="border rounded-lg p-4 shadow bg-white">
-                <h3 className="text-lg font-semibold mb-2">Latest Upload Status</h3>
-                <div className="flex items-center gap-3">
-                  <span className={`inline-block w-3 h-3 rounded-full ${recentDocStatus.status === 'complete' ? 'bg-green-500' : recentDocStatus.status === 'error' ? 'bg-red-500' : 'bg-yellow-400'}`}></span>
-                  <span className="font-medium">
-                    {recentDocStatus.status === 'pending' && 'Upload received. Waiting to start processing...'}
-                    {recentDocStatus.status === 'processing' && 'Processing your document. This may take a while...'}
-                    {recentDocStatus.status === 'complete' && 'Your document is ready!'}
-                    {recentDocStatus.status === 'error' && `Error: ${recentDocStatus.error}`}
-                  </span>
-                  {recentDocStatus.processedAt && (
-                    <span className="ml-auto text-xs text-gray-500">Processed at: {new Date(recentDocStatus.processedAt).toLocaleString()}</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </PageLayout>

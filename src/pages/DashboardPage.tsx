@@ -8,6 +8,8 @@ import ConditionItem from "../components/ui/ConditionItem";
 import CombinedRatingChart from "../components/ui/CombinedRatingChart";
 import { useAuth } from "../contexts/AuthContext";
 import { getUserConditions, getUserDocuments, UserCondition } from "../lib/supabase";
+import { supabase } from '../lib/supabase';
+import toast from 'react-hot-toast';
 
 // Helper function to calculate VA combined rating
 function calculateCombinedRating(ratings: number[]): number {
@@ -47,6 +49,40 @@ const DashboardPage: React.FC = () => {
   const { user, isLoading: isAuthLoading } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [highlightedConditionId, setHighlightedConditionId] = useState<string | null>(null);
+
+  // Realtime subscription for user_conditions
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase.channel(`user-conditions-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_conditions',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            toast.success('A new condition has been added to your dashboard!');
+            setHighlightedConditionId(payload.new.id);
+          } else if (payload.eventType === 'UPDATE') {
+            toast('A condition was updated on your dashboard.');
+            setHighlightedConditionId(payload.new.id);
+          } else if (payload.eventType === 'DELETE') {
+            toast('A condition was removed from your dashboard.');
+            setHighlightedConditionId(payload.old.id);
+          }
+          // Optionally, refetch dashboard data
+          setTimeout(() => setHighlightedConditionId(null), 3000);
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -138,10 +174,11 @@ const DashboardPage: React.FC = () => {
             <h2 className="text-xl font-semibold mb-4">Condition List</h2>
             <div className="max-h-[400px] overflow-y-auto pr-2">
               {data.conditions.map((condition) => (
-                <ConditionItem
-                  key={condition.id}
-                  condition={condition}
-                />
+                <div key={condition.id} className={highlightedConditionId === condition.id ? 'ring-2 ring-blue-400 rounded transition-all duration-300' : ''}>
+                  <ConditionItem
+                    condition={condition}
+                  />
+                </div>
               ))}
             </div>
           </section>

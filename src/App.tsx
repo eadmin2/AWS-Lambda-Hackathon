@@ -28,6 +28,7 @@ import ConditionsOverviewPage from "./pages/ConditionsOverviewPage";
 import VAFormsPage from "./pages/VAFormsPage";
 import FacilitiesPage from "./pages/FacilitiesPage";
 import { Helmet } from "react-helmet-async";
+import { Toaster } from 'react-hot-toast';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -66,6 +67,7 @@ const router = {
 function App() {
   return (
     <>
+      <Toaster position="top-right" />
       <Helmet>
         {/* Primary Meta Tags */}
         <title>VA Rating Assistant - AI-Powered VA Rating Estimates</title>
