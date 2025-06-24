@@ -5,8 +5,7 @@ import {
   Shield,
   Zap,
   Star,
-  CheckCircle,
-  AlertCircle,
+  CheckCircle
 } from "lucide-react";
 import PageLayout from "../components/layout/PageLayout";
 import Button from "../components/ui/Button";
@@ -215,17 +214,6 @@ const PricingPage: React.FC = () => {
             <p className="text-xl text-gray-600">
               Pay only for what you need. Each token = 1 page analyzed.
             </p>
-            <div className="mt-4 bg-info-100 border border-info-200 p-4 rounded-md flex items-start max-w-2xl mx-auto">
-              <AlertCircle className="h-5 w-5 text-info-500 mr-2 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-info-700 text-sm font-medium">
-                  Coming Soon
-                </p>
-                <p className="text-info-600 text-xs mt-1">
-                  These are made up pricing plans. Ordering is not yet available. We'll notify you when the service launches.
-                </p>
-              </div>
-            </div>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-12">
