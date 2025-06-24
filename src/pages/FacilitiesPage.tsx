@@ -22,7 +22,6 @@ const SERVICES_LIST = [
   { label: 'Pharmacy', value: 'Pharmacy' },
   { label: 'Emergency Care', value: 'EmergencyCare' },
   { label: 'Dental', value: 'DentalServices' },
-  // ... add more as needed
 ];
 
 // Types for facility data (simplified for now)

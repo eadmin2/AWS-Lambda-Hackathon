@@ -517,45 +517,6 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 
   const enoughTokens = hasEnoughTokens();
 
-  // Real-time subscription for session updates
-  useEffect(() => {
-    if (!sessionId) return;
-    const channel = supabase.channel(`upload-session-${sessionId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'upload_sessions',
-          filter: `id=eq.${sessionId}`,
-        },
-        (payload) => {
-          if (payload.new) {
-            // Update files and progress from real-time event
-            const session = payload.new as any;
-            if (session.files) {
-              const restoredFiles = session.files.map((f: any) => ({
-                file: { name: f.name, size: f.size, type: f.type || '', lastModified: Date.now() } as File,
-                name: f.name,
-                estimatedTokens: f.estimatedTokens || 1,
-              }));
-              dispatch({ type: 'SET_FILES', files: restoredFiles });
-            }
-            if (session.progress) {
-              dispatch({ type: 'SET_PROGRESS', progress: session.progress.overall || 0 });
-            }
-            if (session.status && session.status !== 'active') {
-              setSessionError(`Session ${session.status}. Please re-select your files.`);
-            }
-          }
-        }
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [sessionId]);
-
   // UI for restoration/loading/error
   if (restoringSession) {
     return <div className="flex flex-col items-center justify-center py-8"><div className="animate-spin">🔄</div><div>Restoring upload session...</div></div>;

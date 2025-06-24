@@ -173,7 +173,7 @@ export function VAFormSearch({ onFormSelect }: Props) {
     setFilters({ categories: [], formType: '', administration: '' });
   };
 
-  // Example options; replace with dynamic if available
+  // Category, form type, and admin options are now static and relevant
   const CATEGORY_OPTIONS = [
     { label: 'Health Care', value: 'Health Care' },
     { label: 'Disability', value: 'Disability' },

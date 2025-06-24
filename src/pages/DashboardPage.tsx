@@ -51,39 +51,6 @@ const DashboardPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [highlightedConditionId, setHighlightedConditionId] = useState<string | null>(null);
 
-  // Realtime subscription for user_conditions
-  useEffect(() => {
-    if (!user) return;
-    const channel = supabase.channel(`user-conditions-${user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_conditions',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            toast.success('A new condition has been added to your dashboard!');
-            setHighlightedConditionId(payload.new.id);
-          } else if (payload.eventType === 'UPDATE') {
-            toast('A condition was updated on your dashboard.');
-            setHighlightedConditionId(payload.new.id);
-          } else if (payload.eventType === 'DELETE') {
-            toast('A condition was removed from your dashboard.');
-            setHighlightedConditionId(payload.old.id);
-          }
-          // Optionally, refetch dashboard data
-          setTimeout(() => setHighlightedConditionId(null), 3000);
-        }
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user]);
-
   useEffect(() => {
     async function fetchDashboardData() {
       if (!user) {
