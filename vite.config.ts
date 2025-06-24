@@ -37,14 +37,16 @@ export default defineConfig({
     }),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'Logo.svg', 'robots.txt'],
+      includeAssets: ['favicon.svg', 'Logo.svg', 'Logo.png', 'robots.txt'],
       injectRegister: 'auto',
       devOptions: {
         enabled: true,
         type: 'module',
       },
+      filename: 'manifest.json',
       manifestFilename: 'manifest.json',
       manifest: {
+        id: '/',
         name: "VA Rating Assistant",
         short_name: "VA Rating",
         description: "VA Disability Rating Assistant for U.S. veterans",
@@ -55,7 +57,9 @@ export default defineConfig({
         scope: "/",
         orientation: "portrait",
         lang: "en",
+        dir: "ltr",
         categories: ["utilities", "productivity"],
+        prefer_related_applications: false,
         icons: [
           {
             src: "/Logo.png",
@@ -68,6 +72,18 @@ export default defineConfig({
             sizes: "512x512",
             type: "image/png",
             purpose: "any"
+          },
+          {
+            src: "/Logo.png",
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "maskable"
+          },
+          {
+            src: "/Logo.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable"
           }
         ]
       },
