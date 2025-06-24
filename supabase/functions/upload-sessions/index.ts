@@ -1,9 +1,11 @@
+// deno-lint-ignore-file no-explicit-any
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 };
 
 const supabase = createClient(
@@ -11,7 +13,7 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
-function appendAuditLog(auditLog: any[], action: string, userId: string, details: any = {}) {
+function appendAuditLog(auditLog: unknown[], action: string, userId: string, details: Record<string, unknown> = {}) {
   return [
     ...(Array.isArray(auditLog) ? auditLog : []),
     { timestamp: new Date().toISOString(), action, userId, ...details }
@@ -21,7 +23,7 @@ function appendAuditLog(auditLog: any[], action: string, userId: string, details
 async function expireOldSessions(userId: string) {
   // Expire sessions that are past their expires_at
   const now = new Date().toISOString();
-  const { data: sessions, error } = await supabase
+  const { data: sessions, error: _error } = await supabase
     .from('upload_sessions')
     .select('id, audit_log, status')
     .eq('user_id', userId)
@@ -87,7 +89,7 @@ serve(async (req: Request) => {
     }
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
     const auditLog = appendAuditLog([], 'created', user.id);
-    const { data, error } = await supabase
+    const { data, error: _error } = await supabase
       .from('upload_sessions')
       .insert({
         user_id: user.id,
@@ -99,7 +101,7 @@ serve(async (req: Request) => {
       })
       .select('id, expires_at')
       .single();
-    if (error) {
+    if (_error) {
       return new Response('Failed to create session', { status: 500, headers: corsHeaders });
     }
     // Update profiles.active_upload_session_id
@@ -114,12 +116,12 @@ serve(async (req: Request) => {
 
   // GET /upload-sessions/:id - Get session state
   if (method === 'GET' && sessionId) {
-    const { data, error } = await supabase
+    const { data, error: _error } = await supabase
       .from('upload_sessions')
       .select('*')
       .eq('id', sessionId)
       .single();
-    if (error || !data) {
+    if (_error || !data) {
       return new Response('Session not found', { status: 404, headers: corsHeaders });
     }
     // Only allow session owner
@@ -164,7 +166,7 @@ serve(async (req: Request) => {
     if (session.user_id !== user.id) {
       return new Response('Forbidden', { status: 403, headers: corsHeaders });
     }
-    let updateFields: any = { updated_at: new Date().toISOString() };
+    const updateFields: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (files) updateFields.files = files;
     if (progress) updateFields.progress = progress;
     if (status) updateFields.status = status;
@@ -174,14 +176,14 @@ serve(async (req: Request) => {
     // Append audit event
     let auditLog = session.audit_log;
     if (auditEvent) {
-      auditLog = appendAuditLog(auditLog, auditEvent, user.id);
+      auditLog = appendAuditLog(auditLog as unknown[], auditEvent, user.id);
       updateFields.audit_log = auditLog;
     }
-    const { error } = await supabase
+    const { error: _error } = await supabase
       .from('upload_sessions')
       .update(updateFields)
       .eq('id', sessionId);
-    if (error) {
+    if (_error) {
       return new Response('Failed to update session', { status: 500, headers: corsHeaders });
     }
     // If session is completed/expired/conflict, clear active_upload_session_id
@@ -208,7 +210,7 @@ serve(async (req: Request) => {
       return new Response('Forbidden', { status: 403, headers: corsHeaders });
     }
     const now = new Date().toISOString();
-    const newAudit = appendAuditLog(session.audit_log, 'deleted', user.id);
+    const newAudit = appendAuditLog(session.audit_log as unknown[], 'deleted', user.id);
     await supabase
       .from('upload_sessions')
       .update({ status: 'expired', ended_at: now, audit_log: newAudit })

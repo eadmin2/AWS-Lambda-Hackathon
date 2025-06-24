@@ -257,6 +257,9 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         body: JSON.stringify({ status: 'completed', auditEvent: 'completed' }),
       }).catch(console.error);
       deleteSession().catch(console.error);
+      // Clear session state and error after successful upload
+      setSessionId(null);
+      setSessionError(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uploading, files]);
@@ -551,7 +554,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   if (restoringSession) {
     return <div className="flex flex-col items-center justify-center py-8"><div className="animate-spin">🔄</div><div>Restoring upload session...</div></div>;
   }
-  if (sessionError) {
+  if (sessionError && files.length > 0) {
     return <div className="flex flex-col items-center justify-center py-8 text-red-600"><AlertCircle className="mb-2" /><div>{sessionError}</div></div>;
   }
 
@@ -641,9 +644,6 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                           <p className="text-sm font-medium text-gray-900 truncate">
                             {f.file.name}
                           </p>
-                          <p className="text-xs text-gray-500">
-                            {formatFileSize(f.file.size)} • ~{f.estimatedTokens} tokens
-                          </p>
                         </div>
                       </div>
                       <button
@@ -681,7 +681,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                     {getFileIcon(f.file.name)}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-500 truncate">
-                        {f.file.name} ({formatFileSize(f.file.size)}) • ~{f.estimatedTokens} tokens
+                        {f.file.name} ({formatFileSize(f.file.size)})
                       </p>
                     </div>
                     <input
