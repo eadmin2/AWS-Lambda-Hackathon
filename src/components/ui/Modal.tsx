@@ -1,4 +1,4 @@
-import React, { ReactNode, useEffect } from "react";
+import React, { ReactNode, useEffect, useRef } from "react";
 
 interface ModalProps {
   isOpen: boolean;
@@ -16,13 +16,47 @@ const Modal: React.FC<ModalProps> = ({
   children,
   ariaLabelledBy,
 }) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+  const lastFocusedElement = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
     if (!isOpen) return;
+    lastFocusedElement.current = document.activeElement as HTMLElement;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
+      if (e.key === "Tab" && modalRef.current) {
+        const focusableEls = modalRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+        );
+        const focusable = Array.from(focusableEls).filter(el => el.offsetParent !== null);
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        } else if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    // Focus the first focusable element in the modal
+    setTimeout(() => {
+      if (modalRef.current) {
+        const focusableEls = modalRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+        );
+        const focusable = Array.from(focusableEls).filter(el => el.offsetParent !== null);
+        if (focusable.length > 0) focusable[0].focus();
+      }
+    }, 0);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      // Restore focus to the previously focused element
+      if (lastFocusedElement.current) lastFocusedElement.current.focus();
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -36,6 +70,7 @@ const Modal: React.FC<ModalProps> = ({
       {...(ariaLabelledBy ? { "aria-labelledby": ariaLabelledBy } : {})}
     >
       <div
+        ref={modalRef}
         className="relative bg-white rounded-lg shadow-lg max-w-full max-h-full overflow-auto p-6"
         style={{ minWidth: 320, minHeight: 120 }}
         onClick={(e) => e.stopPropagation()}

@@ -1,12 +1,13 @@
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
-import { FileText, ClipboardList, Calculator } from "lucide-react";
+import { FileText, ClipboardList, Calculator, MapPin } from "lucide-react";
 
 const navItems = [
   { label: "Documents", icon: <FileText />, to: "/documents" },
   { label: "Detected Conditions", icon: <ClipboardList />, to: "/dashboard/conditions" },
   { label: "Combined Rating Calculator", icon: <Calculator />, to: "/calculator" },
   { label: "VA Forms", icon: <FileText />, to: "/dashboard/forms" },
+  { label: "VA Facilities", icon: <MapPin />, to: "/facilities" },
 ];
 
 const Sidebar: React.FC = () => {

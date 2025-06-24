@@ -99,6 +99,13 @@ const Navbar: React.FC = () => {
             >
               VA Forms
             </Link>
+            <Link
+              to="/facilities"
+              className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              VA Facilities
+            </Link>
             {!isLoading && (
               <>
                 {user ? (
@@ -196,6 +203,13 @@ const Navbar: React.FC = () => {
               onClick={() => setIsMobileMenuOpen(false)}
             >
               VA Forms
+            </Link>
+            <Link
+              to="/facilities"
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              VA Facilities
             </Link>
             {user && (
               <>

@@ -26,6 +26,7 @@ import DocumentsPage from "./pages/DocumentsPage";
 import ConditionDetailsPage from "./pages/ConditionDetailsPage";
 import ConditionsOverviewPage from "./pages/ConditionsOverviewPage";
 import VAFormsPage from "./pages/VAFormsPage";
+import FacilitiesPage from "./pages/FacilitiesPage";
 import { Helmet } from "react-helmet-async";
 
 interface ProtectedRouteProps {
@@ -182,6 +183,7 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route path="/facilities" element={<FacilitiesPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>
