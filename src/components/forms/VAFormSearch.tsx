@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Search, FileText, Download, AlertCircle, Filter, ChevronDown, ChevronUp } from 'lucide-react';
-import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowUp, ArrowDown } from 'lucide-react';
 import { searchVAForms } from '../../services/vaFormsApi';
 import type { VAForm, VAFormFilterState, VAFormSuggestion } from '../../../types';
+import Select from 'react-select';
 
 interface Props {
   onFormSelect: (form: VAForm) => void;
@@ -168,6 +169,33 @@ export function VAFormSearch({ onFormSelect }: Props) {
     }));
   };
 
+  const handleClearFilters = () => {
+    setFilters({ categories: [], formType: '', administration: '' });
+  };
+
+  // Example options; replace with dynamic if available
+  const CATEGORY_OPTIONS = [
+    { label: 'Health Care', value: 'Health Care' },
+    { label: 'Disability', value: 'Disability' },
+    { label: 'Education', value: 'Education' },
+    { label: 'Records', value: 'Records' },
+    { label: 'Housing', value: 'Housing' },
+    { label: 'Insurance', value: 'Insurance' },
+  ];
+  const FORM_TYPE_OPTIONS = [
+    { label: 'All Types', value: '' },
+    { label: 'Benefit', value: 'benefit' },
+    { label: 'Medical', value: 'medical' },
+    { label: 'Other', value: 'other' },
+  ];
+  const ADMIN_OPTIONS = [
+    { label: 'All Administrations', value: '' },
+    { label: 'VBA', value: 'VBA' },
+    { label: 'VHA', value: 'VHA' },
+    { label: 'NCA', value: 'NCA' },
+    { label: 'Other', value: 'Other' },
+  ];
+
   return (
     <div className="space-y-4 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="relative">
@@ -198,15 +226,10 @@ export function VAFormSearch({ onFormSelect }: Props) {
             onClick={() => setShowFilters(!showFilters)}
             className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-3 sm:py-2 border border-gray-300 shadow-sm text-base sm:text-sm font-medium rounded-lg sm:rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#003875] transition-all duration-200 ease-in-out"
             aria-expanded={showFilters}
-            aria-controls="filter-section"
           >
-            <Filter className="h-5 w-5 mr-2 text-gray-400" />
+            <Filter className="h-5 w-5 mr-2" />
             Filters
-            {showFilters ? (
-              <ChevronUp className="ml-2 h-5 w-5 transition-transform duration-200" />
-            ) : (
-              <ChevronDown className="ml-2 h-5 w-5 transition-transform duration-200" />
-            )}
+            {showFilters ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />}
           </button>
         </div>
 
@@ -229,86 +252,62 @@ export function VAFormSearch({ onFormSelect }: Props) {
         )}
       </div>
 
-      {/* Filters section */}
-      <div
-        id="filter-section"
-        className={`transition-all duration-200 ease-in-out ${
-          showFilters ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
-        }`}
-      >
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm mt-4">
-          <div className="p-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-medium text-gray-900">Filters</h3>
-              <button
-                onClick={() => setShowFilters(false)}
-                className="text-gray-400 hover:text-gray-500 p-2 rounded-full hover:bg-gray-100 transition-colors"
-                aria-label="Close filters"
-              >
-                <ChevronUp className="h-6 w-6 sm:h-5 sm:w-5" />
-              </button>
+      {/* Modern Filters Panel */}
+      {showFilters && (
+        <div className="bg-white border border-gray-200 rounded-xl p-6 mt-2 shadow-sm space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Benefit Categories</label>
+              <Select
+                isMulti
+                options={CATEGORY_OPTIONS}
+                value={CATEGORY_OPTIONS.filter(opt => filters.categories.includes(opt.value))}
+                onChange={selected => handleFilterChange('categories', selected.map(opt => opt.value))}
+                className="w-full"
+                classNamePrefix="react-select"
+                placeholder="Select categories..."
+                closeMenuOnSelect={false}
+              />
             </div>
-            
-            <div className="mt-4 space-y-6 sm:space-y-4">
-              <div>
-                <label className="block text-base sm:text-sm font-medium text-gray-700 mb-2">Benefit Categories</label>
-                <div className="flex flex-wrap gap-3 sm:gap-2">
-                  {['Health Care', 'Disability', 'Education', 'Records', 'Housing', 'Insurance'].map((category) => (
-                    <label 
-                      key={category} 
-                      className="group relative inline-flex items-center px-4 sm:px-3 py-3 sm:py-2 border border-gray-300 rounded-lg sm:rounded-md text-base sm:text-sm bg-white hover:bg-gray-50 transition-colors cursor-pointer"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={filters.categories.includes(category)}
-                        onChange={(e) => {
-                          const newCategories = e.target.checked
-                            ? [...filters.categories, category]
-                            : filters.categories.filter(c => c !== category);
-                          handleFilterChange('categories', newCategories);
-                        }}
-                        className="h-5 w-5 sm:h-4 sm:w-4 text-[#003875] focus:ring-[#003875] border-gray-300 rounded mr-3 sm:mr-2 transition-colors"
-                      />
-                      <span className="text-gray-700 group-hover:text-gray-900">{category}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-base sm:text-sm font-medium text-gray-700">Form Type</label>
-                  <select
-                    value={filters.formType}
-                    onChange={(e) => handleFilterChange('formType', e.target.value)}
-                    className="block w-full pl-3 pr-10 py-3 sm:py-2 text-base sm:text-sm border-gray-300 focus:outline-none focus:ring-[#003875] focus:border-[#003875] rounded-lg sm:rounded-md bg-white transition-colors"
-                  >
-                    <option value="">All Types</option>
-                    <option value="standard">Standard</option>
-                    <option value="benefit">Benefit</option>
-                    <option value="online">Online Tool</option>
-                    <option value="pdf">PDF Only</option>
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-base sm:text-sm font-medium text-gray-700">VA Administration</label>
-                  <select
-                    value={filters.administration}
-                    onChange={(e) => handleFilterChange('administration', e.target.value)}
-                    className="block w-full pl-3 pr-10 py-3 sm:py-2 text-base sm:text-sm border-gray-300 focus:outline-none focus:ring-[#003875] focus:border-[#003875] rounded-lg sm:rounded-md bg-white transition-colors"
-                  >
-                    <option value="">All Administrations</option>
-                    <option value="Veterans Benefits Administration">Veterans Benefits Administration (VBA)</option>
-                    <option value="Veterans Health Administration">Veterans Health Administration (VHA)</option>
-                    <option value="National Cemetery Administration">National Cemetery Administration (NCA)</option>
-                  </select>
-                </div>
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Form Type</label>
+              <Select
+                options={FORM_TYPE_OPTIONS}
+                value={FORM_TYPE_OPTIONS.find(opt => opt.value === filters.formType) || FORM_TYPE_OPTIONS[0]}
+                onChange={selected => {
+                  if (selected) handleFilterChange('formType', selected.value);
+                }}
+                className="w-full"
+                classNamePrefix="react-select"
+                placeholder="All Types"
+                isSearchable={false}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">VA Administration</label>
+              <Select
+                options={ADMIN_OPTIONS}
+                value={ADMIN_OPTIONS.find(opt => opt.value === filters.administration) || ADMIN_OPTIONS[0]}
+                onChange={selected => {
+                  if (selected) handleFilterChange('administration', selected.value);
+                }}
+                className="w-full"
+                classNamePrefix="react-select"
+                placeholder="All Administrations"
+                isSearchable={false}
+              />
             </div>
           </div>
+          <div className="flex justify-end mt-2">
+            <button
+              onClick={handleClearFilters}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#003875]"
+            >
+              Clear All
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Results section */}
       {isLoading ? (
