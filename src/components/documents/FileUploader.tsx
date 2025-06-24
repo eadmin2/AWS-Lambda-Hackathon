@@ -12,7 +12,8 @@ import {
 import Button from "../ui/Button";
 import { supabase } from "../../lib/supabase";
 import { DocumentRow } from "./DocumentsTable";
-import { getUserTokenBalance, validateTokens } from "../../lib/supabase";
+import { validateTokens } from "../../lib/supabase";
+import { useTokenBalance } from '../../hooks/useTokenBalance';
 
 // AWS Constants
 const AWS_S3_BUCKET = "my-receipts-app-bucket";
@@ -89,8 +90,11 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   };
 
   const [state, dispatch] = useReducer(uploaderReducer, initialState);
-  const { files, uploading, uploadProgress, error, tokenBalance, checkingTokens } = state;
+  const { files, uploading, uploadProgress, error, checkingTokens } = state;
   const workerRef = useRef<Worker | null>(null);
+
+  // Use realtime token balance
+  const { tokensAvailable, tokensUsed } = useTokenBalance(userId);
 
   // Calculate estimated tokens for a file
   const estimateTokensForFile = (file: File): number => {
@@ -99,21 +103,6 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     return Math.max(MIN_TOKENS_PER_FILE, estimatedPages);
   };
 
-  // Load user's token balance
-  const loadTokenBalance = useCallback(async () => {
-    if (!userId) return;
-    
-    dispatch({ type: 'SET_CHECKING_TOKENS', checking: true });
-    try {
-      const balance = await getUserTokenBalance(userId);
-      dispatch({ type: 'SET_TOKEN_BALANCE', balance });
-    } catch (error) {
-      console.error("Error loading token balance:", error);
-    } finally {
-      dispatch({ type: 'SET_CHECKING_TOKENS', checking: false });
-    }
-  }, [userId]);
-
   // Calculate total tokens required for all files
   const getTotalTokensRequired = (): number => {
     return files.reduce((total, file) => total + file.estimatedTokens, 0);
@@ -121,12 +110,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 
   // Check if user has enough tokens
   const hasEnoughTokens = (): boolean => {
-    return tokenBalance >= getTotalTokensRequired();
+    return tokensAvailable >= getTotalTokensRequired();
   };
-
-  useEffect(() => {
-    loadTokenBalance();
-  }, [userId, loadTokenBalance]);
 
   useEffect(() => {
     workerRef.current = new Worker(new URL('../../workers/upload.worker.ts', import.meta.url));
@@ -336,9 +321,6 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         onUploadComplete(documentData);
       }
 
-      // Refresh token balance after successful upload
-      await loadTokenBalance();
-
       // Clear files on successful upload
       dispatch({ type: 'UPLOAD_SUCCESS' });
     } catch (error) {
@@ -376,7 +358,6 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
-  const totalTokensRequired = getTotalTokensRequired();
   const enoughTokens = hasEnoughTokens();
 
   return (
@@ -388,28 +369,13 @@ const FileUploader: React.FC<FileUploaderProps> = ({
             <div>
               <h3 className="text-sm font-medium text-blue-900">Token Balance</h3>
               <p className="text-blue-700">
-                {checkingTokens ? "Loading..." : `${tokenBalance} tokens available`}
+                {`${tokensAvailable} tokens available`}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {`Tokens Used: ${tokensUsed}`}
               </p>
             </div>
-            {files.length > 0 && (
-              <div className="text-right">
-                <p className="text-sm text-blue-600">
-                  Required: {totalTokensRequired} tokens
-                </p>
-                <p className={`text-sm font-medium ${enoughTokens ? 'text-green-600' : 'text-red-600'}`}>
-                  {enoughTokens ? '✓ Sufficient tokens' : '⚠ Insufficient tokens'}
-                </p>
-              </div>
-            )}
           </div>
-          {!enoughTokens && files.length > 0 && (
-            <div className="mt-2 p-2 bg-yellow-100 border border-yellow-300 rounded">
-              <p className="text-yellow-800 text-sm">
-                You need {totalTokensRequired - tokenBalance} more tokens. 
-                <a href="/pricing" className="underline ml-1">Purchase tokens</a>
-              </p>
-            </div>
-          )}
         </div>
       )}
 

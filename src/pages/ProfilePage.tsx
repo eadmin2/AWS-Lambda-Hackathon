@@ -19,6 +19,7 @@ import {
   StripeBillingInfo,
 } from "../lib/stripe";
 import Modal from "../components/ui/Modal";
+import { useTokenBalance } from '../hooks/useTokenBalance';
 
 interface ProfileFormData {
   fullName: string;
@@ -86,6 +87,7 @@ const ProfilePage: React.FC = () => {
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
   const [tokenLoading, setTokenLoading] = useState(false);
   const navigate = useNavigate();
+  const { tokensAvailable, tokensUsed } = useTokenBalance(user?.id || null);
 
   const {
     register,
@@ -357,7 +359,7 @@ const ProfilePage: React.FC = () => {
                         <p className="text-base font-medium text-primary-600">
                           {tokenLoading
                             ? "Loading..."
-                            : `${tokenInfo?.tokens_available || 0} tokens`}
+                            : `${tokensAvailable} tokens`}
                         </p>
                         <h3 className="text-sm font-medium text-gray-500 mb-1 mt-3">
                           Tokens Used
@@ -365,7 +367,7 @@ const ProfilePage: React.FC = () => {
                         <p className="text-base font-medium text-gray-600">
                           {tokenLoading
                             ? "Loading..."
-                            : `${tokenInfo?.tokens_used || 0} tokens`}
+                            : `${tokensUsed} tokens`}
                         </p>
                       </div>
                     </div>
