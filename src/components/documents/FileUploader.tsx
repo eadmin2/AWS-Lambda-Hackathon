@@ -14,6 +14,7 @@ import { supabase } from "../../lib/supabase";
 import { DocumentRow } from "./DocumentsTable";
 import { validateTokens } from "../../lib/supabase";
 import { useTokenBalance } from '../../hooks/useTokenBalance';
+import { useAuth } from '../../contexts/AuthContext';
 
 // AWS Constants
 const AWS_S3_BUCKET = "my-receipts-app-bucket";
@@ -92,6 +93,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   const [state, dispatch] = useReducer(uploaderReducer, initialState);
   const { files, uploading, uploadProgress, error, checkingTokens } = state;
   const workerRef = useRef<Worker | null>(null);
+  const [sessionId, setSessionId] = React.useState<string | null>(null);
+  const { session: supabaseSession } = useAuth();
 
   // Use realtime token balance
   const { tokensAvailable, tokensUsed } = useTokenBalance(userId);
@@ -112,6 +115,80 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   const hasEnoughTokens = (): boolean => {
     return tokensAvailable >= getTotalTokensRequired();
   };
+
+  // --- Session API helpers ---
+  const apiBase = '/functions/v1/upload-sessions';
+  const getAuthHeaders = () => ({
+    'Authorization': `Bearer ${supabaseSession?.access_token}`,
+    'Content-Type': 'application/json',
+  });
+
+  // Create session
+  const createSession = async (filesMeta: any[]) => {
+    const res = await fetch(apiBase, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ files: filesMeta }),
+    });
+    if (!res.ok) throw new Error('Failed to create upload session');
+    const data = await res.json();
+    setSessionId(data.sessionId);
+    return data.sessionId;
+  };
+
+  // Update session
+  const updateSession = async (filesMeta: any[], progress: number) => {
+    if (!sessionId) return;
+    await fetch(`${apiBase}/${sessionId}`, {
+      method: 'PUT',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ files: filesMeta, progress }),
+    });
+  };
+
+  // Delete session
+  const deleteSession = async () => {
+    if (!sessionId) return;
+    await fetch(`${apiBase}/${sessionId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    setSessionId(null);
+  };
+
+  // --- Integrate session logic ---
+  // On file add/remove, update session
+  useEffect(() => {
+    if (files.length > 0 && supabaseSession) {
+      const filesMeta = files.map(f => ({ name: f.name, size: f.file.size, estimatedTokens: f.estimatedTokens }));
+      if (!sessionId) {
+        createSession(filesMeta).catch(console.error);
+      } else {
+        updateSession(filesMeta, uploadProgress).catch(console.error);
+      }
+    }
+    if (files.length === 0 && sessionId) {
+      deleteSession().catch(console.error);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [files]);
+
+  // On upload progress, update session
+  useEffect(() => {
+    if (sessionId && files.length > 0 && supabaseSession) {
+      const filesMeta = files.map(f => ({ name: f.name, size: f.file.size, estimatedTokens: f.estimatedTokens }));
+      updateSession(filesMeta, uploadProgress).catch(console.error);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uploadProgress]);
+
+  // On upload complete or cancel, delete session
+  useEffect(() => {
+    if (!uploading && files.length === 0 && sessionId) {
+      deleteSession().catch(console.error);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uploading, files]);
 
   useEffect(() => {
     workerRef.current = new Worker(new URL('../../workers/upload.worker.ts', import.meta.url));
