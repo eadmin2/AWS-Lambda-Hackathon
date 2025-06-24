@@ -6,6 +6,33 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 );
 
+function appendAuditLog(auditLog: any[], action: string, userId: string, details: any = {}) {
+  return [
+    ...(Array.isArray(auditLog) ? auditLog : []),
+    { timestamp: new Date().toISOString(), action, userId, ...details }
+  ];
+}
+
+async function expireOldSessions(userId: string) {
+  // Expire sessions that are past their expires_at
+  const now = new Date().toISOString();
+  const { data: sessions, error } = await supabase
+    .from('upload_sessions')
+    .select('id, audit_log, status')
+    .eq('user_id', userId)
+    .eq('status', 'active')
+    .lt('expires_at', now);
+  if (sessions && sessions.length > 0) {
+    for (const session of sessions) {
+      const newAudit = appendAuditLog(session.audit_log, 'expired', userId);
+      await supabase
+        .from('upload_sessions')
+        .update({ status: 'expired', ended_at: now, audit_log: newAudit })
+        .eq('id', session.id);
+    }
+  }
+}
+
 serve(async (req: Request) => {
   const url = new URL(req.url);
   const method = req.method;
@@ -23,29 +50,53 @@ serve(async (req: Request) => {
     return new Response('Unauthorized', { status: 401 });
   }
 
+  // Expire old sessions for this user
+  await expireOldSessions(user.id);
+
   // POST /upload-sessions - Create session
   if (method === 'POST' && pathParts[pathParts.length - 1] === 'upload-sessions') {
     const { files } = await req.json();
     if (!Array.isArray(files)) {
       return new Response('Invalid files metadata', { status: 400 });
     }
+    // Check for active session conflict
+    const { data: activeSession } = await supabase
+      .from('upload_sessions')
+      .select('id, status, expires_at')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
+    if (activeSession) {
+      return new Response(JSON.stringify({
+        error: 'conflict',
+        message: 'An upload session is already active.',
+        sessionId: activeSession.id,
+        expiresAt: activeSession.expires_at
+      }), { status: 409, headers: { 'Content-Type': 'application/json' } });
+    }
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    const auditLog = appendAuditLog([], 'created', user.id);
     const { data, error } = await supabase
       .from('upload_sessions')
       .insert({
         user_id: user.id,
         files,
-        progress: 0,
+        progress: {},
+        status: 'active',
         expires_at: expiresAt,
-        audit_log: JSON.stringify([
-          { timestamp: new Date().toISOString(), action: 'created', userId: user.id }
-        ])
+        audit_log: auditLog
       })
       .select('id, expires_at')
       .single();
     if (error) {
       return new Response('Failed to create session', { status: 500 });
     }
+    // Update profiles.active_upload_session_id
+    await supabase
+      .from('profiles')
+      .update({ active_upload_session_id: data.id })
+      .eq('id', user.id);
     return new Response(JSON.stringify({ sessionId: data.id, expiresAt: data.expires_at }), {
       headers: { 'Content-Type': 'application/json' }
     });
@@ -61,14 +112,28 @@ serve(async (req: Request) => {
     if (error || !data) {
       return new Response('Session not found', { status: 404 });
     }
-    // Only return minimal metadata
+    // Only allow session owner
+    if (data.user_id !== user.id) {
+      return new Response('Forbidden', { status: 403 });
+    }
+    // Expire if needed
+    if (data.status === 'active' && new Date(data.expires_at) < new Date()) {
+      const newAudit = appendAuditLog(data.audit_log, 'expired', user.id);
+      await supabase
+        .from('upload_sessions')
+        .update({ status: 'expired', ended_at: new Date().toISOString(), audit_log: newAudit })
+        .eq('id', sessionId);
+      return new Response(JSON.stringify({ error: 'expired', message: 'Session expired.' }), { status: 410 });
+    }
     return new Response(JSON.stringify({
       id: data.id,
       files: data.files,
       progress: data.progress,
+      status: data.status,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
       expiresAt: data.expires_at,
+      endedAt: data.ended_at,
       auditLog: data.audit_log
     }), {
       headers: { 'Content-Type': 'application/json' }
@@ -77,11 +142,31 @@ serve(async (req: Request) => {
 
   // PUT /upload-sessions/:id - Update session state
   if (method === 'PUT' && sessionId) {
-    const { files, progress, auditLog } = await req.json();
-    const updateFields: any = { updated_at: new Date().toISOString() };
+    const { files, progress, status, auditEvent } = await req.json();
+    const { data: session, error: sessionError } = await supabase
+      .from('upload_sessions')
+      .select('user_id, audit_log, status')
+      .eq('id', sessionId)
+      .single();
+    if (sessionError || !session) {
+      return new Response('Session not found', { status: 404 });
+    }
+    if (session.user_id !== user.id) {
+      return new Response('Forbidden', { status: 403 });
+    }
+    let updateFields: any = { updated_at: new Date().toISOString() };
     if (files) updateFields.files = files;
-    if (typeof progress === 'number') updateFields.progress = progress;
-    if (auditLog) updateFields.audit_log = auditLog;
+    if (progress) updateFields.progress = progress;
+    if (status) updateFields.status = status;
+    if (status && ['completed', 'expired', 'conflict'].includes(status)) {
+      updateFields.ended_at = new Date().toISOString();
+    }
+    // Append audit event
+    let auditLog = session.audit_log;
+    if (auditEvent) {
+      auditLog = appendAuditLog(auditLog, auditEvent, user.id);
+      updateFields.audit_log = auditLog;
+    }
     const { error } = await supabase
       .from('upload_sessions')
       .update(updateFields)
@@ -89,18 +174,39 @@ serve(async (req: Request) => {
     if (error) {
       return new Response('Failed to update session', { status: 500 });
     }
+    // If session is completed/expired/conflict, clear active_upload_session_id
+    if (status && ['completed', 'expired', 'conflict'].includes(status)) {
+      await supabase
+        .from('profiles')
+        .update({ active_upload_session_id: null })
+        .eq('id', user.id);
+    }
     return new Response('Session updated', { status: 200 });
   }
 
   // DELETE /upload-sessions/:id - Clean up session
   if (method === 'DELETE' && sessionId) {
-    const { error } = await supabase
+    const { data: session, error: sessionError } = await supabase
       .from('upload_sessions')
-      .delete()
-      .eq('id', sessionId);
-    if (error) {
-      return new Response('Failed to delete session', { status: 500 });
+      .select('user_id, audit_log, status')
+      .eq('id', sessionId)
+      .single();
+    if (sessionError || !session) {
+      return new Response('Session not found', { status: 404 });
     }
+    if (session.user_id !== user.id) {
+      return new Response('Forbidden', { status: 403 });
+    }
+    const now = new Date().toISOString();
+    const newAudit = appendAuditLog(session.audit_log, 'deleted', user.id);
+    await supabase
+      .from('upload_sessions')
+      .update({ status: 'expired', ended_at: now, audit_log: newAudit })
+      .eq('id', sessionId);
+    await supabase
+      .from('profiles')
+      .update({ active_upload_session_id: null })
+      .eq('id', user.id);
     return new Response('Session deleted', { status: 200 });
   }
 

@@ -94,6 +94,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   const { files, uploading, uploadProgress, error, checkingTokens } = state;
   const workerRef = useRef<Worker | null>(null);
   const [sessionId, setSessionId] = React.useState<string | null>(null);
+  const [restoringSession, setRestoringSession] = React.useState<boolean>(true);
+  const [sessionError, setSessionError] = React.useState<string | null>(null);
   const { session: supabaseSession } = useAuth();
 
   // Use realtime token balance
@@ -123,6 +125,66 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     'Content-Type': 'application/json',
   });
 
+  // Fetch user profile to get active_upload_session_id
+  const fetchActiveSessionId = async () => {
+    if (!supabaseSession) return null;
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('active_upload_session_id')
+      .eq('id', userId)
+      .single();
+    if (error || !data) return null;
+    return data.active_upload_session_id;
+  };
+
+  // Fetch session state
+  const fetchSessionState = async (sid: string) => {
+    const res = await fetch(`${apiBase}/${sid}`, {
+      method: 'GET',
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) {
+      if (res.status === 410) {
+        setSessionError('Your upload session has expired. Please re-select your files.');
+      } else if (res.status === 403) {
+        setSessionError('Upload in progress in another tab. Continue here?');
+      } else {
+        setSessionError('Failed to restore upload session.');
+      }
+      setRestoringSession(false);
+      return null;
+    }
+    const data = await res.json();
+    return data;
+  };
+
+  // Restore session on mount
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      setRestoringSession(true);
+      setSessionError(null);
+      const sid = await fetchActiveSessionId();
+      if (sid) {
+        setSessionId(sid);
+        const session = await fetchSessionState(sid);
+        if (session && session.files && mounted) {
+          // Restore files (as placeholders, since File objects can't be restored)
+          const restoredFiles = session.files.map((f: any) => ({
+            file: { name: f.name, size: f.size, type: f.type || '', lastModified: Date.now() } as File,
+            name: f.name,
+            estimatedTokens: f.estimatedTokens || 1,
+          }));
+          dispatch({ type: 'SET_FILES', files: restoredFiles });
+          dispatch({ type: 'SET_PROGRESS', progress: session.progress?.overall || 0 });
+        }
+      }
+      setRestoringSession(false);
+    })();
+    return () => { mounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, supabaseSession]);
+
   // Create session
   const createSession = async (filesMeta: any[]) => {
     const res = await fetch(apiBase, {
@@ -137,7 +199,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   };
 
   // Update session
-  const updateSession = async (filesMeta: any[], progress: number) => {
+  const updateSession = async (filesMeta: any[], progress: any) => {
     if (!sessionId) return;
     await fetch(`${apiBase}/${sessionId}`, {
       method: 'PUT',
@@ -159,15 +221,15 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   // --- Integrate session logic ---
   // On file add/remove, update session
   useEffect(() => {
-    if (files.length > 0 && supabaseSession) {
+    if (files.length > 0 && supabaseSession && !restoringSession) {
       const filesMeta = files.map(f => ({ name: f.name, size: f.file.size, estimatedTokens: f.estimatedTokens }));
       if (!sessionId) {
         createSession(filesMeta).catch(console.error);
       } else {
-        updateSession(filesMeta, uploadProgress).catch(console.error);
+        updateSession(filesMeta, { overall: uploadProgress, perFile: filesMeta.map(f => ({ name: f.name, progress: uploadProgress })) }).catch(console.error);
       }
     }
-    if (files.length === 0 && sessionId) {
+    if (files.length === 0 && sessionId && !restoringSession) {
       deleteSession().catch(console.error);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -175,16 +237,22 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 
   // On upload progress, update session
   useEffect(() => {
-    if (sessionId && files.length > 0 && supabaseSession) {
+    if (sessionId && files.length > 0 && supabaseSession && !restoringSession) {
       const filesMeta = files.map(f => ({ name: f.name, size: f.file.size, estimatedTokens: f.estimatedTokens }));
-      updateSession(filesMeta, uploadProgress).catch(console.error);
+      updateSession(filesMeta, { overall: uploadProgress, perFile: filesMeta.map(f => ({ name: f.name, progress: uploadProgress })) }).catch(console.error);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uploadProgress]);
 
-  // On upload complete or cancel, delete session
+  // On upload complete or cancel, mark session completed and delete
   useEffect(() => {
-    if (!uploading && files.length === 0 && sessionId) {
+    if (!uploading && files.length === 0 && sessionId && !restoringSession) {
+      // Mark session as completed
+      fetch(`${apiBase}/${sessionId}`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ status: 'completed', auditEvent: 'completed' }),
+      }).catch(console.error);
       deleteSession().catch(console.error);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -436,6 +504,53 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   };
 
   const enoughTokens = hasEnoughTokens();
+
+  // Real-time subscription for session updates
+  useEffect(() => {
+    if (!sessionId) return;
+    const channel = supabase.channel(`upload-session-${sessionId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'upload_sessions',
+          filter: `id=eq.${sessionId}`,
+        },
+        (payload) => {
+          if (payload.new) {
+            // Update files and progress from real-time event
+            const session = payload.new as any;
+            if (session.files) {
+              const restoredFiles = session.files.map((f: any) => ({
+                file: { name: f.name, size: f.size, type: f.type || '', lastModified: Date.now() } as File,
+                name: f.name,
+                estimatedTokens: f.estimatedTokens || 1,
+              }));
+              dispatch({ type: 'SET_FILES', files: restoredFiles });
+            }
+            if (session.progress) {
+              dispatch({ type: 'SET_PROGRESS', progress: session.progress.overall || 0 });
+            }
+            if (session.status && session.status !== 'active') {
+              setSessionError(`Session ${session.status}. Please re-select your files.`);
+            }
+          }
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [sessionId]);
+
+  // UI for restoration/loading/error
+  if (restoringSession) {
+    return <div className="flex flex-col items-center justify-center py-8"><div className="animate-spin">🔄</div><div>Restoring upload session...</div></div>;
+  }
+  if (sessionError) {
+    return <div className="flex flex-col items-center justify-center py-8 text-red-600"><AlertCircle className="mb-2" /><div>{sessionError}</div></div>;
+  }
 
   return (
     <div className="w-full">
