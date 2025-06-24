@@ -1,7 +1,6 @@
 import type { VAForm } from '../../types';
 
-const VA_FORMS_API_URL = 'https://sandbox-api.va.gov/services/va_forms/v0';
-const API_KEY = import.meta.env.VITE_VA_FORMS_API_KEY;
+const VA_FORMS_API_URL = 'https://zgjmrmhoal.execute-api.us-east-2.amazonaws.com/prod';
 
 // Improved mock data with more examples
 const mockForms: VAForm[] = [
@@ -95,26 +94,12 @@ const mockForms: VAForm[] = [
 ];
 
 const headers = {
-  ...(API_KEY ? { apikey: API_KEY } : {}),
   'Accept': 'application/json',
   'Content-Type': 'application/json'
 };
 
 export async function searchVAForms(query: string): Promise<VAForm[]> {
-  if (!API_KEY) {
-    console.warn('Using mock data - VA Forms API key not configured');
-    return mockForms.filter(form => 
-      !query || 
-      form.attributes.form_name.toLowerCase().includes(query.toLowerCase()) ||
-      form.attributes.title.toLowerCase().includes(query.toLowerCase())
-    );
-  }
-
   try {
-    console.log('Searching VA Forms with query:', query);
-    console.log('Using API URL:', VA_FORMS_API_URL);
-    console.log('API Key present:', !!API_KEY);
-    
     // Use proper query parameter format
     const queryParams = new URLSearchParams({
       query: query || '',
@@ -128,85 +113,53 @@ export async function searchVAForms(query: string): Promise<VAForm[]> {
     
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      console.error('VA Forms API Error:', {
-        status: response.status,
-        statusText: response.statusText,
-        errorData,
-        headers: Object.fromEntries(response.headers.entries())
-      });
-      
       if (response.status === 401) {
         throw new Error('Invalid VA Forms API key');
       } else if (response.status === 429) {
         throw new Error('Rate limit exceeded. Please try again later.');
       }
-      
       throw new Error(`VA Forms API request failed: ${errorData.errors?.[0]?.detail || response.statusText}`);
     }
     
     const data = await response.json();
-    console.log('VA Forms API Response:', {
-      totalResults: Array.isArray(data) ? data.length : Array.isArray(data.data) ? data.data.length : 0
-    });
-    
     // Handle both array and single item responses
     if (Array.isArray(data)) {
       return data;
     } else if (data.data) {
       return Array.isArray(data.data) ? data.data : [data.data];
     }
-    
     return [];
     
   } catch (error) {
-    console.error('VA Forms API Error:', error);
-    if (error instanceof Error) {
-      throw new Error(`Failed to search VA forms: ${error.message}`);
-    }
-    throw error;
+    // fallback to mock data if fetch fails
+    return mockForms.filter(form => 
+      !query || 
+      form.attributes.form_name.toLowerCase().includes(query.toLowerCase()) ||
+      form.attributes.title.toLowerCase().includes(query.toLowerCase())
+    );
   }
 }
 
 export async function getVAForm(formId: string): Promise<VAForm> {
-  if (!API_KEY) {
-    console.warn('Using mock data - VA Forms API key not configured');
+  try {
+    const response = await fetch(`${VA_FORMS_API_URL}/forms/${encodeURIComponent(formId)}`, {
+      headers,
+    });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      if (response.status === 404) {
+        throw new Error(`VA Form ${formId} not found`);
+      }
+      throw new Error(`Failed to fetch VA form: ${errorData.errors?.[0]?.detail || response.statusText}`);
+    }
+    const data = await response.json();
+    return data.data;
+  } catch (error) {
+    // fallback to mock data if fetch fails
     const form = mockForms.find(f => f.id === formId);
     if (!form) {
       throw new Error('Form not found');
     }
     return form;
-  }
-
-  try {
-    console.log('Fetching VA Form:', formId);
-    
-    const response = await fetch(`${VA_FORMS_API_URL}/forms/${encodeURIComponent(formId)}`, {
-      headers,
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error('VA Form API Error:', {
-        status: response.status,
-        statusText: response.statusText,
-        errorData,
-        formId
-      });
-      
-      if (response.status === 404) {
-        throw new Error(`VA Form ${formId} not found`);
-      }
-      
-      throw new Error(`Failed to fetch VA form: ${errorData.errors?.[0]?.detail || response.statusText}`);
-    }
-    
-    const data = await response.json();
-    return data.data;
-  } catch (error) {
-    console.error('VA Form API Error:', error);
-    if (error instanceof Error) {
-      throw new Error(`Failed to fetch VA form: ${error.message}`);
-    }
-    throw error;
   }
 } 

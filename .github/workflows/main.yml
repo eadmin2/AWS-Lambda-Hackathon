@@ -22,7 +22,6 @@ jobs:
         run: |
           echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" >> $GITHUB_ENV
           echo "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}" >> $GITHUB_ENV
-          echo "VITE_VA_FORMS_API_KEY=${{ secrets.VITE_VA_FORMS_API_KEY }}" >> $GITHUB_ENV
 
       - name: Install dependencies
         run: npm install
