@@ -26,12 +26,6 @@ interface Message {
   metadata?: any;
 }
 
-interface QuickReply {
-  id: string;
-  text: string;
-  action: string;
-}
-
 interface ChatBotProps {
   className?: string;
 }
@@ -69,14 +63,6 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Quick reply options
-  const quickReplies: QuickReply[] = [
-    { id: '1', text: 'Calculate my rating', action: 'calculator' },
-    { id: '2', text: 'Upload documents', action: 'upload' },
-    { id: '3', text: 'Pricing info', action: 'pricing' },
-    { id: '4', text: 'Contact support', action: 'support' },
-  ];
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -146,25 +132,6 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
     } finally {
       setIsLoading(false);
       setIsTyping(false);
-    }
-  };
-
-  const handleQuickReply = (reply: QuickReply) => {
-    switch (reply.action) {
-      case 'calculator':
-        sendMessage('I want to calculate my VA disability rating', 'quick-reply');
-        break;
-      case 'upload':
-        sendMessage('How do I upload my medical documents?', 'quick-reply');
-        break;
-      case 'pricing':
-        sendMessage('What are your pricing options?', 'quick-reply');
-        break;
-      case 'support':
-        sendMessage('I need help from support', 'quick-reply');
-        break;
-      default:
-        sendMessage(reply.text, 'quick-reply');
     }
   };
 
