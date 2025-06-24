@@ -92,6 +92,13 @@ const Navbar: React.FC = () => {
             >
               Combined Rating Calculator
             </Link>
+            <Link
+              to="/forms"
+              className="text-gray-700 hover:text-primary-600 px-3 py-2 rounded-md text-sm font-medium"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              VA Forms
+            </Link>
             {!isLoading && (
               <>
                 {user ? (
@@ -182,6 +189,13 @@ const Navbar: React.FC = () => {
               onClick={() => setIsMobileMenuOpen(false)}
             >
               Combined Rating Calculator
+            </Link>
+            <Link
+              to="/forms"
+              className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              VA Forms
             </Link>
             {user && (
               <>

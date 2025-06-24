@@ -25,6 +25,7 @@ import CalculatorPage from "./pages/CalculatorPage";
 import DocumentsPage from "./pages/DocumentsPage";
 import ConditionDetailsPage from "./pages/ConditionDetailsPage";
 import ConditionsOverviewPage from "./pages/ConditionsOverviewPage";
+import VAFormsPage from "./pages/VAFormsPage";
 import { Helmet } from "react-helmet-async";
 
 interface ProtectedRouteProps {
@@ -111,6 +112,7 @@ function App() {
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/calculator" element={<CalculatorPage />} />
+              <Route path="/forms" element={<VAFormsPage />} />
               <Route path="/pricing" element={<PricingPage />} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/faq" element={<FAQPage />} />
@@ -169,6 +171,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <ConditionsOverviewPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard/forms"
+                element={
+                  <ProtectedRoute>
+                    <VAFormsPage />
                   </ProtectedRoute>
                 }
               />
