@@ -24,6 +24,7 @@ import { useTokenBalance } from '../hooks/useTokenBalance';
 interface ProfileFormData {
   fullName: string;
   email: string;
+  emailNotificationsEnabled: boolean;
 }
 
 interface TokenInfo {
@@ -97,6 +98,7 @@ const ProfilePage: React.FC = () => {
     defaultValues: {
       fullName: profile?.full_name || "",
       email: user?.email || "",
+      emailNotificationsEnabled: true,
     },
   });
 
@@ -260,6 +262,28 @@ const ProfilePage: React.FC = () => {
                             Email cannot be changed. Contact support if you need
                             to update your email.
                           </p>
+                        </div>
+
+                        {/* Email Notification Settings */}
+                        <div className="space-y-1 mt-6 border-t pt-6">
+                          <label className="block text-sm font-medium text-gray-700">
+                            Email Notifications
+                          </label>
+                          <div className="mt-2">
+                            <label className="inline-flex items-center">
+                              <input
+                                type="checkbox"
+                                className="form-checkbox h-4 w-4 text-primary-600"
+                                {...register("emailNotificationsEnabled")}
+                              />
+                              <span className="ml-2 text-sm text-gray-600">
+                                Receive email notifications when new conditions are detected
+                              </span>
+                            </label>
+                            <p className="text-xs text-gray-500 mt-1">
+                              We'll send you an email when we detect new conditions in your medical documents.
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
