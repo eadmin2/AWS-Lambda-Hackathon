@@ -89,8 +89,7 @@ define(['./workbox-e755d862'], (function (workbox) { 'use strict';
     cacheName: "api-cache",
     plugins: [new workbox.ExpirationPlugin({
       maxEntries: 100,
-      maxAgeSeconds: 86400,
-      cacheName: "api-cache"
+      maxAgeSeconds: 86400
     }), new workbox.CacheableResponsePlugin({
       statuses: [0, 200]
     })]
