@@ -14,7 +14,12 @@ Compress-Archive -Path index.js,package.json,package-lock.json,node_modules,lib,
 $size = (Get-Item rag-agent.zip).Length
 Write-Host "Zip size: $([math]::Round($size / 1MB, 2)) MB"
 
+# Update function code
 aws lambda update-function-code --function-name rag-agent --zip-file fileb://rag-agent.zip --region us-east-2
+
+# Enable X-Ray tracing
+aws lambda update-function-configuration --function-name rag-agent --tracing-config Mode=Active --region us-east-2
+
 Remove-Item rag-agent.zip
 Write-Host "Deploy complete!"
 Read-Host "Press Enter to exit"

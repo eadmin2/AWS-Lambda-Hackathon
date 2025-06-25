@@ -21,6 +21,7 @@
     "@tanstack/react-table": "^8.21.3",
     "@types/dompurify": "^3.0.5",
     "@types/uuid": "^10.0.0",
+    "aws-xray-sdk-core": "^3.10.3",
     "axios": "^1.9.0",
     "clsx": "^2.1.0",
     "dompurify": "^3.2.6",

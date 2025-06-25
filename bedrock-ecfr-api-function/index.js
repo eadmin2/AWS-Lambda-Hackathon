@@ -1,9 +1,17 @@
 const https = require('https');
+const AWSXRay = require('aws-xray-sdk-core');
+
+// Enable X-Ray tracing for HTTPS requests
+const httpsTraced = AWSXRay.captureHTTPs(https);
 
 /**
  * Lambda function to search eCFR API for VA disability rating criteria
  */
 exports.handler = async (event) => {
+    // Create a new X-Ray segment
+    const segment = AWSXRay.getSegment();
+    const subsegment = segment.addNewSubsegment('handler');
+    
     try {
         console.log('Event received:', JSON.stringify(event, null, 2));
         // Check if this is a direct invocation (not through Bedrock Agent)

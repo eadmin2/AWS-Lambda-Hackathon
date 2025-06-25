@@ -16,6 +16,7 @@
     "@aws-sdk/client-textract": "^3.634.0",
     "@aws-sdk/s3-request-presigner": "^3.634.0",
     "@supabase/supabase-js": "^2.49.10",
+    "aws-xray-sdk-core": "^3.5.3",
     "uuid": "^10.0.0"
   }
 }

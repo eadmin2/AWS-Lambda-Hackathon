@@ -127,6 +127,7 @@ const FacilitiesPage = () => {
           onSubmit={e => { e.preventDefault(); fetchFacilities(); }}
         >
           <input
+            id="state"
             name="state"
             placeholder="State (e.g. CO)"
             value={search.state}
@@ -135,6 +136,7 @@ const FacilitiesPage = () => {
             maxLength={2}
           />
           <input
+            id="zip"
             name="zip"
             placeholder="Zip Code"
             value={search.zip}
@@ -143,6 +145,7 @@ const FacilitiesPage = () => {
             maxLength={10}
           />
           <select
+            id="facility-type"
             name="type"
             value={search.type}
             onChange={handleInputChange}
@@ -151,6 +154,7 @@ const FacilitiesPage = () => {
             {FACILITY_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
           </select>
           <input
+            id="radius"
             name="radius"
             placeholder="Radius (mi)"
             value={search.radius}
@@ -161,14 +165,15 @@ const FacilitiesPage = () => {
             step="any"
           />
           <Select
-            isMulti
+            id="services"
             name="services"
+            isMulti
             options={SERVICES_LIST}
             value={SERVICES_LIST.filter(opt => search.services.includes(opt.value))}
-            onChange={selected => {
+            onChange={(selected: { value: string }[] | null) => {
               setSearch(prev => ({
                 ...prev,
-                services: selected ? selected.map(opt => opt.value) : []
+                services: selected ? selected.map((opt: { value: string }) => opt.value) : []
               }));
               setPage(1);
             }}
@@ -179,6 +184,7 @@ const FacilitiesPage = () => {
           />
           <label className="flex items-center gap-2 border border-gray-300 p-2 rounded-lg w-full bg-white">
             <input
+              id="mobile"
               type="checkbox"
               name="mobile"
               checked={search.mobile}
@@ -188,6 +194,7 @@ const FacilitiesPage = () => {
             <span>Mobile Only</span>
           </label>
           <select
+            id="visn"
             name="visn"
             value={search.visn}
             onChange={handleInputChange}
@@ -197,6 +204,7 @@ const FacilitiesPage = () => {
             {VISN_OPTIONS.map(v => <option key={v} value={v}>{`VISN ${v}`}</option>)}
           </select>
           <input
+            id="facility-ids"
             name="facilityIds"
             placeholder="Facility IDs (comma separated)"
             value={search.facilityIds}
@@ -204,6 +212,7 @@ const FacilitiesPage = () => {
             className="border border-gray-300 p-2 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full"
           />
           <select
+            id="per-page"
             name="per_page"
             value={search.per_page}
             onChange={handleInputChange}

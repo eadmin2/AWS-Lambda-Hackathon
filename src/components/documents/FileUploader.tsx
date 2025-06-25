@@ -554,7 +554,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
               : "border-gray-300 hover:border-primary-400"
           } ${!canUpload ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
         >
-          <input {...getInputProps()} />
+          <input {...getInputProps()} id="file-upload-input" name="file-upload" />
 
           <Upload
             className={`h-8 w-8 sm:h-12 sm:w-12 mb-3 sm:mb-4 ${

@@ -4,11 +4,12 @@ import { v4 as uuidv4 } from "uuid";
 import * as S3 from "@aws-sdk/client-s3";
 import * as S3RequestPresigner from "@aws-sdk/s3-request-presigner";
 import * as SQS from "@aws-sdk/client-sqs";
+import AWSXRay from 'aws-xray-sdk-core';
 
 const REGION = "us-east-2";
-const textractClient = new Textract.TextractClient({ region: REGION });
-const s3Client = new S3.S3Client({ region: REGION });
-const sqsClient = new SQS.SQSClient({ region: REGION });
+const textractClient = AWSXRay.captureAWSv3Client(new Textract.TextractClient({ region: REGION }));
+const s3Client = AWSXRay.captureAWSv3Client(new S3.S3Client({ region: REGION }));
+const sqsClient = AWSXRay.captureAWSv3Client(new SQS.SQSClient({ region: REGION }));
 
 // Supabase configuration
 const supabaseUrl = process.env.SUPABASE_URL;
@@ -377,6 +378,10 @@ const processTableBlock = (tableBlock, allBlocks) => {
 
 // Main Lambda handler - FIXED with SQS support
 export const handler = async (event) => {
+  // Create a new X-Ray segment
+  const segment = AWSXRay.getSegment();
+  const subsegment = segment.addNewSubsegment('handler');
+  
   const requestId = uuidv4();
   console.log("Request ID:", requestId);
   

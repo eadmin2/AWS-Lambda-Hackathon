@@ -10,18 +10,20 @@ import {
     createSuccessResponse 
 } from './utils/helpers.js';
 import { SQSClient } from "@aws-sdk/client-sqs";
+import AWSXRay from 'aws-xray-sdk-core';
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-const bedrock = new BedrockRuntimeClient({ region: "us-east-1" });
+// Initialize AWS clients with X-Ray tracing
+const bedrock = AWSXRay.captureAWSv3Client(new BedrockRuntimeClient({ region: "us-east-1" }));
+const bedrockAgentClient = AWSXRay.captureAWSv3Client(new BedrockAgentRuntimeClient({ region: "us-east-2" }));
+const AWS_REGION = process.env.AWS_REGION || "us-east-1";
+const sqs = AWSXRay.captureAWSv3Client(new SQSClient({ region: AWS_REGION }));
 
 // Bedrock Agent configuration
-const bedrockAgentClient = new BedrockAgentRuntimeClient({ region: "us-east-2" });
-const AWS_REGION = process.env.AWS_REGION || "us-east-1";
-
 const AGENT_ID = process.env.BEDROCK_AGENT_ID;
 const AGENT_ALIAS_ID = process.env.BEDROCK_AGENT_ALIAS_ID;
 
@@ -30,8 +32,6 @@ if (!AGENT_ID || !AGENT_ALIAS_ID) {
     "Missing required environment variables: BEDROCK_AGENT_ID and/or BEDROCK_AGENT_ALIAS_ID must be set."
   );
 }
-
-const sqs = new SQSClient({ region: AWS_REGION });
 
 // Configuration for batch processing
 const CHUNK_BATCH_SIZE = 3; // Process 3 chunks per Bedrock call for efficiency
@@ -186,6 +186,10 @@ function areConditionsSimilar(name1, name2) {
 
 // Simplified RAG Agent Handler - only processes work messages
 export const handler = async (event) => {
+  // Create a new X-Ray segment
+  const segment = AWSXRay.getSegment();
+  const subsegment = segment.addNewSubsegment('handler');
+  
   try {
     console.log("Event received:", JSON.stringify(event, null, 2));
 
