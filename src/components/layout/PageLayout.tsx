@@ -25,7 +25,11 @@ const PageLayout: React.FC<PageLayoutProps> = ({
   onBellOpenChange
 }) => {
   const location = useLocation();
-  const showSidebar = location.pathname.startsWith("/dashboard") || location.pathname.startsWith("/documents");
+  const showSidebar = location.pathname.startsWith("/dashboard") || 
+                     location.pathname.startsWith("/documents") ||
+                     location.pathname === "/calculator" ||
+                     location.pathname === "/forms" ||
+                     location.pathname === "/facilities";
   return (
     <div className="flex min-h-screen">
       {showSidebar && (
