@@ -16,20 +16,25 @@ const CheckoutPage: React.FC = () => {
   useEffect(() => {
     const doCheckout = async () => {
       if (!user) return;
-      if (type === "single") {
+      
+      // Handle all valid product types
+      if (type === "starter" || type === "file-review" || type === "full-review" || 
+          type === "tokens-100" || type === "tokens-250" || type === "tokens-500") {
         try {
-          await createUploadCheckoutSession(user.id);
-        } catch {
-          setError("Failed to start single upload checkout.");
+          await createUploadCheckoutSession(user.id, type);
+        } catch (error) {
+          console.error("Checkout error:", error);
+          setError(`Failed to start ${type} checkout. Please try again.`);
         }
       } else if (type === "subscription") {
         try {
           await createSubscriptionCheckoutSession(user.id);
-        } catch {
-          setError("Failed to start subscription checkout.");
+        } catch (error) {
+          console.error("Subscription error:", error);
+          setError("Failed to start subscription checkout. Please try again.");
         }
       } else {
-        setError("Invalid or missing checkout type.");
+        setError(`Invalid or missing checkout type: ${type}`);
       }
     };
     doCheckout();

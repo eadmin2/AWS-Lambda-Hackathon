@@ -8,7 +8,7 @@ import { registerSW } from 'virtual:pwa-register';
 // Lazy load the App component
 const App = lazy(() => import("./App"));
 
-// Register service worker
+// Register service worker with error handling
 const updateSW = registerSW({
   onNeedRefresh() {
     if (confirm('New content available. Reload?')) {
@@ -18,37 +18,26 @@ const updateSW = registerSW({
   onOfflineReady() {
     console.log('App ready to work offline');
   },
+  onRegistered(registration) {
+    // Handle successful registration
+    console.log('Service Worker registered');
+  },
+  onRegisterError(error) {
+    // Handle registration error
+    console.warn('Service Worker registration failed:', error);
+  }
 });
 
 // Suppress extension-related runtime errors
 window.addEventListener('error', function(e) {
-  if (e.message && e.message.includes('message channel closed')) {
+  if (e.message && (
+    e.message.includes('message channel closed') ||
+    e.message.includes('Extension context invalidated')
+  )) {
     e.preventDefault();
     return false;
   }
 });
-window.addEventListener('unhandledrejection', function(e) {
-  if (e.reason && e.reason.message && 
-      e.reason.message.includes('message channel closed')) {
-    e.preventDefault();
-    return false;
-  }
-});
-const win = window as any;
-if (typeof win !== 'undefined' && win.chrome && win.chrome.runtime) {
-  const originalLastError = win.chrome.runtime.lastError;
-  Object.defineProperty(win.chrome.runtime, 'lastError', {
-    get: function() {
-      const error = originalLastError;
-      if (error && error.message && 
-          error.message.includes('message channel closed')) {
-        return null;
-      }
-      return error;
-    },
-    configurable: true
-  });
-}
 
 // Generate CSP nonce for inline scripts if needed
 const generateCSPNonce = (): string => {
@@ -80,17 +69,17 @@ const removeLoadingSpinner = () => {
 };
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <Suspense fallback={
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-900"></div>
-    </div>
-  }>
+  <BrowserRouter>
     <HelmetProvider>
-      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <Suspense fallback={
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-900"></div>
+        </div>
+      }>
         <App />
-      </BrowserRouter>
+      </Suspense>
     </HelmetProvider>
-  </Suspense>,
+  </BrowserRouter>
 );
 
 // Remove loading spinner after a short delay to ensure smooth transition

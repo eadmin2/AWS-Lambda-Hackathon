@@ -53,8 +53,19 @@ const DashboardPage: React.FC = () => {
     if (user && !isAuthLoading) {
       const pendingRedirect = sessionStorage.getItem("pendingRedirect");
       if (pendingRedirect) {
+        // Parse the URL to get the type parameter
+        const url = new URL(pendingRedirect);
+        const type = url.searchParams.get("type");
+        
+        // Remove the pending redirect before proceeding
         sessionStorage.removeItem("pendingRedirect");
-        window.location.href = pendingRedirect;
+        
+        // If this is a checkout redirect, go through the checkout page
+        if (type) {
+          window.location.href = `/checkout?type=${type}`;
+        } else {
+          window.location.href = pendingRedirect;
+        }
       }
     }
   }, [user, isAuthLoading]);
