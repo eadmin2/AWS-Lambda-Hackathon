@@ -39,7 +39,7 @@ if (!self.define) {
       .then(() => {
         let promise = registry[uri];
         if (!promise) {
-          throw new Error(`Module ${uri} didn’t register its module`);
+          throw new Error(`Module ${uri} didn't register its module`);
         }
         return promise;
       })
@@ -86,10 +86,11 @@ define(['./workbox-e755d862'], (function (workbox) { 'use strict';
     allowlist: [/^\/$/]
   }));
   workbox.registerRoute(/^https:\/\/algojcmqstokyghijcyc\.supabase\.co/, new workbox.NetworkFirst({
-    "cacheName": "api-cache",
+    cacheName: "api-cache",
     plugins: [new workbox.ExpirationPlugin({
       maxEntries: 100,
-      maxAgeSeconds: 86400
+      maxAgeSeconds: 86400,
+      cacheName: "api-cache"
     }), new workbox.CacheableResponsePlugin({
       statuses: [0, 200]
     })]
