@@ -1,21 +1,13 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import { splitVendorChunkPlugin } from 'vite';
 import { compression, defineAlgorithm } from 'vite-plugin-compression2';
 import { VitePWA } from 'vite-plugin-pwa';
 import imagemin from 'vite-plugin-imagemin';
-
-// Define vendor packages
-const vendorPackages = {
-  react: ['react', 'react-dom', 'react-router-dom'],
-  ui: ['framer-motion', 'lucide-react', 'recharts'],
-};
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
-    splitVendorChunkPlugin(),
     // Configure both Brotli and Gzip compression
     compression({
       algorithms: [
@@ -137,22 +129,14 @@ export default defineConfig({
     reportCompressedSize: false, // Speed up build
     rollupOptions: {
       output: {
-        manualChunks(id) {
-          // Check if the module is from node_modules
-          if (id.includes('node_modules')) {
-            // Check if it's a React-related package
-            if (vendorPackages.react.some(pkg => id.includes(`/${pkg}/`))) {
-              return 'react-vendor';
-            }
-            // Check if it's a UI-related package
-            if (vendorPackages.ui.some(pkg => id.includes(`/${pkg}/`))) {
-              return 'ui-vendor';
-            }
-            // Other node_modules can go into a separate chunk
-            return 'vendor';
-          }
+        manualChunks: {
+          'react-core': ['react', 'react-dom', 'scheduler'],
+          'react-router': ['react-router-dom'],
+          'framer': ['framer-motion'],
+          'ui': ['lucide-react', 'recharts'],
+          'vendor': ['@supabase/supabase-js', '@stripe/stripe-js', 'axios']
         }
-      },
+      }
     },
     chunkSizeWarningLimit: 1000,
     minify: 'terser',
@@ -165,13 +149,13 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    exclude: ["lucide-react"],
     include: [
       'react',
       'react-dom',
       'react-router-dom',
       'framer-motion',
       'recharts',
-    ],
+      'scheduler'
+    ]
   },
 });
