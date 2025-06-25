@@ -6,7 +6,7 @@ import "./index.css";
 import { registerSW } from 'virtual:pwa-register';
 
 // Lazy load the App component
-const App = lazy(() => import("./App.tsx"));
+const App = lazy(() => import("./App"));
 
 // Register service worker
 const updateSW = registerSW({

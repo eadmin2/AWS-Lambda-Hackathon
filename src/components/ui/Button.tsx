@@ -1,19 +1,35 @@
-import React from "react";
+import React from 'react';
 import { cn } from "../../lib/utils";
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps {
   variant?: "primary" | "secondary" | "accent" | "danger" | "ghost";
   size?: "sm" | "md" | "lg";
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
+  className?: string;
+  children?: React.ReactNode;
+  disabled?: boolean;
+  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  type?: 'button' | 'submit' | 'reset';
+  form?: string;
+  name?: string;
+  value?: string;
+  autoFocus?: boolean;
+  tabIndex?: number;
+  'aria-label'?: string;
+  'aria-labelledby'?: string;
+  'aria-describedby'?: string;
 }
+
+type ButtonSize = NonNullable<ButtonProps["size"]>;
+type ButtonVariant = NonNullable<ButtonProps["variant"]>;
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {
-      className,
+      className = "",
       variant = "primary",
       size = "md",
       isLoading = false,
@@ -21,17 +37,19 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       rightIcon,
       children,
       disabled,
+      onClick,
+      type = 'button',
       ...props
     },
     ref,
   ) => {
-    const sizeClasses = {
+    const sizeClasses: Record<ButtonSize, string> = {
       sm: "h-8 px-3 text-xs",
       md: "h-10 px-4 text-sm",
       lg: "h-12 px-6 text-base",
     };
 
-    const variantClasses = {
+    const variantClasses: Record<ButtonVariant, string> = {
       primary: "btn-primary",
       secondary: "btn-secondary",
       accent: "btn-accent",
@@ -40,12 +58,12 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     };
 
     return (
-      <motion.button
+      <m.button
         ref={ref}
         className={cn(
           "btn",
-          sizeClasses[size],
-          variantClasses[variant],
+          sizeClasses[size as ButtonSize],
+          variantClasses[variant as ButtonVariant],
           isLoading && "opacity-70 pointer-events-none",
           className,
         )}
@@ -53,28 +71,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         whileHover={!disabled && !isLoading ? { scale: 1.04, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' } : {}}
         whileTap={!disabled && !isLoading ? { scale: 0.97 } : {}}
         transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-        onClick={props.onClick}
-        onMouseDown={props.onMouseDown}
-        onMouseUp={props.onMouseUp}
-        onMouseEnter={props.onMouseEnter}
-        onMouseLeave={props.onMouseLeave}
-        onFocus={props.onFocus}
-        onBlur={props.onBlur}
-        type={props.type}
-        tabIndex={props.tabIndex}
-        autoFocus={props.autoFocus}
-        name={props.name}
-        value={props.value}
-        form={props.form}
-        formAction={props.formAction}
-        formEncType={props.formEncType}
-        formMethod={props.formMethod}
-        formNoValidate={props.formNoValidate}
-        formTarget={props.formTarget}
-        id={props.id}
-        aria-label={props["aria-label"]}
-        aria-labelledby={props["aria-labelledby"]}
-        aria-describedby={props["aria-describedby"]}
+        onClick={onClick}
+        type={type}
+        {...props}
       >
         {isLoading ? (
           <span className="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -83,7 +82,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         ) : null}
         {children}
         {rightIcon && !isLoading && <span className="ml-2">{rightIcon}</span>}
-      </motion.button>
+      </m.button>
     );
   },
 );

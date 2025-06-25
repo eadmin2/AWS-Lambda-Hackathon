@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m, AnimatePresence } from 'framer-motion';
 import {
   MessageCircle,
   X,
@@ -149,7 +149,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
       {/* Chat Toggle Button */}
       <AnimatePresence>
         {!isOpen && (
-          <motion.button
+          <m.button
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
@@ -166,14 +166,14 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
             aria-label="Open chat"
           >
             <MessageCircle className="h-6 w-6" />
-          </motion.button>
+          </m.button>
         )}
       </AnimatePresence>
 
       {/* Chat Window */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 100, scale: 0.8 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 100, scale: 0.8 }}
@@ -327,7 +327,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
                 </div>
               </>
             )}
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>

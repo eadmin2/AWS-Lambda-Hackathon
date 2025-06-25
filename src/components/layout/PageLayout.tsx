@@ -2,7 +2,7 @@ import React, { Suspense, lazy } from "react";
 import Navbar from "./Navbar";
 import Footer from "./Footer";
 import { useLocation } from "react-router-dom";
-import { motion } from 'framer-motion';
+import { LazyMotion, domAnimation, m } from 'framer-motion';
 
 // Lazy load non-critical components
 const CookieConsentBanner = lazy(() => import("../CookieConsentBanner"));
@@ -40,14 +40,16 @@ const PageLayout: React.FC<PageLayoutProps> = ({
           bellOpen={bellOpen}
           onBellOpenChange={onBellOpenChange}
         />
-        <motion.main
-          className="flex-grow mt-4 md:mt-8"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
-        >
-          {children}
-        </motion.main>
+        <LazyMotion features={domAnimation} strict>
+          <m.main
+            className="flex-grow mt-4 md:mt-8"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+          >
+            {children}
+          </m.main>
+        </LazyMotion>
         <Footer />
         <Suspense fallback={null}>
           <CookieConsentBanner />

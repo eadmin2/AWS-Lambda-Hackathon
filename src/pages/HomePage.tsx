@@ -3,30 +3,36 @@ import { Link } from "react-router-dom";
 import { FileText, Star } from "lucide-react";
 import PageLayout from "../components/layout/PageLayout";
 import Button from "../components/ui/Button";
-import { motion, LazyMotion, domAnimation } from "framer-motion";
+import { LazyMotion, domAnimation, m } from "framer-motion";
 
 // Lazy load non-critical sections
 const FeaturesSection = lazy(() => import("./sections/FeaturesSection"));
 const BenefitsSection = lazy(() => import("./sections/BenefitsSection"));
 
+// Pre-define animations for reuse
+const fadeInUp = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.3 }
+};
+
+const fadeIn = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  transition: { duration: 0.3 }
+};
+
 const VeteranRibbon: React.FC = () => (
-  <LazyMotion features={domAnimation}>
-    <motion.div
-      initial={{ y: -50, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="w-full bg-gradient-to-r from-red-600 via-white to-blue-600 py-1.5 relative overflow-hidden"
-    >
-      <div className="absolute inset-0 bg-gradient-to-r from-red-600 via-white to-blue-600 opacity-75"></div>
-      <div className="container mx-auto px-4 flex items-center justify-center space-x-2">
-        <Star className="h-3 w-3 text-red-600" />
-        <span className="text-xs font-semibold text-gray-900">
-          Veteran Owned & Operated
-        </span>
-        <Star className="h-3 w-3 text-blue-600" />
-      </div>
-    </motion.div>
-  </LazyMotion>
+  <div className="w-full bg-gradient-to-r from-red-600 via-white to-blue-600 py-1.5 relative overflow-hidden">
+    <div className="absolute inset-0 bg-gradient-to-r from-red-600 via-white to-blue-600 opacity-75"></div>
+    <div className="container mx-auto px-4 flex items-center justify-center space-x-2">
+      <Star className="h-3 w-3 text-red-600" />
+      <span className="text-xs font-semibold text-gray-900">
+        Veteran Owned & Operated
+      </span>
+      <Star className="h-3 w-3 text-blue-600" />
+    </div>
+  </div>
 );
 
 const HomePage: React.FC = () => {
@@ -51,21 +57,16 @@ const HomePage: React.FC = () => {
                 className="w-full h-full object-contain"
                 width={112}
                 height={112}
-                loading="eager"
+                fetchpriority="high"
+                decoding="async"
               />
             </a>
           </div>
           {/* Right: Main content grid */}
           <div className="flex-1">
             <div className="grid md:grid-cols-2 gap-12 items-center">
-              <LazyMotion features={domAnimation}>
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5 }}
-                  className="ml-[clamp(56px,16vw,104px)] sm:ml-0"
-                >
+              <LazyMotion features={domAnimation} strict>
+                <m.div {...fadeInUp} className="ml-[clamp(56px,16vw,104px)] sm:ml-0">
                   <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-4 text-white">
                     Simplify Your VA Disability Claim Process!
                   </h1>
@@ -100,11 +101,8 @@ const HomePage: React.FC = () => {
                   </div>
                   
                   {/* Trust Message Box */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: 0.3 }}
+                  <m.div
+                    {...fadeIn}
                     className="mt-8 p-4 rounded-lg bg-blue-800/30 backdrop-blur-sm border border-blue-700/30"
                   >
                     <div className="flex items-start space-x-3">
@@ -120,16 +118,13 @@ const HomePage: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                  </motion.div>
-                </motion.div>
+                  </m.div>
+                </m.div>
               </LazyMotion>
               
-              <LazyMotion features={domAnimation}>
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
+              <LazyMotion features={domAnimation} strict>
+                <m.div
+                  {...fadeIn}
                   className="w-full flex justify-center"
                 >
                   <div className="bg-white rounded-lg shadow-xl overflow-hidden w-full max-w-md">
@@ -204,18 +199,18 @@ const HomePage: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                </motion.div>
+                </m.div>
               </LazyMotion>
             </div>
           </div>
         </div>
       </section>
 
-      <Suspense fallback={<div className="h-96 flex items-center justify-center">Loading...</div>}>
+      {/* Lazy load non-critical sections */}
+      <Suspense fallback={<div className="h-32" />}>
         <FeaturesSection />
       </Suspense>
-
-      <Suspense fallback={<div className="h-96 flex items-center justify-center">Loading...</div>}>
+      <Suspense fallback={<div className="h-32" />}>
         <BenefitsSection />
       </Suspense>
 

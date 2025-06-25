@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { splitVendorChunkPlugin } from 'vite';
-import { compression } from 'vite-plugin-compression2';
+import { compression, defineAlgorithm } from 'vite-plugin-compression2';
 import { VitePWA } from 'vite-plugin-pwa';
 import imagemin from 'vite-plugin-imagemin';
 
@@ -16,23 +16,41 @@ export default defineConfig({
   plugins: [
     react(),
     splitVendorChunkPlugin(),
+    // Configure both Brotli and Gzip compression
     compression({
-      algorithms: ['gzip'],
-      exclude: [/\.(br)$/, /\.(gz)$/],
-    }),
-    compression({
-      algorithms: ['brotliCompress'],
-      exclude: [/\.(br)$/, /\.(gz)$/],
+      algorithms: [
+        defineAlgorithm('brotliCompress', {
+          params: {
+            // BROTLI_PARAM_QUALITY = 2, value 11 = maximum compression
+            2: 11
+          }
+        }),
+        defineAlgorithm('gzip', { level: 9 })
+      ],
+      include: /\.(js|mjs|json|css|html|svg|xml|toml|yml|yaml)$/i,
+      threshold: 1024, // Only compress files larger than 1KB
+      skipIfLargerOrEqual: true, // Skip if compressed file is larger than original
     }),
     imagemin({
       gifsicle: { optimizationLevel: 7 },
-      mozjpeg: { quality: 80 },
-      pngquant: { quality: [0.7, 0.8] },
+      mozjpeg: { quality: 85 },
+      pngquant: { 
+        quality: [0.8, 0.9],
+        speed: 4
+      },
       svgo: {
         plugins: [
           { name: 'removeViewBox', active: false },
-          { name: 'removeEmptyAttrs', active: false }
+          { name: 'removeEmptyAttrs', active: false },
+          { name: 'removeDimensions', active: true },
+          { name: 'removeUnknownsAndDefaults', active: true },
+          { name: 'removeUselessStrokeAndFill', active: true },
+          { name: 'cleanupIDs', active: true }
         ]
+      },
+      webp: {
+        quality: 85,
+        method: 6
       }
     }),
     VitePWA({
@@ -42,9 +60,8 @@ export default defineConfig({
       devOptions: {
         enabled: true,
         type: 'module',
+        navigateFallback: 'index.html',
       },
-      filename: 'manifest.json',
-      manifestFilename: 'manifest.json',
       manifest: {
         id: '/',
         name: "VA Rating Assistant",
@@ -88,7 +105,13 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globDirectory: 'dist',
+        globPatterns: [
+          '**/*.{js,css,html}',
+          '**/*.{ico,png,svg,webp}',
+          '**/*.{woff,woff2,ttf,otf}',
+          '**/manifest.webmanifest'
+        ],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3MB
         runtimeCaching: [
           {
@@ -125,13 +148,21 @@ export default defineConfig({
             if (vendorPackages.ui.some(pkg => id.includes(`/${pkg}/`))) {
               return 'ui-vendor';
             }
-            // Other node_modules can go into a separate vendor chunk
+            // Other node_modules can go into a separate chunk
             return 'vendor';
           }
         }
       },
     },
     chunkSizeWarningLimit: 1000,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.trace'],
+      },
+    },
   },
   optimizeDeps: {
     exclude: ["lucide-react"],

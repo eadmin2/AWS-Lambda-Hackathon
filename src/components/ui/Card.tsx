@@ -1,6 +1,6 @@
 import React from "react";
 import { cn } from "../../lib/utils";
-import { motion } from 'framer-motion';
+import { LazyMotion, domAnimation, m } from 'framer-motion';
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: "default" | "outline" | "elevated";
@@ -15,15 +15,17 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
     };
 
     return (
-      <motion.div
-        ref={ref}
-        className={cn("rounded-lg p-6", variantClasses[variant], className)}
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: 'easeOut' }}
-      >
-        <div {...props}>{children}</div>
-      </motion.div>
+      <LazyMotion features={domAnimation} strict>
+        <m.div
+          ref={ref}
+          className={cn("rounded-lg p-6", variantClasses[variant], className)}
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+        >
+          <div {...props}>{children}</div>
+        </m.div>
+      </LazyMotion>
     );
   },
 );

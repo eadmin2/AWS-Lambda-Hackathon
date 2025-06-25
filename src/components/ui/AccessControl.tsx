@@ -9,7 +9,7 @@ import {
 import { Lock, CreditCard, Crown } from "lucide-react";
 import Button from "./Button";
 import { Card, CardHeader, CardTitle, CardContent } from "./Card";
-import { motion } from 'framer-motion';
+import { LazyMotion, domAnimation, m } from 'framer-motion';
 
 interface AccessControlProps {
   children: React.ReactNode;
@@ -116,44 +116,46 @@ const AccessControl: React.FC<AccessControlProps> = ({
   const restrictionContent = getRestrictionContent();
 
   return (
-    <motion.div
-      className="max-w-md mx-auto"
-      initial={{ x: 0 }}
-      animate={{ x: [0, -8, 8, -8, 8, 0] }}
-      transition={{ duration: 0.5, ease: 'easeInOut' }}
-    >
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-center">
-            {restrictionContent.icon}
-            {restrictionContent.title}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-center">
-          <p className="text-gray-600 mb-6">{restrictionContent.message}</p>
-          {restrictionContent.showUpgradeButton && (
-            <div className="space-y-3">
-              <Button
-                onClick={() => window.location.href = "/pricing"}
-                className="w-full"
-              >
-                View Pricing Plans
-              </Button>
-              <p className="text-xs text-gray-500">
-                Choose from single uploads or unlimited monthly subscriptions
-              </p>
-            </div>
-          )}
-          {userStatus === "paid" && !permissions.canUpload && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4">
-              <p className="text-yellow-800 text-sm">
-                Upload credits remaining: {permissions.uploadCreditsRemaining}
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </motion.div>
+    <LazyMotion features={domAnimation} strict>
+      <m.div
+        className="max-w-md mx-auto"
+        initial={{ x: 0 }}
+        animate={{ x: [0, -8, 8, -8, 8, 0] }}
+        transition={{ duration: 0.5, ease: 'easeInOut' }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-center">
+              {restrictionContent.icon}
+              {restrictionContent.title}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center">
+            <p className="text-gray-600 mb-6">{restrictionContent.message}</p>
+            {restrictionContent.showUpgradeButton && (
+              <div className="space-y-3">
+                <Button
+                  onClick={() => window.location.href = "/pricing"}
+                  className="w-full"
+                >
+                  View Pricing Plans
+                </Button>
+                <p className="text-xs text-gray-500">
+                  Choose from single uploads or unlimited monthly subscriptions
+                </p>
+              </div>
+            )}
+            {userStatus === "paid" && !permissions.canUpload && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4">
+                <p className="text-yellow-800 text-sm">
+                  Upload credits remaining: {permissions.uploadCreditsRemaining}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </m.div>
+    </LazyMotion>
   );
 };
 
