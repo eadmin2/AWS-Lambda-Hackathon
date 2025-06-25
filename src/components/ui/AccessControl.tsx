@@ -135,7 +135,7 @@ const AccessControl: React.FC<AccessControlProps> = ({
             {restrictionContent.showUpgradeButton && (
               <div className="space-y-3">
                 <Button
-                  onClick={() => window.location.href = "/pricing"}
+                  onClick={() => window.location.href = "/pricing#pricing-section"}
                   className="w-full"
                 >
                   View Pricing Plans
