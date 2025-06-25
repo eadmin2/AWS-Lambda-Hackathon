@@ -42,7 +42,10 @@ const AuthPage: React.FC = () => {
           </div>
 
           <div className="bg-white py-8 px-6 shadow-md rounded-lg">
-            <AuthTabs onSuccess={handleAuthSuccess} />
+            <AuthTabs 
+              onSuccess={handleAuthSuccess} 
+              defaultTab={next === "checkout" ? "register" : "login"}
+            />
           </div>
 
           <div className="text-center text-sm text-gray-500">

@@ -91,7 +91,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
       // Build redirect URL with parameters
       let redirectTo = window.location.origin + "/dashboard";
       if (next && type) {
-        redirectTo = window.location.origin + `/checkout?type=${type}`;
+        // Store checkout info in session storage
+        sessionStorage.setItem("pendingRedirect", window.location.origin + `/checkout?type=${type}`);
+        redirectTo = window.location.origin + "/dashboard";
       }
 
       const { error } = await supabase.auth.signInWithOAuth({
