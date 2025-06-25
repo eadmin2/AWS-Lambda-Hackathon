@@ -110,9 +110,9 @@ const HomePage: React.FC = () => {
                         <Star className="h-5 w-5 text-white" />
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold text-white mb-1">
+                        <h2 className="text-lg font-semibold text-white mb-1">
                           Built by Veterans, for Veterans
-                        </h3>
+                        </h2>
                         <p className="text-gray-200">
                           We understand your journey because we've walked it too
                         </p>
@@ -131,9 +131,9 @@ const HomePage: React.FC = () => {
                     <div className="bg-gray-200 p-4 border-b border-gray-200">
                       <div className="flex items-center">
                         <FileText className="h-6 w-6 text-primary-600 mr-2" />
-                        <h3 className="text-lg font-semibold text-gray-900">
+                        <h2 className="text-lg font-semibold text-gray-900">
                           VA Rating Estimate
-                        </h3>
+                        </h2>
                       </div>
                     </div>
                     <div className="p-6 bg-white">

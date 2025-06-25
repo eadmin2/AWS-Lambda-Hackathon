@@ -1,0 +1,17 @@
+# VA Rating Assistant robots.txt
+
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Disallow admin and authentication pages
+Disallow: /admin
+Disallow: /auth
+Disallow: /profile
+Disallow: /dashboard
+
+# Sitemap
+Sitemap: https://varatingassistant.com/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 10 
