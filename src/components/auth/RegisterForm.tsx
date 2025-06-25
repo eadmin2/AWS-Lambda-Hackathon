@@ -8,7 +8,7 @@ import {
   createSubscriptionCheckoutSession,
   createUploadCheckoutSession,
 } from "../../lib/stripe";
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 
 interface RegisterFormProps {
   onSuccess?: () => void;
@@ -129,10 +129,15 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
   };
 
   return (
-    <>
+    <m.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="space-y-6"
+    >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {errors.root && (
-          <motion.div
+          <m.div
             className="bg-error-100 p-3 rounded-md flex items-start"
             initial={{ x: 0 }}
             animate={{ x: [0, -8, 8, -8, 8, 0] }}
@@ -140,10 +145,10 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
           >
             <AlertCircle className="h-5 w-5 text-error-500 mr-2 flex-shrink-0 mt-0.5" />
             <p className="text-error-700 text-sm">{errors.root.message}</p>
-          </motion.div>
+          </m.div>
         )}
         {successMessage && (
-          <motion.div
+          <m.div
             className="bg-success-100 p-3 rounded-md flex items-start"
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -151,7 +156,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
           >
             <svg className="h-5 w-5 text-success-500 mr-2 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
             <p className="text-success-700 text-sm">{successMessage}</p>
-          </motion.div>
+          </m.div>
         )}
         <div className="space-y-1">
           <label
@@ -297,7 +302,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
         </svg>
         Sign up with Google
       </Button>
-    </>
+    </m.div>
   );
 };
 

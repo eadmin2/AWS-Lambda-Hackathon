@@ -39,7 +39,7 @@ if (!self.define) {
       .then(() => {
         let promise = registry[uri];
         if (!promise) {
-          throw new Error(`Module ${uri} didn't register its module`);
+          throw new Error(`Module ${uri} didn’t register its module`);
         }
         return promise;
       })
@@ -79,14 +79,14 @@ define(['./workbox-e755d862'], (function (workbox) { 'use strict';
    */
   workbox.precacheAndRoute([{
     "url": "index.html",
-    "revision": "0.08n1q9aooo8"
+    "revision": "0.hqp7g65fino"
   }], {});
   workbox.cleanupOutdatedCaches();
   workbox.registerRoute(new workbox.NavigationRoute(workbox.createHandlerBoundToURL("index.html"), {
     allowlist: [/^\/$/]
   }));
   workbox.registerRoute(/^https:\/\/algojcmqstokyghijcyc\.supabase\.co/, new workbox.NetworkFirst({
-    cacheName: "api-cache",
+    "cacheName": "api-cache",
     plugins: [new workbox.ExpirationPlugin({
       maxEntries: 100,
       maxAgeSeconds: 86400

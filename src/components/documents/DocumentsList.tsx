@@ -14,7 +14,7 @@ import Button from "../ui/Button";
 import { Card, CardHeader, CardTitle, CardContent } from "../ui/Card";
 import { useAuth } from "../../contexts/AuthContext";
 import Modal from "../ui/Modal";
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, m } from 'framer-motion';
 
 const DocumentsList: React.FC = () => {
   const { user } = useAuth();
@@ -156,7 +156,7 @@ const DocumentsList: React.FC = () => {
 
   if (documents.length === 0) {
     return (
-      <motion.div
+      <m.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4, ease: 'easeOut' }}
@@ -174,14 +174,14 @@ const DocumentsList: React.FC = () => {
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </m.div>
     );
   }
 
   return (
     <div className="space-y-4 sm:space-y-6">
       {error && (
-        <motion.div
+        <m.div
           className="rounded-md bg-red-50 p-4 mb-2"
           initial={{ x: 0 }}
           animate={{ x: [0, -8, 8, -8, 8, 0] }}
@@ -198,7 +198,7 @@ const DocumentsList: React.FC = () => {
               <p className="text-sm font-medium text-red-800">{error}</p>
             </div>
           </div>
-        </motion.div>
+        </m.div>
       )}
       <AnimatePresence>
         {documents.map((document, idx) => {
@@ -210,12 +210,12 @@ const DocumentsList: React.FC = () => {
           const showDropdown = activeDropdown === document.id;
 
           return (
-            <motion.div
+            <m.div
               key={document.id}
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 16 }}
-              transition={{ duration: 0.3, ease: 'easeOut', delay: idx * 0.07 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="bg-white rounded-lg shadow-sm p-4 border border-gray-200"
             >
               <Card>
                 <CardHeader className="pb-3 sm:pb-6">
@@ -435,7 +435,7 @@ const DocumentsList: React.FC = () => {
                   )}
                 </CardContent>
               </Card>
-            </motion.div>
+            </m.div>
           );
         })}
       </AnimatePresence>

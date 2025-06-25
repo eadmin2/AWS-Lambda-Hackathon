@@ -24,7 +24,7 @@ import {
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import DocumentViewer from "./DocumentViewer";
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, m } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 
 export interface DocumentRow {
@@ -466,11 +466,11 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
           <tbody className="bg-white divide-y divide-gray-200">
             <AnimatePresence>
               {table.getRowModel().rows.map((row, idx) => (
-                <motion.tr
+                <m.tr
                   key={row.id}
-                  initial={{ opacity: 0, y: 16 }}
+                  initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 16 }}
+                  exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.3, ease: 'easeOut', delay: idx * 0.07 }}
                 >
                   {row.getVisibleCells().map((cell) => (
@@ -481,7 +481,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
                       )}
                     </td>
                   ))}
-                </motion.tr>
+                </m.tr>
               ))}
             </AnimatePresence>
           </tbody>

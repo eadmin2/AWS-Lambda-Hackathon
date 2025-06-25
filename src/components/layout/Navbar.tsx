@@ -245,6 +245,70 @@ const Navbar: React.FC<NavbarProps> = ({
               )}
             </div>
           </div>
+          {/* Mobile menu */}
+          {isMobileMenuOpen && (
+            <div className="sm:hidden">
+              <div className="pt-2 pb-3 space-y-1">
+                <Link
+                  to="/"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Home
+                </Link>
+                <Link
+                  to="/calculator"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Combined Rating Calculator
+                </Link>
+                <Link
+                  to="/forms"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  VA Forms
+                </Link>
+                <Link
+                  to="/facilities"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  VA Facilities
+                </Link>
+                {!isLoading && user && (
+                  <>
+                    <Link
+                      to="/dashboard"
+                      className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      Dashboard
+                    </Link>
+                    {profile?.role === "admin" && (
+                      <Link
+                        to="/admin"
+                        className="block px-3 py-2 rounded-md text-base font-medium text-purple-700 hover:text-purple-900 hover:bg-purple-50"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        Admin
+                      </Link>
+                    )}
+                  </>
+                )}
+                {!isLoading && !user && (
+                  <Link
+                    to="/auth"
+                    className="block px-3 py-2 rounded-md text-base font-medium text-primary-600 hover:text-primary-900 hover:bg-primary-50"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Sign In
+                  </Link>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </m.nav>
     </LazyMotion>

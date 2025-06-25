@@ -3,7 +3,7 @@ import { Search, FileText, Download, AlertCircle, Filter, ChevronDown, ChevronUp
 import { searchVAForms } from '../../services/vaFormsApi';
 import type { VAForm, VAFormFilterState, VAFormSuggestion } from '../../../types';
 import Select from 'react-select';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, m } from 'framer-motion';
 
 interface Props {
   onFormSelect: (form: VAForm) => void;
@@ -314,7 +314,7 @@ export function VAFormSearch({ onFormSelect }: Props) {
       ) : forms.length > 0 ? (
         <AnimatePresence>
           {sortedForms.length > 0 && (
-            <motion.ul
+            <m.ul
               initial="hidden"
               animate="visible"
               exit="hidden"
@@ -325,7 +325,7 @@ export function VAFormSearch({ onFormSelect }: Props) {
               className="divide-y divide-gray-200"
             >
               {sortedForms.map((form) => (
-                <motion.li
+                <m.li
                   key={form.id}
                   variants={{
                     hidden: { opacity: 0, y: 16 },
@@ -363,9 +363,9 @@ export function VAFormSearch({ onFormSelect }: Props) {
                       Download
                     </a>
                   </div>
-                </motion.li>
+                </m.li>
               ))}
-            </motion.ul>
+            </m.ul>
           )}
         </AnimatePresence>
       ) : searchQuery.length > 0 ? (

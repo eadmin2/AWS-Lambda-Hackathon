@@ -16,7 +16,7 @@ import { validateTokens } from "../../lib/supabase";
 import { useTokenBalance } from '../../hooks/useTokenBalance';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 
 // AWS Constants
 const AWS_S3_BUCKET = "my-receipts-app-bucket";
@@ -596,38 +596,72 @@ const FileUploader: React.FC<FileUploaderProps> = ({
           )}
         </div>
       ) : (
-        <div className="border rounded-lg p-3 sm:p-4 bg-white">
-          {/* Mobile: Cards layout, Desktop: List layout */}
-          <div className="space-y-3 sm:space-y-4">
-            {files.map((f, idx) => {
-              const ext = f.file.name.split(".").pop();
-              return (
-                <div key={idx}>
-                  {/* Mobile Card Layout */}
-                  <div className="block sm:hidden bg-gray-50 rounded-lg p-3">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        {getFileIcon(f.file.name)}
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-gray-900 truncate">
-                            {f.file.name}
-                          </p>
+        <m.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className="max-w-xl mx-auto"
+        >
+          <div className="border rounded-lg p-3 sm:p-4 bg-white">
+            {/* Mobile: Cards layout, Desktop: List layout */}
+            <div className="space-y-3 sm:space-y-4">
+              {files.map((f, idx) => {
+                const ext = f.file.name.split(".").pop();
+                return (
+                  <div key={idx}>
+                    {/* Mobile Card Layout */}
+                    <div className="block sm:hidden bg-gray-50 rounded-lg p-3">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          {getFileIcon(f.file.name)}
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {f.file.name}
+                            </p>
+                          </div>
                         </div>
+                        <button
+                          onClick={() => handleRemoveFile(idx)}
+                          className="text-gray-400 hover:text-gray-600 p-1"
+                          disabled={uploading}
+                          title="Remove file"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
                       </div>
-                      <button
-                        onClick={() => handleRemoveFile(idx)}
-                        className="text-gray-400 hover:text-gray-600 p-1"
-                        disabled={uploading}
-                        title="Remove file"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <input
+                          className="input flex-1 text-sm"
+                          id={`file-name-${idx}`}
+                          name={`file-name-${idx}`}
+                          value={f.name}
+                          onChange={(e) =>
+                            handleFileNameChange(
+                              idx,
+                              e.target.value.replace(/[^a-zA-Z0-9-_ ]/g, ""),
+                            )
+                          }
+                          disabled={uploading}
+                          placeholder="File name"
+                        />
+                        <span className="text-xs text-gray-500 whitespace-nowrap">
+                          .{ext}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
+
+                    {/* Desktop List Layout */}
+                    <div className="hidden sm:flex items-center gap-3 border-b pb-2 last:border-b-0">
+                      {getFileIcon(f.file.name)}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-500 truncate">
+                          {f.file.name} ({formatFileSize(f.file.size)})
+                        </p>
+                      </div>
                       <input
-                        className="input flex-1 text-sm"
-                        id={`file-name-${idx}`}
-                        name={`file-name-${idx}`}
+                        className="input w-40"
+                        id={`file-name-desktop-${idx}`}
+                        name={`file-name-desktop-${idx}`}
                         value={f.name}
                         onChange={(e) =>
                           handleFileNameChange(
@@ -636,125 +670,98 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                           )
                         }
                         disabled={uploading}
-                        placeholder="File name"
                       />
-                      <span className="text-xs text-gray-500 whitespace-nowrap">
-                        .{ext}
-                      </span>
+                      <span className="text-xs text-gray-500">.{ext}</span>
+                      <button
+                        onClick={() => handleRemoveFile(idx)}
+                        className="ml-2 text-gray-400 hover:text-gray-500 focus:outline-none"
+                        disabled={uploading}
+                        title="Remove file"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
                     </div>
                   </div>
+                );
+              })}
+            </div>
 
-                  {/* Desktop List Layout */}
-                  <div className="hidden sm:flex items-center gap-3 border-b pb-2 last:border-b-0">
-                    {getFileIcon(f.file.name)}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-500 truncate">
-                        {f.file.name} ({formatFileSize(f.file.size)})
-                      </p>
-                    </div>
-                    <input
-                      className="input w-40"
-                      id={`file-name-desktop-${idx}`}
-                      name={`file-name-desktop-${idx}`}
-                      value={f.name}
-                      onChange={(e) =>
-                        handleFileNameChange(
-                          idx,
-                          e.target.value.replace(/[^a-zA-Z0-9-_ ]/g, ""),
-                        )
-                      }
-                      disabled={uploading}
-                    />
-                    <span className="text-xs text-gray-500">.{ext}</span>
-                    <button
-                      onClick={() => handleRemoveFile(idx)}
-                      className="ml-2 text-gray-400 hover:text-gray-500 focus:outline-none"
-                      disabled={uploading}
-                      title="Remove file"
-                    >
-                      <X className="h-5 w-5" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+            {/* Add More Files Button */}
+            {!uploading && canUpload && (
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={open}
+                  className="w-full sm:w-auto"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add More Files
+                </Button>
+              </div>
+            )}
 
-          {/* Add More Files Button */}
-          {!uploading && canUpload && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
+            {/* Action Buttons */}
+            <div className="mt-4 flex flex-col sm:flex-row justify-end gap-2">
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="sm"
-                onClick={open}
-                className="w-full sm:w-auto"
+                onClick={() => {
+                  dispatch({ type: 'SET_FILES', files: [] });
+                  dispatch({ type: 'SET_ERROR', error: null });
+                }}
+                disabled={uploading}
+                className="w-full sm:w-auto order-2 sm:order-1"
               >
-                <Plus className="h-4 w-4 mr-2" />
-                Add More Files
+                Cancel All
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleUpload}
+                isLoading={uploading || checkingTokens}
+                disabled={uploading || checkingTokens || !enoughTokens}
+                leftIcon={<Upload className="h-4 w-4" />}
+                className="w-full sm:w-auto order-1 sm:order-2"
+              >
+                {checkingTokens ? "Checking Tokens..." : 
+                 !enoughTokens ? "Insufficient Tokens" :
+                 `Upload ${files.length > 1 ? `${files.length} Files` : "File"}`}
               </Button>
             </div>
-          )}
 
-          {/* Action Buttons */}
-          <div className="mt-4 flex flex-col sm:flex-row justify-end gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                dispatch({ type: 'SET_FILES', files: [] });
-                dispatch({ type: 'SET_ERROR', error: null });
-              }}
-              disabled={uploading}
-              className="w-full sm:w-auto order-2 sm:order-1"
-            >
-              Cancel All
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={handleUpload}
-              isLoading={uploading || checkingTokens}
-              disabled={uploading || checkingTokens || !enoughTokens}
-              leftIcon={<Upload className="h-4 w-4" />}
-              className="w-full sm:w-auto order-1 sm:order-2"
-            >
-              {checkingTokens ? "Checking Tokens..." : 
-               !enoughTokens ? "Insufficient Tokens" :
-               `Upload ${files.length > 1 ? `${files.length} Files` : "File"}`}
-            </Button>
+            {/* Progress Bar */}
+            {uploading && (
+              <m.div
+                className="w-full h-2 bg-gray-200 rounded overflow-hidden mb-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+              >
+                <m.div
+                  className="h-2 bg-blue-500"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${uploadProgress}%` }}
+                  transition={{ duration: 0.4, ease: 'easeOut' }}
+                  style={{ width: `${uploadProgress}%` }}
+                />
+              </m.div>
+            )}
           </div>
 
-          {/* Progress Bar */}
-          {uploading && (
-            <motion.div
-              className="w-full h-2 bg-gray-200 rounded overflow-hidden mb-2"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.3, ease: 'easeOut' }}
+          {/* Error Message - Always render when there's an error */}
+          {error && (
+            <m.div
+              className="bg-error-100 p-3 rounded-md flex items-start mb-2"
+              initial={{ x: 0 }}
+              animate={{ x: [0, -8, 8, -8, 8, 0] }}
+              transition={{ duration: 0.5, ease: 'easeInOut' }}
             >
-              <motion.div
-                className="h-2 bg-blue-500"
-                initial={{ width: 0 }}
-                animate={{ width: `${uploadProgress}%` }}
-                transition={{ duration: 0.4, ease: 'easeOut' }}
-                style={{ width: `${uploadProgress}%` }}
-              />
-            </motion.div>
+              <AlertCircle className="h-5 w-5 text-error-500 mr-2 flex-shrink-0 mt-0.5" />
+              <p className="text-error-700 text-sm">{error}</p>
+            </m.div>
           )}
-        </div>
-      )}
-
-      {/* Error Message - Always render when there's an error */}
-      {error && (
-        <motion.div
-          className="bg-error-100 p-3 rounded-md flex items-start mb-2"
-          initial={{ x: 0 }}
-          animate={{ x: [0, -8, 8, -8, 8, 0] }}
-          transition={{ duration: 0.5, ease: 'easeInOut' }}
-        >
-          <AlertCircle className="h-5 w-5 text-error-500 mr-2 flex-shrink-0 mt-0.5" />
-          <p className="text-error-700 text-sm">{error}</p>
-        </motion.div>
+        </m.div>
       )}
     </div>
   );

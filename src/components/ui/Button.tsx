@@ -21,6 +21,7 @@ interface ButtonProps {
   'aria-label'?: string;
   'aria-labelledby'?: string;
   'aria-describedby'?: string;
+  title?: string;
 }
 
 type ButtonSize = NonNullable<ButtonProps["size"]>;
