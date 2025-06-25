@@ -155,6 +155,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
               type="email"
               className={`input pl-10 ${errors.email ? "border-error-500 focus:border-error-500 focus:ring-error-500" : ""}`}
               placeholder="veteran@example.com"
+              autoComplete="username"
               {...register("email", {
                 required: "Email is required",
                 pattern: {

@@ -169,6 +169,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
               type="text"
               className={`input pl-10 ${errors.fullName ? "border-error-500 focus:border-error-500 focus:ring-error-500" : ""}`}
               placeholder="John Doe"
+              autoComplete="name"
               {...register("fullName", {
                 required: "Full name is required",
               })}
@@ -196,6 +197,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
               type="email"
               className={`input pl-10 ${errors.email ? "border-error-500 focus:border-error-500 focus:ring-error-500" : ""}`}
               placeholder="veteran@example.com"
+              autoComplete="username"
               {...register("email", {
                 required: "Email is required",
                 pattern: {
