@@ -3,6 +3,7 @@ import Navbar from "./Navbar";
 import Footer from "./Footer";
 import { useLocation } from "react-router-dom";
 import { LazyMotion, domAnimation, m } from 'framer-motion';
+import { useAuth } from "../../contexts/AuthContext";
 
 // Lazy load non-critical components
 const CookieConsentBanner = lazy(() => import("../CookieConsentBanner"));
@@ -25,11 +26,16 @@ const PageLayout: React.FC<PageLayoutProps> = ({
   onBellOpenChange
 }) => {
   const location = useLocation();
-  const showSidebar = location.pathname.startsWith("/dashboard") || 
-                     location.pathname.startsWith("/documents") ||
-                     location.pathname === "/calculator" ||
-                     location.pathname === "/forms" ||
-                     location.pathname === "/facilities";
+  const { user } = useAuth();
+  
+  const showSidebar = user && (
+    location.pathname.startsWith("/dashboard") || 
+    location.pathname.startsWith("/documents") ||
+    location.pathname === "/calculator" ||
+    location.pathname === "/forms" ||
+    location.pathname === "/facilities"
+  );
+  
   return (
     <div className="flex min-h-screen">
       {showSidebar && (
