@@ -4,7 +4,7 @@ import { Save, Bot, Palette, MessageSquare, Settings, Eye, EyeOff, X } from 'luc
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import Button from '../ui/Button';
 import { useChatBotConfig } from '../../hooks/useChatBotConfig';
-import Chatbot from '../chat/Chatbot';
+import ChatbotPreview from './ChatbotPreview';
 
 interface ChatBotSettingsFormData {
   botName: string;
@@ -456,26 +456,16 @@ const ChatBotSettings = () => {
 
       {/* Live Chatbot Preview */}
       {showPreview && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">Live Chatbot Preview</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowPreview(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <p className="text-gray-600 mb-4">
-              This is how your chatbot will appear to users on your website.
-            </p>
-            <div className="relative h-96 bg-gray-100 rounded-lg overflow-hidden">
-              <Chatbot />
-            </div>
-          </div>
-        </div>
+        <ChatbotPreview
+          botName={watchedValues.botName || 'VA Assistant'}
+          welcomeMessage={watchedValues.welcomeMessage || "Hi! I'm your VA Rating Assistant. How can I help you today?"}
+          statusMessage={watchedValues.statusMessage || 'Online • Typically replies instantly'}
+          inputPlaceholder={watchedValues.inputPlaceholder || 'Type your message...'}
+          primaryColor={watchedValues.primaryColor || '#3b82f6'}
+          headerColor={watchedValues.headerColor || '#f8fafc'}
+          userTextColor={normalizeHex(watchedValues.userTextColor || '#ffffff')}
+          position={watchedValues.position || 'bottom-right'}
+        />
       )}
     </div>
   );

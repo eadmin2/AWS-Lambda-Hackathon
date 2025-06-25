@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { Link } from "react-router-dom";
+import { registerCookieConsentOpener } from '../utils/cookieConsent';
 
 const COOKIE_KEY = "cookie_consent_v1";
 const REJECT_REPROMPT_DAYS = 7; // For demo, 7 days. Use 180/365 for 6-12 months in production.
@@ -13,12 +14,12 @@ interface CookieConsentData {
 }
 
 const CookieConsentBanner: React.FC = () => {
-  const [visible, setVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     const checkConsent = () => {
       const raw = localStorage.getItem(COOKIE_KEY);
-      if (!raw) return setVisible(true);
+      if (!raw) return setIsVisible(true);
       try {
         const data: CookieConsentData = JSON.parse(raw);
         if (data.type === "rejected") {
@@ -26,21 +27,19 @@ const CookieConsentBanner: React.FC = () => {
           const now = Date.now();
           const days = (now - data.timestamp) / (1000 * 60 * 60 * 24);
           if (days >= REJECT_REPROMPT_DAYS) {
-            setVisible(true);
+            setIsVisible(true);
             return;
           }
         }
       } catch {
-        setVisible(true);
+        setIsVisible(true);
         return;
       }
-      setVisible(false);
+      setIsVisible(false);
     };
     checkConsent();
     // Listen for external open
-    const handler = () => setVisible(true);
-    window.addEventListener("open-cookie-consent", handler);
-    return () => window.removeEventListener("open-cookie-consent", handler);
+    registerCookieConsentOpener(() => setIsVisible(true));
   }, []);
 
   const handleConsent = (type: ConsentType) => {
@@ -49,10 +48,10 @@ const CookieConsentBanner: React.FC = () => {
       timestamp: Date.now(),
     };
     localStorage.setItem(COOKIE_KEY, JSON.stringify(data));
-    setVisible(false);
+    setIsVisible(false);
   };
 
-  if (!visible) return null;
+  if (!isVisible) return null;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-[9998] flex justify-center items-end pointer-events-none">
@@ -111,7 +110,7 @@ const CookieConsentBanner: React.FC = () => {
         <button
           className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 focus:outline-none"
           aria-label="Close cookie banner"
-          onClick={() => setVisible(false)}
+          onClick={() => setIsVisible(false)}
         >
           <X className="h-5 w-5" />
         </button>

@@ -1,7 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Youtube, Linkedin, Facebook } from "lucide-react";
-import { openCookieConsentBanner } from "../CookieConsentBanner";
+import { openCookieConsentBanner } from "../../utils/cookieConsent";
 
 const Footer: React.FC = () => {
   return (

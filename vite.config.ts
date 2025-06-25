@@ -71,25 +71,25 @@ export default defineConfig({
         prefer_related_applications: false,
         icons: [
           {
-            src: "/Logo.png",
+            src: "/icon-192x192.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "any"
           },
           {
-            src: "/Logo.png",
+            src: "/icon-512x512.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "any"
           },
           {
-            src: "/Logo.png",
+            src: "/icon-192x192-maskable.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "maskable"
           },
           {
-            src: "/Logo.png",
+            src: "/icon-512x512-maskable.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable"
@@ -101,7 +101,6 @@ export default defineConfig({
         globPatterns: [
           '**/*.{js,css,html}',
           '**/*.{ico,png,svg,webp}',
-          '**/*.{woff,woff2,ttf,otf}',
           '**/manifest.webmanifest'
         ],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3MB
