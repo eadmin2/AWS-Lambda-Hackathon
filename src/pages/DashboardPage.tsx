@@ -48,6 +48,17 @@ const DashboardPage: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Handle redirect after Google auth
+  useEffect(() => {
+    if (user && !isAuthLoading) {
+      const pendingRedirect = sessionStorage.getItem("pendingRedirect");
+      if (pendingRedirect) {
+        sessionStorage.removeItem("pendingRedirect");
+        window.location.href = pendingRedirect;
+      }
+    }
+  }, [user, isAuthLoading]);
+
   useEffect(() => {
     async function fetchDashboardData() {
       if (!user) {
