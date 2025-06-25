@@ -49,18 +49,11 @@ const UploadCompleteModal: React.FC<UploadCompleteModalProps> = ({ isOpen, onClo
           </div>
           
           <p className="text-sm text-gray-500">
-            Coming soon: You'll receive an email notification when processing is complete.
+            Feature not available yet: Email notification when processing is complete.
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 w-full">
-          <Button
-            variant="secondary"
-            onClick={onClose}
-            className="w-full sm:w-auto"
-          >
-            Stay Here
-          </Button>
+        <div className="flex justify-center w-full">
           <Button
             variant="primary"
             onClick={handleGoToDashboard}
