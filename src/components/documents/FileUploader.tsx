@@ -17,6 +17,7 @@ import { useTokenBalance } from '../../hooks/useTokenBalance';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import { m } from 'framer-motion';
+import UploadCompleteModal from './UploadCompleteModal';
 
 // AWS Constants
 const AWS_S3_BUCKET = "my-receipts-app-bucket";
@@ -99,6 +100,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   const [restoringSession, setRestoringSession] = React.useState<boolean>(true);
   const [sessionError, setSessionError] = React.useState<string | null>(null);
   const { session: supabaseSession } = useAuth();
+  const [showCompleteModal, setShowCompleteModal] = React.useState(false);
 
   // Use realtime token balance
   const { tokensAvailable, tokensUsed } = useTokenBalance(userId);
@@ -480,6 +482,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
       // Clear files on successful upload
       dispatch({ type: 'UPLOAD_SUCCESS' });
       toast.success('Upload complete! Processing your document...', { id: 'uploading' });
+      setShowCompleteModal(true);
     } catch (error) {
       console.error("Error uploading document:", error);
       const errorMessage =
@@ -763,6 +766,11 @@ const FileUploader: React.FC<FileUploaderProps> = ({
           )}
         </m.div>
       )}
+
+      <UploadCompleteModal 
+        isOpen={showCompleteModal}
+        onClose={() => setShowCompleteModal(false)}
+      />
     </div>
   );
 };
