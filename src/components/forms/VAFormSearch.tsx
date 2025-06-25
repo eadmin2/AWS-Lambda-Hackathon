@@ -198,6 +198,8 @@ export function VAFormSearch({ onFormSelect }: Props) {
             <input
               ref={searchInputRef}
               type="text"
+              id="va-form-search"
+              name="va-form-search"
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -253,7 +255,7 @@ export function VAFormSearch({ onFormSelect }: Props) {
                 isMulti
                 options={CATEGORY_OPTIONS}
                 value={CATEGORY_OPTIONS.filter(opt => filters.categories.includes(opt.value))}
-                onChange={selected => handleFilterChange('categories', selected.map(opt => opt.value))}
+                onChange={(selected: { value: string }[]) => handleFilterChange('categories', selected.map(opt => opt.value))}
                 className="w-full"
                 classNamePrefix="react-select"
                 placeholder="Select categories..."
@@ -265,7 +267,7 @@ export function VAFormSearch({ onFormSelect }: Props) {
               <Select
                 options={FORM_TYPE_OPTIONS}
                 value={FORM_TYPE_OPTIONS.find(opt => opt.value === filters.formType) || FORM_TYPE_OPTIONS[0]}
-                onChange={selected => {
+                onChange={(selected: { value: string } | null) => {
                   if (selected) handleFilterChange('formType', selected.value);
                 }}
                 className="w-full"
@@ -279,7 +281,7 @@ export function VAFormSearch({ onFormSelect }: Props) {
               <Select
                 options={ADMIN_OPTIONS}
                 value={ADMIN_OPTIONS.find(opt => opt.value === filters.administration) || ADMIN_OPTIONS[0]}
-                onChange={selected => {
+                onChange={(selected: { value: string } | null) => {
                   if (selected) handleFilterChange('administration', selected.value);
                 }}
                 className="w-full"
