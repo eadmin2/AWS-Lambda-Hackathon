@@ -220,7 +220,12 @@ const PricingPage: React.FC = () => {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto mb-12">
-            <Card>
+            <Card className="border-2 border-primary-500 relative">
+              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                <span className="bg-primary-500 text-white px-4 py-1 rounded-full text-sm font-medium">
+                  Most Popular
+                </span>
+              </div>
               <CardContent className="p-8">
                 <div className="text-center mb-6">
                   <h3 className="text-2xl font-bold mb-2">Starter Pack</h3>
@@ -231,6 +236,7 @@ const PricingPage: React.FC = () => {
                   <div className="mt-2 text-lg font-semibold text-primary-600">
                     50 Tokens (Pages)
                   </div>
+                  <p className="text-primary-600 mt-2 font-medium">Use this for Test</p>
                 </div>
 
                 <ul className="space-y-4 mb-8">
@@ -268,113 +274,96 @@ const PricingPage: React.FC = () => {
               </CardContent>
             </Card>
 
-            <Card className="border-2 border-primary-500 relative">
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                <span className="bg-primary-500 text-white px-4 py-1 rounded-full text-sm font-medium">
-                  Most Popular
-                </span>
-              </div>
+            <Card className="opacity-50 cursor-not-allowed">
               <CardContent className="p-8">
                 <div className="text-center mb-6">
                   <h3 className="text-2xl font-bold mb-2">File Review Pack</h3>
-                  <div className="text-4xl font-bold text-primary-600 mb-2">
+                  <div className="text-4xl font-bold text-gray-600 mb-2">
                     $49.99
                   </div>
                   <p className="text-gray-600">Great for medium files</p>
-                  <div className="mt-2 text-lg font-semibold text-primary-600">
+                  <div className="mt-2 text-lg font-semibold text-gray-600">
                     150 Tokens (Pages)
                   </div>
+                  <p className="text-gray-600 mt-2 font-medium">Coming Soon</p>
                 </div>
 
                 <ul className="space-y-4 mb-8">
                   <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
+                    <CheckCircle className="h-5 w-5 text-gray-500 mr-2" />
                     <span>Analyze up to 150 pages</span>
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
+                    <CheckCircle className="h-5 w-5 text-gray-500 mr-2" />
                     <span>Priority processing</span>
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
+                    <CheckCircle className="h-5 w-5 text-gray-500 mr-2" />
                     <span>Enhanced condition analysis</span>
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
+                    <CheckCircle className="h-5 w-5 text-gray-500 mr-2" />
                     <span>Detailed PDF reports</span>
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
+                    <CheckCircle className="h-5 w-5 text-gray-500 mr-2" />
                     <span>90-day access to results</span>
                   </li>
                 </ul>
 
                 <Button
                   className="w-full"
-                  onClick={() => {
-                    if (!user) {
-                      window.location.href = "/auth?next=checkout&type=file-review";
-                    } else {
-                      handlePurchase("file-review");
-                    }
-                  }}
-                  isLoading={isLoading === "file-review"}
+                  disabled
                 >
-                  Choose File Review
+                  Coming Soon
                 </Button>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="opacity-50 cursor-not-allowed">
               <CardContent className="p-8">
                 <div className="text-center mb-6">
                   <h3 className="text-2xl font-bold mb-2">Full Review Pack</h3>
-                  <div className="text-4xl font-bold text-primary-600 mb-2">
+                  <div className="text-4xl font-bold text-gray-600 mb-2">
                     $89.99
                   </div>
                   <p className="text-gray-600">For comprehensive reviews</p>
-                  <div className="mt-2 text-lg font-semibold text-primary-600">
+                  <div className="mt-2 text-lg font-semibold text-gray-600">
                     500 Tokens (Pages)
                   </div>
+                  <p className="text-gray-600 mt-2 font-medium">Coming Soon</p>
                 </div>
 
                 <ul className="space-y-4 mb-8">
                   <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
+                    <CheckCircle className="h-5 w-5 text-gray-500 mr-2" />
                     <span className="font-semibold">
                       Analyze up to 500 pages
                     </span>
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
+                    <CheckCircle className="h-5 w-5 text-gray-500 mr-2" />
                     <span>Highest priority processing</span>
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
+                    <CheckCircle className="h-5 w-5 text-gray-500 mr-2" />
                     <span>Complete medical record analysis</span>
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
+                    <CheckCircle className="h-5 w-5 text-gray-500 mr-2" />
                     <span>Premium PDF reports</span>
                   </li>
                   <li className="flex items-center">
-                    <CheckCircle className="h-5 w-5 text-primary-500 mr-2" />
+                    <CheckCircle className="h-5 w-5 text-gray-500 mr-2" />
                     <span>180-day access to results</span>
                   </li>
                 </ul>
 
                 <Button
                   className="w-full"
-                  onClick={() => {
-                    if (!user) {
-                      window.location.href = "/auth?next=checkout&type=full-review";
-                    } else {
-                      handlePurchase("full-review");
-                    }
-                  }}
-                  isLoading={isLoading === "full-review"}
+                  disabled
                 >
-                  Choose Full Review
+                  Coming Soon
                 </Button>
               </CardContent>
             </Card>
