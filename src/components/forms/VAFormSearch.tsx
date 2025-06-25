@@ -338,7 +338,8 @@ export function VAFormSearch({ onFormSelect }: Props) {
                   className="py-4 cursor-pointer hover:bg-gray-50 transition-colors"
                   onClick={() => onFormSelect(form)}
                 >
-                  <div className="space-y-2">
+                  {/* Mobile View */}
+                  <div className="block md:hidden space-y-2">
                     <div className="flex justify-between items-start">
                       <h3 className="text-lg font-semibold text-gray-900">{form.attributes.form_name}</h3>
                       <span className="text-sm text-gray-500 whitespace-nowrap ml-4">
@@ -346,22 +347,51 @@ export function VAFormSearch({ onFormSelect }: Props) {
                       </span>
                     </div>
                     <p className="text-base text-gray-700">{form.attributes.title}</p>
+                    <div className="flex flex-col space-y-3">
+                      <button
+                        className="w-full inline-flex items-center justify-center px-4 py-2.5 border border-[#003875] text-base font-medium rounded-lg text-white bg-[#003875] hover:bg-[#002855] transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#003875]"
+                      >
+                        View Details
+                      </button>
+                      <a
+                        href={form.attributes.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full inline-flex items-center justify-center px-4 py-2.5 border border-[#003875] text-base font-medium rounded-lg text-[#003875] bg-white hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#003875]"
+                      >
+                        <Download className="h-5 w-5 mr-2" />
+                        Download
+                      </a>
+                    </div>
                   </div>
-                  <div className="flex flex-col space-y-3">
-                    <button
-                      className="w-full inline-flex items-center justify-center px-4 py-2.5 border border-[#003875] text-base font-medium rounded-lg text-white bg-[#003875] hover:bg-[#002855] transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#003875]"
-                    >
-                      View Details
-                    </button>
-                    <a
-                      href={form.attributes.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full inline-flex items-center justify-center px-4 py-2.5 border border-[#003875] text-base font-medium rounded-lg text-[#003875] bg-white hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#003875]"
-                    >
-                      <Download className="h-5 w-5 mr-2" />
-                      Download
-                    </a>
+
+                  {/* Desktop View */}
+                  <div className="hidden md:flex items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-base font-semibold text-gray-900 truncate">{form.attributes.form_name}</h3>
+                        <span className="text-sm text-gray-500">
+                          ({new Date(form.attributes.last_revision_on).toLocaleDateString()})
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 truncate mt-0.5">{form.attributes.title}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        className="inline-flex items-center px-3 py-1.5 border border-[#003875] text-sm font-medium rounded-md text-white bg-[#003875] hover:bg-[#002855] transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#003875]"
+                      >
+                        View Details
+                      </button>
+                      <a
+                        href={form.attributes.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-3 py-1.5 border border-[#003875] text-sm font-medium rounded-md text-[#003875] bg-white hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#003875]"
+                      >
+                        <Download className="h-4 w-4 mr-1.5" />
+                        Download
+                      </a>
+                    </div>
                   </div>
                 </m.li>
               ))}
