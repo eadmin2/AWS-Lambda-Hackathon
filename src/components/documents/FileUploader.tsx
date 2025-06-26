@@ -459,23 +459,10 @@ const FileUploader: React.FC<FileUploaderProps> = ({
           const fileUrl = `https://${AWS_S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${key}`;
           // Step 2: Upload file directly to S3 via Web Worker
           await uploadFileWithWorker(file, presignedUrl);
-          // Step 3: Pre-insert duplicate check
-          const { data: existing } = await supabase
-            .from('documents')
-            .select('id')
-            .eq('user_id', userId)
-            .eq('file_name', finalName)
-            .eq('processing_status', 'processing')
-            .maybeSingle();
-          if (existing) {
-            toast.error('A document with this name is already being processed.');
-            onUploadError('Duplicate document detected: ' + finalName);
-            continue;
-          }
-          // Step 3: Upsert document record in Supabase database
+          // Step 3: Insert document record in Supabase database (no more upsert)
           const { data: documentData, error: documentError } = await supabase
             .from("documents")
-            .upsert([
+            .insert([
               {
                 user_id: userId,
                 file_name: finalName,
@@ -486,15 +473,18 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                 document_type: "medical_record",
                 mime_type: file.type,
                 file_size: file.size,
-                estimated_tokens: estimatedTokens, // Store estimated tokens
+                estimated_tokens: estimatedTokens,
               },
-            ], {
-              onConflict: 'user_id,file_name,processing_status',
-              ignoreDuplicates: false
-            })
+            ])
             .select()
             .single();
           if (documentError) {
+            // Handle duplicate error specifically
+            if (documentError.code === '23505' || documentError.message?.includes('duplicate')) {
+              toast.error(`A document with the name \"${finalName}\" already exists.`);
+              onUploadError(`Duplicate document detected: ${finalName}`);
+              continue; // Skip to next file
+            }
             throw documentError;
           }
           if (!documentData) {
