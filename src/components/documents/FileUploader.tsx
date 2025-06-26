@@ -445,6 +445,22 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         // Step 2: Upload file directly to S3 via Web Worker
         await uploadFileWithWorker(file, presignedUrl);
 
+        // Step 3: Pre-insert duplicate check
+        const { data: existing } = await supabase
+          .from('documents')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('file_name', finalName)
+          .eq('processing_status', 'processing')
+          .maybeSingle();
+
+        if (existing) {
+          toast.error('A document with this name is already being processed.');
+          // Optionally, notify parent of error for this file
+          onUploadError('Duplicate document detected: ' + finalName);
+          // Skip to next file
+          continue;
+        }
         // Step 3: Create document record in Supabase database
         const { data: documentData, error: documentError } = await supabase
           .from("documents")

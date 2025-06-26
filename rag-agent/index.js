@@ -553,6 +553,32 @@ async function processDocument(userId, documentId) {
         .update({ processing_status: 'completed', rag_status: 'completed' })
         .eq("id", documentId);
 
+    console.log(`✅ Document processing status set to 'completed' for document ${documentId}`);
+
+    // ✅ Fire Supabase Edge Function to trigger user email notification
+    try {
+        const notificationResponse = await fetch(`${process.env.SUPABASE_URL}/functions/v1/notify-condition-updates`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
+            },
+            body: JSON.stringify({
+                user_id: userId,
+                trigger: 'rag_agent_completed'
+            })
+        });
+
+        if (notificationResponse.ok) {
+            console.log(`✅ Supabase notification trigger succeeded for user ${userId}`);
+        } else {
+            const errorText = await notificationResponse.text();
+            console.error(`❌ Supabase notification trigger failed. Status: ${notificationResponse.status}, Body: ${errorText}`);
+        }
+    } catch (notifError) {
+        console.error(`❌ Error while calling Supabase notification function:`, notifError);
+    }
+
     const duration = (Date.now() - startTime) / 1000;
     console.log(`✅ Document processing complete in ${duration}s. Found ${finalConditions.length} unique conditions.`);
 
