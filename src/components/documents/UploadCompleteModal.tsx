@@ -40,17 +40,13 @@ const UploadCompleteModal: React.FC<UploadCompleteModalProps> = ({ isOpen, onClo
           className="text-center mb-6"
         >
           <p className="text-gray-600 mb-4">
-            Your document is being processed. This typically takes about 2 minutes to complete.
+            Your document is being processed. This typically takes about <span className="font-semibold">5-10 minutes</span> to complete. You will receive an email when processing is finished. You can also check your dashboard for updates.
           </p>
           
           <div className="flex items-center justify-center text-primary-600 mb-4">
             <Clock className="h-5 w-5 mr-2" />
-            <span className="font-medium">Processing time: ~2 minutes</span>
+            <span className="font-medium">Processing time: ~5-10 minutes</span>
           </div>
-          
-          <p className="text-sm text-gray-500">
-            Feature not available yet: Email notification when processing is complete.
-          </p>
         </div>
 
         <div className="flex justify-center w-full">
