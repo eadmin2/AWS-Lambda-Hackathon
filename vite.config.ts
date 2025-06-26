@@ -47,7 +47,7 @@ export default defineConfig({
     }),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'Logo.svg', 'Logo.png', 'robots.txt'],
+      includeAssets: ['favicon.svg', 'Logo.svg', 'robots.txt'],
       injectRegister: 'auto',
       devOptions: {
         enabled: true,
@@ -97,12 +97,17 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globDirectory: 'dist',
+        globDirectory: process.env.NODE_ENV === 'development' ? 'dev-dist' : 'dist',
         globPatterns: [
           '**/*.{js,css,html}',
           '**/*.{ico,png,svg,webp}',
           '**/manifest.webmanifest'
         ],
+        navigateFallback: 'index.html',
+        navigateFallbackAllowlist: [/^(?!\/__).*/],
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3MB
         runtimeCaching: [
           {
@@ -116,6 +121,17 @@ export default defineConfig({
               },
               cacheableResponse: {
                 statuses: [0, 200]
+              }
+            }
+          },
+          {
+            urlPattern: /\.(png|jpg|jpeg|svg|gif)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'image-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 30 * 24 * 60 * 60 // 30 days
               }
             }
           }

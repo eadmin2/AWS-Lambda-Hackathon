@@ -17,9 +17,11 @@ const stripe = new Stripe(stripeSecret, {
 
 function corsResponse(body: string | object | null, status = 200) {
   const headers = {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": "https://varatingassistant.com",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "*",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Max-Age": "86400",
+    "Access-Control-Allow-Credentials": "true"
   };
   if (status === 204) {
     return new Response(null, { status, headers });
