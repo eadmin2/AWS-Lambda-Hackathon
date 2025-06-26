@@ -78,6 +78,20 @@ interface FileUploaderProps {
   canUpload: boolean;
 }
 
+// Debounce utility function
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => {
+      func(...args);
+    }, wait);
+  };
+}
+
 const FileUploader: React.FC<FileUploaderProps> = ({
   userId,
   onUploadComplete,
@@ -101,6 +115,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   const [sessionError, setSessionError] = React.useState<string | null>(null);
   const { session: supabaseSession } = useAuth();
   const [showCompleteModal, setShowCompleteModal] = React.useState(false);
+  const [isUploading, setIsUploading] = React.useState(false);
 
   // Use realtime token balance
   const { tokensAvailable, tokensUsed } = useTokenBalance(userId);
@@ -382,137 +397,132 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     });
   };
 
-  const handleUpload = async () => {
-    if (!files.length || !userId || !canUpload) return;
-
-    // Check token balance before upload
-    const totalTokensRequired = getTotalTokensRequired();
-    
-    dispatch({ type: 'SET_CHECKING_TOKENS', checking: true });
-    try {
-      const validation = await validateTokens(userId, totalTokensRequired);
-      
-      if (!validation.valid) {
-        dispatch({ 
-          type: 'SET_ERROR', 
-          error: `${validation.message} You need ${totalTokensRequired} tokens but only have ${validation.currentBalance}. Please purchase more tokens to continue.`
-        });
-        dispatch({ type: 'SET_CHECKING_TOKENS', checking: false });
-        toast.error('Not enough tokens to upload.');
+  // Debounced upload handler
+  const handleUpload = React.useCallback(
+    debounce(async () => {
+      if (isUploading) return;
+      setIsUploading(true);
+      if (!files.length || !userId || !canUpload) {
+        setIsUploading(false);
         return;
       }
-    } catch {
-      dispatch({ 
-        type: 'SET_ERROR', 
-        error: 'Failed to validate token balance. Please try again.'
-      });
-      dispatch({ type: 'SET_CHECKING_TOKENS', checking: false });
-      toast.error('Failed to validate token balance.');
-      return;
-    }
-
-    dispatch({ type: 'SET_UPLOADING', uploading: true });
-    toast('Uploading file(s)...', { id: 'uploading' });
-    dispatch({ type: 'SET_PROGRESS', progress: 0 });
-    dispatch({ type: 'SET_CHECKING_TOKENS', checking: false });
-
-    try {
-      for (let i = 0; i < files.length; i++) {
-        const { file, name, estimatedTokens } = files[i];
-        const ext = file.name.split(".").pop();
-        const finalName = `${name}.${ext}`;
-
-        // Step 1: Get presigned URL from Supabase Edge Function (includes token validation)
-        const { data: urlData, error: urlError } =
-          await supabase.functions.invoke("generate-presigned-url", {
-            body: {
-              fileName: finalName,
-              userId: userId,
-              fileType: file.type,
-              estimatedTokens: estimatedTokens, // Pass estimated tokens for validation
-            },
+      // Check token balance before upload
+      const totalTokensRequired = getTotalTokensRequired();
+      dispatch({ type: 'SET_CHECKING_TOKENS', checking: true });
+      try {
+        const validation = await validateTokens(userId, totalTokensRequired);
+        if (!validation.valid) {
+          dispatch({
+            type: 'SET_ERROR',
+            error: `${validation.message} You need ${totalTokensRequired} tokens but only have ${validation.currentBalance}. Please purchase more tokens to continue.`
           });
-
-        if (urlError || !urlData) {
-          throw new Error(
-            `Failed to get upload URL: ${urlError?.message || "Unknown error"}`,
-          );
+          dispatch({ type: 'SET_CHECKING_TOKENS', checking: false });
+          toast.error('Not enough tokens to upload.');
+          setIsUploading(false);
+          return;
         }
-
-        const { url: presignedUrl, key } = urlData;
-        const fileUrl = `https://${AWS_S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${key}`;
-
-        // Step 2: Upload file directly to S3 via Web Worker
-        await uploadFileWithWorker(file, presignedUrl);
-
-        // Step 3: Pre-insert duplicate check
-        const { data: existing } = await supabase
-          .from('documents')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('file_name', finalName)
-          .eq('processing_status', 'processing')
-          .maybeSingle();
-
-        if (existing) {
-          toast.error('A document with this name is already being processed.');
-          // Optionally, notify parent of error for this file
-          onUploadError('Duplicate document detected: ' + finalName);
-          // Skip to next file
-          continue;
-        }
-        // Step 3: Create document record in Supabase database
-        const { data: documentData, error: documentError } = await supabase
-          .from("documents")
-          .insert([
-            {
-              user_id: userId,
-              file_name: finalName,
-              document_name: name,
-              file_url: fileUrl,
-              upload_status: "uploaded",
-              processing_status: "processing",
-              document_type: "medical_record",
-              mime_type: file.type,
-              file_size: file.size,
-              estimated_tokens: estimatedTokens, // Store estimated tokens
-            },
-          ])
-          .select()
-          .single();
-
-        if (documentError) {
-          throw documentError;
-        }
-        if (!documentData) {
-          throw new Error("Failed to create document record in database.");
-        }
-
-        // Update overall progress
-        dispatch({ type: 'SET_PROGRESS', progress: Math.round(((i + 1) / files.length) * 100) });
-
-        // Notify parent component
-        onUploadComplete(documentData);
+      } catch {
+        dispatch({
+          type: 'SET_ERROR',
+          error: 'Failed to validate token balance. Please try again.'
+        });
+        dispatch({ type: 'SET_CHECKING_TOKENS', checking: false });
+        toast.error('Failed to validate token balance.');
+        setIsUploading(false);
+        return;
       }
-
-      // Clear files on successful upload
-      dispatch({ type: 'UPLOAD_SUCCESS' });
-      toast.success('Upload complete! Processing your document...', { id: 'uploading' });
-      setShowCompleteModal(true);
-    } catch (error) {
-      console.error("Error uploading document:", error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "Failed to upload document. Please try again.";
-      dispatch({ type: 'SET_ERROR', error: errorMessage });
-      onUploadError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      dispatch({ type: 'SET_UPLOADING', uploading: false });
+      dispatch({ type: 'SET_UPLOADING', uploading: true });
+      toast('Uploading file(s)...', { id: 'uploading' });
       dispatch({ type: 'SET_PROGRESS', progress: 0 });
-    }
-  };
+      dispatch({ type: 'SET_CHECKING_TOKENS', checking: false });
+      try {
+        for (let i = 0; i < files.length; i++) {
+          const { file, name, estimatedTokens } = files[i];
+          const ext = file.name.split(".").pop();
+          const finalName = `${name}.${ext}`;
+          // Step 1: Get presigned URL from Supabase Edge Function (includes token validation)
+          const { data: urlData, error: urlError } =
+            await supabase.functions.invoke("generate-presigned-url", {
+              body: {
+                fileName: finalName,
+                userId: userId,
+                fileType: file.type,
+                estimatedTokens: estimatedTokens, // Pass estimated tokens for validation
+              },
+            });
+          if (urlError || !urlData) {
+            throw new Error(
+              `Failed to get upload URL: ${urlError?.message || "Unknown error"}`,
+            );
+          }
+          const { url: presignedUrl, key } = urlData;
+          const fileUrl = `https://${AWS_S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${key}`;
+          // Step 2: Upload file directly to S3 via Web Worker
+          await uploadFileWithWorker(file, presignedUrl);
+          // Step 3: Pre-insert duplicate check
+          const { data: existing } = await supabase
+            .from('documents')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('file_name', finalName)
+            .eq('processing_status', 'processing')
+            .maybeSingle();
+          if (existing) {
+            toast.error('A document with this name is already being processed.');
+            onUploadError('Duplicate document detected: ' + finalName);
+            continue;
+          }
+          // Step 3: Upsert document record in Supabase database
+          const { data: documentData, error: documentError } = await supabase
+            .from("documents")
+            .upsert([
+              {
+                user_id: userId,
+                file_name: finalName,
+                document_name: name,
+                file_url: fileUrl,
+                upload_status: "uploaded",
+                processing_status: "processing",
+                document_type: "medical_record",
+                mime_type: file.type,
+                file_size: file.size,
+                estimated_tokens: estimatedTokens, // Store estimated tokens
+              },
+            ], {
+              onConflict: 'user_id,file_name,processing_status',
+              ignoreDuplicates: false
+            })
+            .select()
+            .single();
+          if (documentError) {
+            throw documentError;
+          }
+          if (!documentData) {
+            throw new Error("Failed to create document record in database.");
+          }
+          dispatch({ type: 'SET_PROGRESS', progress: Math.round(((i + 1) / files.length) * 100) });
+          onUploadComplete(documentData);
+        }
+        dispatch({ type: 'UPLOAD_SUCCESS' });
+        toast.success('Upload complete! Processing your document...', { id: 'uploading' });
+        setShowCompleteModal(true);
+      } catch (error) {
+        console.error("Error uploading document:", error);
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Failed to upload document. Please try again.";
+        dispatch({ type: 'SET_ERROR', error: errorMessage });
+        onUploadError(errorMessage);
+        toast.error(errorMessage);
+      } finally {
+        dispatch({ type: 'SET_UPLOADING', uploading: false });
+        dispatch({ type: 'SET_PROGRESS', progress: 0 });
+        setIsUploading(false);
+      }
+    }, 300),
+    [files, userId, canUpload, isUploading]
+  );
 
   // Add getFileIcon helper for file icons
   function getFileIcon(fileName: string) {
@@ -744,8 +754,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                 className="w-full sm:w-auto order-1 sm:order-2"
               >
                 {checkingTokens ? "Checking Tokens..." : 
-                 !enoughTokens ? "Insufficient Tokens" :
-                 `Upload ${files.length > 1 ? `${files.length} Files` : "File"}`}
+                  !enoughTokens ? "Insufficient Tokens" :
+                  `Upload ${files.length > 1 ? `${files.length} Files` : "File"}`}
               </Button>
             </div>
 
