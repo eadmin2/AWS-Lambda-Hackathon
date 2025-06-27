@@ -41,7 +41,7 @@ async function sendContactEmail({ name, email, subject, message }: { name: strin
     },
     body: JSON.stringify({
       from: "VA Rating Assistant <noreply@marketing.varatingassistant.com>",
-      to: ["support@marketing.varatingassistant.com"],
+      to: ["support@varatingassistant.com"],
       subject: `[Contact] ${subject}`,
       html: htmlContent,
       text: textContent,
@@ -63,21 +63,38 @@ serve(async (req: Request) => {
     return new Response('ok', { headers: corsHeaders });
   }
   try {
-    const body = await req.json();
+    console.log('[send-contact-email] Request received');
+    const rawBody = await req.text();
+    console.log('[send-contact-email] Raw body:', rawBody);
+    let body;
+    try {
+      body = JSON.parse(rawBody);
+    } catch (parseError) {
+      console.error('[send-contact-email] Failed to parse JSON body:', parseError);
+      return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      });
+    }
+    console.log('[send-contact-email] Parsed body:', body);
     const { name, email, subject, message } = body;
     if (!name || !email || !subject || !message) {
+      console.error('[send-contact-email] Missing required fields:', { name, email, subject, message });
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       });
     }
+    console.log('[send-contact-email] Sending email via Pica...');
     await sendContactEmail({ name, email, subject, message });
+    console.log('[send-contact-email] Email sent successfully');
     return new Response(JSON.stringify({ message: "Contact email sent successfully" }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error('[send-contact-email] Error:', errorMessage, error);
     return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
