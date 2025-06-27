@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import PageLayout from "../components/layout/PageLayout";
 import {
   Card,
@@ -9,12 +9,33 @@ import {
 import Button from "../components/ui/Button";
 import { Mail, Phone, MessageSquare } from "lucide-react";
 import { useForm } from "react-hook-form";
+import axios from "axios";
 
 interface ContactFormData {
   name: string;
   email: string;
   subject: string;
   message: string;
+}
+
+// Email template generator
+function generateContactEmailTemplate({ name, email, subject, message }: ContactFormData) {
+  return `
+    <div style="background:#0a2a66;padding:32px 0;font-family:sans-serif;">
+      <table style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(10,42,102,0.08);">
+        <tr><td style="background:#0a2a66;padding:24px 0;text-align:center;">
+          <img src='https://varatingassistant.com/Logo.png' alt='VA Rating Assistant' style='height:48px;margin-bottom:8px;' />
+          <h1 style="color:#fff;font-size:1.5rem;margin:0;">New Contact Form Submission</h1>
+        </td></tr>
+        <tr><td style="padding:32px;">
+          <h2 style="color:#0a2a66;font-size:1.25rem;margin-bottom:16px;">${subject}</h2>
+          <p style="margin:0 0 16px 0;color:#222;font-size:1rem;"><strong>From:</strong> ${name} (${email})</p>
+          <div style="background:#f3f6fa;padding:16px 20px;border-radius:8px;color:#222;font-size:1rem;line-height:1.6;">${message.replace(/\n/g, '<br/>')}</div>
+        </td></tr>
+        <tr><td style="background:#f3f6fa;padding:16px;text-align:center;color:#0a2a66;font-size:0.95rem;">VA Rating Assistant &mdash; Veteran Owned &amp; Operated</td></tr>
+      </table>
+    </div>
+  `;
 }
 
 const ContactPage: React.FC = () => {
@@ -25,13 +46,28 @@ const ContactPage: React.FC = () => {
     reset,
   } = useForm<ContactFormData>();
 
+  const [submitStatus, setSubmitStatus] = useState<null | 'success' | 'error'>(null);
+
   const onSubmit = async (data: ContactFormData) => {
     try {
-      // In a real app, you would send this to your backend
-      console.log("Form submitted:", data);
+      setSubmitStatus(null);
+      // Send email via Pica (replace with your actual endpoint if needed)
+      await axios.post("https://api.picaos.com/send", {
+        to: "support@marketing.varatingassistant.com",
+        subject: `[Contact] ${data.subject}`,
+        html: generateContactEmailTemplate(data),
+        replyTo: data.email,
+      }, {
+        headers: {
+          "Content-Type": "application/json",
+          // Optionally add Authorization if required by your Pica setup
+        },
+      });
+      setSubmitStatus('success');
       reset();
     } catch (error) {
       console.error("Error submitting form:", error);
+      setSubmitStatus('error');
     }
   };
 
@@ -47,31 +83,16 @@ const ContactPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 mb-12">
-          <Card>
-            <CardContent className="p-6 text-center">
-              <Mail className="h-8 w-8 text-primary-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Email</h3>
-              <p className="text-gray-600">support@varating.com</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6 text-center">
-              <Phone className="h-8 w-8 text-primary-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Phone</h3>
-              <p className="text-gray-600">1-800-VA-RATING</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6 text-center">
-              <MessageSquare className="h-8 w-8 text-primary-600 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Live Chat</h3>
-              <p className="text-gray-600">Available 9am-5pm ET</p>
-            </CardContent>
-          </Card>
-        </div>
+        {submitStatus === 'success' && (
+          <div className="mb-8 rounded-lg bg-green-100 border border-green-400 text-green-700 px-4 py-3 text-center">
+            <strong className="font-bold">Message sent!</strong> We'll get back to you as soon as possible.
+          </div>
+        )}
+        {submitStatus === 'error' && (
+          <div className="mb-8 rounded-lg bg-red-100 border border-red-400 text-red-700 px-4 py-3 text-center">
+            <strong className="font-bold">Error:</strong> There was a problem sending your message. Please try again later.
+          </div>
+        )}
 
         <Card>
           <CardHeader>
