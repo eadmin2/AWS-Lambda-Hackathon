@@ -52,7 +52,7 @@ const ContactPage: React.FC = () => {
     try {
       setSubmitStatus(null);
       // Send email via Supabase Edge Function
-      await axios.post("/functions/v1/send-contact-email", {
+      await axios.post("https://algojcmqstokyghijcyc.supabase.co/functions/v1/send-contact-email", {
         name: data.name,
         email: data.email,
         subject: data.subject,
