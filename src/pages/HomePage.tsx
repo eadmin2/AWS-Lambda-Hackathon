@@ -75,11 +75,11 @@ const HomePage: React.FC = () => {
                     rating in minutes using advanced AI.
                   </p>
                   <div className="flex flex-col xl:flex-row space-y-3 xl:space-y-0 xl:space-x-4">
-                    <Link to="/pricing#pricing-section">
+                    <a href="/pricing#pricing-section">
                       <Button size="lg" className="w-full xl:w-auto">
                         View Pricing
                       </Button>
-                    </Link>
+                    </a>
                     <a href="#how-it-works">
                       <Button
                         variant="secondary"
@@ -214,6 +214,66 @@ const HomePage: React.FC = () => {
         <BenefitsSection />
       </Suspense>
 
+      {/* Key Privacy Features Section */}
+      <section className="py-16 bg-primary-900 text-white" id="privacy-features">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <div className="w-16 h-16 mx-auto bg-primary-700 rounded-full flex items-center justify-center mb-4">
+              <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true" focusable="false" role="img"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354l7.071 2.357A2 2 0 0121 8.59v3.6c0 5.523-3.807 10.74-9 12-5.193-1.26-9-6.477-9-12V8.59a2 2 0 011.929-1.879L12 4.354z" /></svg>
+            </div>
+            <h2 className="text-3xl font-bold text-white mb-2">Key Privacy Features</h2>
+            <p className="text-xl text-blue-100 max-w-2xl mx-auto">Your medical privacy and security are our top priorities—powered by Amazon Bedrock's industry-leading safeguards.</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center p-6 rounded-lg border border-blue-800 bg-primary-800/80 shadow-sm">
+              <div className="w-14 h-14 mx-auto bg-blue-900 rounded-full flex items-center justify-center mb-3">
+                <svg className="h-7 w-7 text-blue-200" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" /></svg>
+              </div>
+              <h3 className="text-lg font-semibold mb-1 text-white">No Data Retention or AI Training</h3>
+              <p className="text-blue-100">Your information is never stored or used to train any AI models—not even by third-party providers like Anthropic. Every query is processed securely and then deleted.</p>
+            </div>
+            <div className="text-center p-6 rounded-lg border border-blue-800 bg-primary-800/80 shadow-sm">
+              <div className="w-14 h-14 mx-auto bg-blue-900 rounded-full flex items-center justify-center mb-3">
+                <svg className="h-7 w-7 text-blue-200" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M17 8h2a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2v-8a2 2 0 012-2h2" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 12v4m0 0l-2-2m2 2l2-2m-6-6V6a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
+              </div>
+              <h3 className="text-lg font-semibold mb-1 text-white">No Sharing with Model Providers</h3>
+              <p className="text-blue-100">Your data stays private. It is never shared with Anthropic or any other external AI companies.</p>
+            </div>
+            <div className="text-center p-6 rounded-lg border border-blue-800 bg-primary-800/80 shadow-sm">
+              <div className="w-14 h-14 mx-auto bg-blue-900 rounded-full flex items-center justify-center mb-3">
+                <svg className="h-7 w-7 text-blue-200" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M12 11c0-1.657 1.343-3 3-3s3 1.343 3 3-1.343 3-3 3-3-1.343-3-3z" /><path strokeLinecap="round" strokeLinejoin="round" d="M17 11V7a5 5 0 00-10 0v4" /><path strokeLinecap="round" strokeLinejoin="round" d="M5 19h14a2 2 0 002-2v-7a2 2 0 00-2-2H5a2 2 0 00-2 2v7a2 2 0 002 2z" /></svg>
+              </div>
+              <h3 className="text-lg font-semibold mb-1 text-white">End-to-End Encryption</h3>
+              <p className="text-blue-100">All your data is encrypted in transit and at rest.</p>
+            </div>
+            <div className="text-center p-6 rounded-lg border border-blue-800 bg-primary-800/80 shadow-sm">
+              <div className="w-14 h-14 mx-auto bg-blue-900 rounded-full flex items-center justify-center mb-3">
+                <svg className="h-7 w-7 text-blue-200" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2a2 2 0 012-2h2a2 2 0 012 2v2" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 12v-2a4 4 0 10-8 0v2" /><path strokeLinecap="round" strokeLinejoin="round" d="M20 12v-2a4 4 0 10-8 0v2" /></svg>
+              </div>
+              <h3 className="text-lg font-semibold mb-1 text-white">Strict Compliance Standards</h3>
+              <p className="text-blue-100">Amazon Bedrock meets SOC 2, ISO 27001, GDPR, and is HIPAA eligible. We also follow strict data residency requirements.</p>
+            </div>
+            <div className="text-center p-6 rounded-lg border border-blue-800 bg-primary-800/80 shadow-sm">
+              <div className="w-14 h-14 mx-auto bg-blue-900 rounded-full flex items-center justify-center mb-3">
+                <svg className="h-7 w-7 text-blue-200" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3" /><path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <h3 className="text-lg font-semibold mb-1 text-white">Dedicated AWS Model Network</h3>
+              <p className="text-blue-100">All AI processing happens within isolated AWS environments. No one—not even AWS or third parties—can access your inputs or results.</p>
+            </div>
+            <div className="text-center p-6 rounded-lg border border-blue-800 bg-primary-800/80 shadow-sm">
+              <div className="w-14 h-14 mx-auto bg-blue-900 rounded-full flex items-center justify-center mb-3">
+                <svg className="h-7 w-7 text-blue-200" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </div>
+              <h3 className="text-lg font-semibold mb-1 text-white">We Never Sell or Share Your Data</h3>
+              <p className="text-blue-100">At VARatingAssistant.com, your personal information is never sold, released, or shared. Your trust is our promise.</p>
+            </div>
+          </div>
+          <div className="mt-10 text-center">
+            <span className="inline-block px-6 py-3 rounded-full bg-blue-800 text-lg font-semibold text-white shadow-md">Your privacy is our mission.</span>
+          </div>
+        </div>
+      </section>
+
       {/* CTA section */}
       <section className="py-16 bg-primary-800 text-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -223,11 +283,11 @@ const HomePage: React.FC = () => {
               Choose a plan and get your estimated VA disability rating in
               minutes.
             </p>
-            <Link to="/pricing#pricing-section">
+            <a href="/pricing#pricing-section">
               <Button size="lg" className="min-w-[200px]">
-                View Plans
+                View Pricing
               </Button>
-            </Link>
+            </a>
           </div>
         </div>
       </section>

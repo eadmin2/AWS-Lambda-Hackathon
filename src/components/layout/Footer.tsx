@@ -1,9 +1,12 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Youtube, Linkedin, Facebook } from "lucide-react";
 import { openCookieConsentBanner } from "../../utils/cookieConsent";
 
 const Footer: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
   return (
     <footer className="bg-gray-50 border-t border-gray-200">
       <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
@@ -54,12 +57,26 @@ const Footer: React.FC = () => {
             </h3>
             <ul className="mt-4 space-y-4">
               <li>
-                <a
-                  href="#how-it-works"
-                  className="text-base text-gray-600 hover:text-gray-900"
+                <button
+                  className="text-base text-gray-600 hover:text-gray-900 focus:outline-none"
+                  onClick={() => {
+                    if (location.pathname === "/") {
+                      // Update hash to force browser anchor, then smooth scroll
+                      window.location.hash = "#how-it-works";
+                      setTimeout(() => {
+                        const el = document.getElementById("how-it-works");
+                        if (el) {
+                          el.scrollIntoView({ behavior: "smooth" });
+                          el.focus && el.focus();
+                        }
+                      }, 10);
+                    } else {
+                      navigate("/#how-it-works");
+                    }
+                  }}
                 >
                   How It Works
-                </a>
+                </button>
               </li>
               <li>
                 <a
@@ -72,14 +89,13 @@ const Footer: React.FC = () => {
                 </a>
               </li>
               <li>
-                <a
-                  href="https://www.va.gov/find-forms/about-form-21-4138/"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Link
+                  to="/forms"
                   className="text-base text-gray-600 hover:text-gray-900"
+                  onClick={() => { setTimeout(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, 300); }}
                 >
                   VA Forms
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -89,12 +105,19 @@ const Footer: React.FC = () => {
             </h3>
             <ul className="mt-4 space-y-4">
               <li>
-                <Link
-                  to="/faq"
-                  className="text-base text-gray-600 hover:text-gray-900"
+                <button
+                  className="text-base text-gray-600 hover:text-gray-900 focus:outline-none"
+                  onClick={() => {
+                    if (location.pathname === "/faq") {
+                      window.scrollTo({ top: 0, behavior: "auto" });
+                    } else {
+                      navigate("/faq");
+                      setTimeout(() => { window.scrollTo({ top: 0, behavior: "auto" }); }, 300);
+                    }
+                  }}
                 >
                   FAQ
-                </Link>
+                </button>
               </li>
               <li>
                 <Link
@@ -122,7 +145,7 @@ const Footer: React.FC = () => {
               <li>
                 <Link
                   to="/privacy"
-                  className="text-base text-gray-600 hover:text-gray-900"
+                  className="text-base text-primary-600 hover:text-primary-800 focus:outline-none focus:ring-2 focus:ring-primary-400"
                 >
                   Privacy Policy
                 </Link>
@@ -131,7 +154,7 @@ const Footer: React.FC = () => {
                 <button
                   type="button"
                   onClick={openCookieConsentBanner}
-                  className="text-base text-gray-600 hover:text-gray-900 underline focus:outline-none"
+                  className="text-base text-primary-600 hover:text-primary-800 focus:outline-none"
                 >
                   Cookie Settings
                 </button>
@@ -156,27 +179,6 @@ const Footer: React.FC = () => {
           </div>
         </div>
         <div className="mt-8 border-t border-gray-200 pt-8 md:flex md:items-center md:justify-between">
-          <div className="flex space-x-6 md:order-2">
-            <Link to="/privacy" className="text-gray-500 hover:text-gray-600">
-              <span className="text-sm">Privacy</span>
-            </Link>
-            <button
-              type="button"
-              onClick={openCookieConsentBanner}
-              className="text-gray-500 hover:text-gray-600 underline focus:outline-none"
-            >
-              <span className="text-sm">Cookie Settings</span>
-            </button>
-            <Link to="/terms" className="text-gray-500 hover:text-gray-600">
-              <span className="text-sm">Terms</span>
-            </Link>
-            <Link
-              to="/disclaimer"
-              className="text-gray-500 hover:text-gray-600"
-            >
-              <span className="text-sm">Disclaimer</span>
-            </Link>
-          </div>
           <p className="mt-8 text-sm text-gray-500 md:mt-0 md:order-1">
             &copy; {new Date().getFullYear()} VA Rating Assistant. All rights
             reserved.

@@ -5,6 +5,65 @@ import { Shield } from "lucide-react";
 const PrivacyPage: React.FC = () => {
   return (
     <PageLayout>
+      {/* Key Privacy Features - Hero Section */}
+      <section className="py-16 bg-primary-900 text-white" id="privacy-features">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <div className="w-20 h-20 mx-auto bg-primary-700 rounded-full flex items-center justify-center mb-4">
+              <svg className="h-10 w-10 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true" focusable="false" role="img"><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354l7.071 2.357A2 2 0 0121 8.59v3.6c0 5.523-3.807 10.74-9 12-5.193-1.26-9-6.477-9-12V8.59a2 2 0 011.929-1.879L12 4.354z" /></svg>
+            </div>
+            <h1 className="text-4xl font-bold text-white mb-2">Key Privacy Features</h1>
+            <p className="text-2xl text-blue-100 max-w-2xl mx-auto">Your privacy and security are our mission—built for veterans, by veterans, with Amazon Bedrock's industry-leading safeguards.</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="text-center p-6 rounded-lg border border-blue-800 bg-primary-800/80 shadow-sm">
+              <div className="w-14 h-14 mx-auto bg-blue-900 rounded-full flex items-center justify-center mb-3">
+                <svg className="h-7 w-7 text-blue-200" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4" /></svg>
+              </div>
+              <h3 className="text-lg font-semibold mb-1">No Data Retention or AI Training</h3>
+              <p className="text-blue-100">Amazon Bedrock does not retain your content or queries. None of your data is used to train AI models—not even third-party models like Claude by Anthropic. Every query is processed securely and then deleted.</p>
+            </div>
+            <div className="text-center p-6 rounded-lg border border-blue-800 bg-primary-800/80 shadow-sm">
+              <div className="w-14 h-14 mx-auto bg-blue-900 rounded-full flex items-center justify-center mb-3">
+                <svg className="h-7 w-7 text-blue-200" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M17 8h2a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2v-8a2 2 0 012-2h2" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 12v4m0 0l-2-2m2 2l2-2m-6-6V6a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>
+              </div>
+              <h3 className="text-lg font-semibold mb-1">No Sharing with Model Providers</h3>
+              <p className="text-blue-100">Your data is not shared with Anthropic, AI21 Labs, or any other model providers. Your privacy stays protected at every step.</p>
+            </div>
+            <div className="text-center p-6 rounded-lg border border-blue-800 bg-primary-800/80 shadow-sm">
+              <div className="w-14 h-14 mx-auto bg-blue-900 rounded-full flex items-center justify-center mb-3">
+                <svg className="h-7 w-7 text-blue-200" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M12 11c0-1.657 1.343-3 3-3s3 1.343 3 3-1.343 3-3 3-3-1.343-3-3z" /><path strokeLinecap="round" strokeLinejoin="round" d="M17 11V7a5 5 0 00-10 0v4" /><path strokeLinecap="round" strokeLinejoin="round" d="M5 19h14a2 2 0 002-2v-7a2 2 0 00-2-2H5a2 2 0 00-2 2v7a2 2 0 002 2z" /></svg>
+              </div>
+              <h3 className="text-lg font-semibold mb-1">End-to-End Encryption</h3>
+              <p className="text-blue-100">All customer data is encrypted both in transit and at rest. You can even use your own AWS Key Management Service (KMS) keys for extra control.</p>
+            </div>
+            <div className="text-center p-6 rounded-lg border border-blue-800 bg-primary-800/80 shadow-sm">
+              <div className="w-14 h-14 mx-auto bg-blue-900 rounded-full flex items-center justify-center mb-3">
+                <svg className="h-7 w-7 text-blue-200" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2a2 2 0 012-2h2a2 2 0 012 2v2" /><path strokeLinecap="round" strokeLinejoin="round" d="M12 12v-2a4 4 0 10-8 0v2" /><path strokeLinecap="round" strokeLinejoin="round" d="M20 12v-2a4 4 0 10-8 0v2" /></svg>
+              </div>
+              <h3 className="text-lg font-semibold mb-1">Strict Compliance Standards</h3>
+              <p className="text-blue-100">Amazon Bedrock aligns with SOC 2, ISO 27001, GDPR, is HIPAA eligible, and follows data residency rules. We meet or exceed government and healthcare privacy standards.</p>
+            </div>
+            <div className="text-center p-6 rounded-lg border border-blue-800 bg-primary-800/80 shadow-sm">
+              <div className="w-14 h-14 mx-auto bg-blue-900 rounded-full flex items-center justify-center mb-3">
+                <svg className="h-7 w-7 text-blue-200" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3" /><path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              </div>
+              <h3 className="text-lg font-semibold mb-1">Dedicated AWS Model Network</h3>
+              <p className="text-blue-100">AWS uses isolated model deployment accounts and keeps all processing inside the AWS network. Neither AWS nor third parties have access to your inputs or outputs.</p>
+            </div>
+            <div className="text-center p-6 rounded-lg border border-blue-800 bg-primary-800/80 shadow-sm">
+              <div className="w-14 h-14 mx-auto bg-blue-900 rounded-full flex items-center justify-center mb-3">
+                <svg className="h-7 w-7 text-blue-200" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </div>
+              <h3 className="text-lg font-semibold mb-1">We Never Sell or Share Your Data</h3>
+              <p className="text-blue-100">At VARatingAssistant.com, we never sell, release, or share your personal information. Period. Your trust is our promise.</p>
+            </div>
+          </div>
+          <div className="mt-10 text-center">
+            <span className="inline-block px-6 py-3 rounded-full bg-blue-800 text-lg font-semibold text-white shadow-md">Your privacy is our mission.</span>
+          </div>
+        </div>
+      </section>
       <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <Shield className="h-12 w-12 text-primary-600 mx-auto mb-4" />
