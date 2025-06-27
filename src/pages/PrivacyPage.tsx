@@ -19,14 +19,7 @@ const PrivacyPage: React.FC = () => {
             <p>
               VA Rating Assistant ("we", "us", "our") provides a platform to
               help users estimate VA disability ratings and manage related
-              documents. For privacy matters, contact:{" "}
-              <a
-                href="mailto:support@fastwebcreations.com"
-                className="text-primary-600 underline"
-              >
-                support@fastwebcreations.com
-              </a>{" "}
-              or 522 W Riverside Ave STE N Spokane, WA 99201-0580.
+              documents. For privacy matters, <a href="/contact" className="text-primary-600 underline">Contact Us</a> or 522 W Riverside Ave STE N Spokane, WA 99201-0580.
             </p>
           </section>
 
@@ -133,14 +126,7 @@ const PrivacyPage: React.FC = () => {
               <li>Lodge a complaint with a supervisory authority</li>
             </ul>
             <p>
-              To exercise your rights, contact us at{" "}
-              <a
-                href="mailto:support@fastwebcreations.com"
-                className="text-primary-600 underline"
-              >
-                support@fastwebcreations.com
-              </a>{" "}
-              or 522 W Riverside Ave STE N Spokane, WA 99201-0580.
+              For privacy questions or requests, <a href="/contact" className="text-primary-600 underline">Contact Us</a> or 522 W Riverside Ave STE N Spokane, WA 99201-0580.
             </p>
           </section>
 
@@ -163,14 +149,7 @@ const PrivacyPage: React.FC = () => {
           <section>
             <h2>11. Contact</h2>
             <p>
-              For privacy questions or requests, contact:{" "}
-              <a
-                href="mailto:support@fastwebcreations.com"
-                className="text-primary-600 underline"
-              >
-                support@fastwebcreations.com
-              </a>{" "}
-              or 522 W Riverside Ave STE N Spokane, WA 99201-0580.
+              For privacy questions or requests, <a href="/contact" className="text-primary-600 underline">Contact Us</a> or 522 W Riverside Ave STE N Spokane, WA 99201-0580.
             </p>
           </section>
         </div>

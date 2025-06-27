@@ -108,15 +108,8 @@ const TermsPage: React.FC = () => {
             </p>
             <ul>
               <li>
-                Email:{" "}
-                <a
-                  href="mailto:support@fastwebcreations.com"
-                  className="text-primary-600 underline"
-                >
-                  support@fastwebcreations.com
-                </a>
+                Email: <a href="/contact" className="text-primary-600 underline">Contact Us</a>
               </li>
-              <li>Address: 522 W Riverside Ave STE N Spokane, WA 99201-0580</li>
             </ul>
           </section>
         </div>

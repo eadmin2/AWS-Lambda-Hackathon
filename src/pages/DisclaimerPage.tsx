@@ -16,7 +16,7 @@ const DisclaimerPage: React.FC = () => {
             Medical Disclaimer
           </h1>
           <p className="mt-4 text-lg text-gray-600">
-            Last updated: June 3, 2024
+            Last updated: June 27, 2025
           </p>
         </div>
         <div className="prose prose-blue max-w-none space-y-8">
@@ -99,20 +99,8 @@ const DisclaimerPage: React.FC = () => {
           <section>
             <h2>Contact Information</h2>
             <p>
-              For questions about this medical disclaimer, please contact us at:
+              For questions about this medical disclaimer, please visit <a href="/contact" className="text-primary-600 underline">Contact Us</a>.
             </p>
-            <ul>
-              <li>
-                Email:{" "}
-                <a
-                  href="mailto:support@fastwebcreations.com"
-                  className="text-primary-600 underline"
-                >
-                  support@fastwebcreations.com
-                </a>
-              </li>
-              <li>Address: 522 W Riverside Ave STE N Spokane, WA 99201-0580</li>
-            </ul>
           </section>
         </div>
       </div>

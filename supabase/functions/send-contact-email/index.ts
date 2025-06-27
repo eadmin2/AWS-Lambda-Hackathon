@@ -58,6 +58,22 @@ async function sendContactEmail({ name, email, subject, message }: { name: strin
   return await response.json();
 }
 
+async function verifyTurnstileToken(token: string, remoteip?: string) {
+  const secret = Deno.env.get("TURNSTILE_SECRET");
+  if (!secret) throw new Error("Missing Turnstile secret key in environment variables");
+  const formData = new URLSearchParams();
+  formData.append("secret", secret);
+  formData.append("response", token);
+  if (remoteip) formData.append("remoteip", remoteip);
+  const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: formData.toString(),
+  });
+  const data = await response.json();
+  return data.success === true;
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -77,10 +93,25 @@ serve(async (req: Request) => {
       });
     }
     console.log('[send-contact-email] Parsed body:', body);
-    const { name, email, subject, message } = body;
+    const { name, email, subject, message, turnstileToken } = body;
     if (!name || !email || !subject || !message) {
       console.error('[send-contact-email] Missing required fields:', { name, email, subject, message });
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      });
+    }
+    // Turnstile validation
+    if (!turnstileToken) {
+      return new Response(JSON.stringify({ error: "Missing Turnstile token" }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      });
+    }
+    const remoteip = req.headers.get("x-forwarded-for") || undefined;
+    const isHuman = await verifyTurnstileToken(turnstileToken, remoteip);
+    if (!isHuman) {
+      return new Response(JSON.stringify({ error: "Turnstile verification failed" }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       });
