@@ -120,20 +120,34 @@ const Footer: React.FC = () => {
                 </button>
               </li>
               <li>
-                <Link
-                  to="/contact"
-                  className="text-base text-gray-600 hover:text-gray-900"
+                <button
+                  className="text-base text-gray-600 hover:text-gray-900 focus:outline-none"
+                  onClick={() => {
+                    if (location.pathname === "/contact") {
+                      window.scrollTo({ top: 0, behavior: "auto" });
+                    } else {
+                      navigate("/contact");
+                      setTimeout(() => { window.scrollTo({ top: 0, behavior: "auto" }); }, 300);
+                    }
+                  }}
                 >
                   Contact Us
-                </Link>
+                </button>
               </li>
               <li>
-                <Link
-                  to="/help"
-                  className="text-base text-gray-600 hover:text-gray-900"
+                <button
+                  className="text-base text-gray-600 hover:text-gray-900 focus:outline-none"
+                  onClick={() => {
+                    if (location.pathname === "/help") {
+                      window.scrollTo({ top: 0, behavior: "auto" });
+                    } else {
+                      navigate("/help");
+                      setTimeout(() => { window.scrollTo({ top: 0, behavior: "auto" }); }, 300);
+                    }
+                  }}
                 >
                   Help Center
-                </Link>
+                </button>
               </li>
             </ul>
           </div>
@@ -143,12 +157,19 @@ const Footer: React.FC = () => {
             </h3>
             <ul className="mt-4 space-y-4">
               <li>
-                <Link
-                  to="/privacy"
+                <button
                   className="text-base text-primary-600 hover:text-primary-800 focus:outline-none focus:ring-2 focus:ring-primary-400"
+                  onClick={() => {
+                    if (location.pathname === "/privacy") {
+                      window.scrollTo({ top: 0, behavior: "auto" });
+                    } else {
+                      navigate("/privacy");
+                      setTimeout(() => { window.scrollTo({ top: 0, behavior: "auto" }); }, 300);
+                    }
+                  }}
                 >
                   Privacy Policy
-                </Link>
+                </button>
               </li>
               <li>
                 <button
@@ -160,20 +181,34 @@ const Footer: React.FC = () => {
                 </button>
               </li>
               <li>
-                <Link
-                  to="/terms"
-                  className="text-base text-gray-600 hover:text-gray-900"
+                <button
+                  className="text-base text-gray-600 hover:text-gray-900 focus:outline-none"
+                  onClick={() => {
+                    if (location.pathname === "/terms") {
+                      window.scrollTo({ top: 0, behavior: "auto" });
+                    } else {
+                      navigate("/terms");
+                      setTimeout(() => { window.scrollTo({ top: 0, behavior: "auto" }); }, 300);
+                    }
+                  }}
                 >
                   Terms of Service
-                </Link>
+                </button>
               </li>
               <li>
-                <Link
-                  to="/disclaimer"
-                  className="text-base text-gray-600 hover:text-gray-900"
+                <button
+                  className="text-base text-gray-600 hover:text-gray-900 focus:outline-none"
+                  onClick={() => {
+                    if (location.pathname === "/disclaimer") {
+                      window.scrollTo({ top: 0, behavior: "auto" });
+                    } else {
+                      navigate("/disclaimer");
+                      setTimeout(() => { window.scrollTo({ top: 0, behavior: "auto" }); }, 300);
+                    }
+                  }}
                 >
                   Medical Disclaimer
-                </Link>
+                </button>
               </li>
             </ul>
           </div>

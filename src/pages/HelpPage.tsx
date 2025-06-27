@@ -13,9 +13,12 @@ import {
   Award,
   ExternalLink,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 const HelpPage: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
   return (
     <PageLayout>
       <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
@@ -128,12 +131,19 @@ const HelpPage: React.FC = () => {
                     </li>
                     <li>
                       Contact us through our{" "}
-                      <Link
-                        to="/contact"
-                        className="text-primary-600 hover:text-primary-700"
+                      <button
+                        className="text-primary-600 hover:text-primary-700 underline focus:outline-none"
+                        onClick={() => {
+                          if (location.pathname === "/contact") {
+                            window.scrollTo({ top: 0, behavior: "auto" });
+                          } else {
+                            navigate("/contact");
+                            setTimeout(() => { window.scrollTo({ top: 0, behavior: "auto" }); }, 300);
+                          }
+                        }}
                       >
                         support form
-                      </Link>
+                      </button>
                     </li>
                     <li>Call our support line during business hours</li>
                   </ul>

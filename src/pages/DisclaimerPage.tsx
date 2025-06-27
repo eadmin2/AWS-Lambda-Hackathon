@@ -1,8 +1,12 @@
-import React from "react";
+import React, { useEffect } from "react";
 import PageLayout from "../components/layout/PageLayout";
 import { AlertTriangle } from "lucide-react";
 
 const DisclaimerPage: React.FC = () => {
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
+
   return (
     <PageLayout>
       <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
