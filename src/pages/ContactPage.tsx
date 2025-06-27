@@ -73,6 +73,7 @@ const ContactPage: React.FC = () => {
         window.turnstile.render(turnstileRef.current, {
           sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY,
           callback: (token: string) => {
+            console.log("Turnstile token:", token);
             setTurnstileToken(token);
             setTurnstileError(null);
           },
@@ -239,7 +240,7 @@ const ContactPage: React.FC = () => {
 
               {/* Turnstile Widget */}
               <div className="my-4">
-                <div ref={turnstileRef} className="cf-turnstile" data-sitekey={import.meta.env.VITE_TURNSTILE_SITE_KEY}></div>
+                <div ref={turnstileRef}></div>
                 {turnstileError && (
                   <p className="mt-2 text-sm text-error-500">{turnstileError}</p>
                 )}
