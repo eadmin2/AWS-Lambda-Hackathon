@@ -60,6 +60,7 @@ const ContactPage: React.FC = () => {
       }, {
         headers: {
           "Content-Type": "application/json",
+          "Authorization": "Bearer SUPABASE_ANON_KEY",
         },
       });
       setSubmitStatus('success');
