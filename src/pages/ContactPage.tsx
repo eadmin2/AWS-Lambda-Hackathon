@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PageLayout from "../components/layout/PageLayout";
 import {
   Card,
@@ -48,6 +48,10 @@ const ContactPage: React.FC = () => {
 
   const [submitStatus, setSubmitStatus] = useState<null | 'success' | 'error'>(null);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
+
   const onSubmit = async (data: ContactFormData) => {
     try {
       setSubmitStatus(null);
@@ -60,7 +64,7 @@ const ContactPage: React.FC = () => {
       }, {
         headers: {
           "Content-Type": "application/json",
-          "Authorization": "Bearer SUPABASE_ANON_KEY",
+          "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFsZ29qY21xc3Rva3lnaGlqY3ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg2NDYyNTksImV4cCI6MjA2NDIyMjI1OX0.eVgbVUPHPMhKT_jk3oZykJbPgLuDy4zf-0e46B4A1NU",
         },
       });
       setSubmitStatus('success');
