@@ -51,16 +51,15 @@ const ContactPage: React.FC = () => {
   const onSubmit = async (data: ContactFormData) => {
     try {
       setSubmitStatus(null);
-      // Send email via Pica (replace with your actual endpoint if needed)
-      await axios.post("https://api.picaos.com/send", {
-        to: "support@marketing.varatingassistant.com",
-        subject: `[Contact] ${data.subject}`,
-        html: generateContactEmailTemplate(data),
-        replyTo: data.email,
+      // Send email via Supabase Edge Function
+      await axios.post("/functions/v1/send-contact-email", {
+        name: data.name,
+        email: data.email,
+        subject: data.subject,
+        message: data.message,
       }, {
         headers: {
           "Content-Type": "application/json",
-          // Optionally add Authorization if required by your Pica setup
         },
       });
       setSubmitStatus('success');
