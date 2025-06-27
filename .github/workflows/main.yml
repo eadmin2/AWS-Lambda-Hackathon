@@ -1,31 +1,20 @@
 name: Deploy React Site to Apache Server
-
 on:
   push:
     branches:
-      - main # Triggers deployment on push to main branch
-
+      - main
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
-
-      - name: Set environment variables
-        run: |
-          echo "VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}" >> $GITHUB_ENV
-          echo "VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}" >> $GITHUB_ENV
-
       - name: Install dependencies
         run: npm install
-
       - name: Build Vite application
         run: |
           npm run build
@@ -35,7 +24,10 @@ jobs:
           fi
           echo "Build successful. Contents of dist directory:"
           ls -la dist
-
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_TURNSTILE_SITE_KEY: ${{ secrets.VITE_TURNSTILE_SITE_KEY }}
       - name: Deploy to Apache Server via SSH
         uses: appleboy/scp-action@master
         with:
