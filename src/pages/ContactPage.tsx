@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import PageLayout from "../components/layout/PageLayout";
 import {
   Card,
@@ -47,62 +47,20 @@ const ContactPage: React.FC = () => {
   } = useForm<ContactFormData>();
 
   const [submitStatus, setSubmitStatus] = useState<null | 'success' | 'error'>(null);
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
-  const [turnstileError, setTurnstileError] = useState<string | null>(null);
-  const turnstileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
-    // Load Turnstile script if not already present
-    if (!document.getElementById('cf-turnstile-script')) {
-      const script = document.createElement('script');
-      script.id = 'cf-turnstile-script';
-      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
-      script.async = true;
-      document.body.appendChild(script);
-    }
-  }, []);
-
-  // Callback for Turnstile
-  useEffect(() => {
-    // Wait for window.turnstile to be available
-    const interval = setInterval(() => {
-      // @ts-ignore
-      if (window.turnstile && turnstileRef.current && !turnstileRef.current.hasChildNodes()) {
-        // @ts-ignore
-        window.turnstile.render(turnstileRef.current, {
-          sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY,
-          callback: (token: string) => {
-            console.log("Turnstile token:", token);
-            setTurnstileToken(token);
-            setTurnstileError(null);
-          },
-          'error-callback': () => {
-            setTurnstileToken(null);
-            setTurnstileError('Verification failed. Please try again.');
-          },
-          theme: 'auto',
-        });
-        clearInterval(interval);
-      }
-    }, 200);
-    return () => clearInterval(interval);
   }, []);
 
   const onSubmit = async (data: ContactFormData) => {
-    if (!turnstileToken) {
-      setTurnstileError('Please complete the verification.');
-      return;
-    }
     try {
       setSubmitStatus(null);
-      // Send email via Supabase Edge Function, include turnstileToken
+      // Send email via Supabase Edge Function (no turnstileToken)
       await axios.post("https://algojcmqstokyghijcyc.supabase.co/functions/v1/send-contact-email", {
         name: data.name,
         email: data.email,
         subject: data.subject,
         message: data.message,
-        turnstileToken,
       }, {
         headers: {
           "Content-Type": "application/json",
@@ -111,12 +69,6 @@ const ContactPage: React.FC = () => {
       });
       setSubmitStatus('success');
       reset();
-      setTurnstileToken(null);
-      // Optionally reset the widget
-      if (turnstileRef.current) {
-        // @ts-ignore
-        window.turnstile && window.turnstile.reset(turnstileRef.current);
-      }
     } catch (error) {
       console.error("Error submitting form:", error);
       setSubmitStatus('error');
@@ -235,14 +187,6 @@ const ContactPage: React.FC = () => {
                   <p className="mt-1 text-sm text-error-500">
                     {errors.message.message}
                   </p>
-                )}
-              </div>
-
-              {/* Turnstile Widget */}
-              <div className="my-4">
-                <div ref={turnstileRef}></div>
-                {turnstileError && (
-                  <p className="mt-2 text-sm text-error-500">{turnstileError}</p>
                 )}
               </div>
 
