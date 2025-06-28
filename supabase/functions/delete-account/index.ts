@@ -89,22 +89,40 @@ Deno.serve(async (req) => {
     if (customerId) {
       console.log(`Processing Stripe customer: ${customerId}`);
       
-      // Cancel all active subscriptions for this customer via Stripe API
-      const subscriptions = await stripe.subscriptions.list({
-        customer: customerId,
-        status: "all"
-      });
-      
-      for (const sub of subscriptions.data) {
-        if (sub.status !== "canceled") {
-          await stripe.subscriptions.del(sub.id);
-          console.log(`Cancelled Stripe subscription: ${sub.id}`);
+      try {
+        // Cancel all active subscriptions for this customer via Stripe API
+        const subscriptions = await stripe.subscriptions.list({
+          customer: customerId,
+          status: "all"
+        });
+        
+        for (const sub of subscriptions.data) {
+          if (sub.status !== "canceled") {
+            try {
+              await stripe.subscriptions.del(sub.id);
+              console.log(`✓ Cancelled Stripe subscription: ${sub.id}`);
+            } catch (subError) {
+              console.warn(`⚠ Could not cancel subscription ${sub.id}:`, subError.message);
+              // Continue with other subscriptions
+            }
+          }
+        }
+
+        // Delete the Stripe customer via Stripe API
+        await stripe.customers.del(customerId);
+        console.log(`✓ Deleted Stripe customer: ${customerId}`);
+        
+      } catch (stripeError) {
+        console.warn(`⚠ Stripe customer deletion failed for ${customerId}:`, stripeError.message);
+        
+        // Check if it's a "customer not found" error (customer may already be deleted)
+        if (stripeError.code === 'resource_missing' || stripeError.message.includes('No such customer')) {
+          console.log(`ℹ Customer ${customerId} was already deleted from Stripe - continuing with database cleanup`);
+        } else {
+          console.error(`⚠ Unexpected Stripe error:`, stripeError);
+          // Don't throw here - we still want to clean up the database even if Stripe fails
         }
       }
-
-      // Delete the Stripe customer via Stripe API
-      await stripe.customers.del(customerId);
-      console.log(`Deleted Stripe customer: ${customerId}`);
     }
 
     // 3. Delete all user files from Supabase Storage (documents bucket)
@@ -137,8 +155,21 @@ Deno.serve(async (req) => {
     // 4. Delete all user data from database tables in correct order to avoid foreign key issues
     console.log("Starting database cleanup...");
 
+    // List of database views that should be skipped (they're read-only)
+    const databaseViews = [
+      "searchable_chunks",        // View of document_chunks + documents
+      "stripe_user_orders",       // View of stripe_customers + stripe_orders  
+      "stripe_user_subscriptions" // View of stripe_customers + stripe_subscriptions
+    ];
+
     // Helper function to safely delete from table
     const safeDelete = async (tableName: string, whereClause: any, description: string) => {
+      // Skip views - they can't be deleted from and will be cleaned automatically
+      if (databaseViews.includes(tableName)) {
+        console.log(`⏭ Skipping ${tableName} (view) - will be cleaned automatically when underlying tables are cleaned`);
+        return;
+      }
+
       try {
         const { error } = await supabase.from(tableName).delete().match(whereClause);
         if (error && error.code !== "42P01") { // 42P01 = table doesn't exist

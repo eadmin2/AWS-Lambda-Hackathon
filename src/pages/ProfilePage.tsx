@@ -20,6 +20,8 @@ import {
 } from "../lib/stripe";
 import Modal from "../components/ui/Modal";
 import { useTokenBalance } from '../hooks/useTokenBalance';
+import LoadingModal from "../components/ui/LoadingModal";
+import ErrorModal from "../components/ui/ErrorModal";
 
 interface ProfileFormData {
   fullName: string;
@@ -86,10 +88,10 @@ const DeleteAccountModalContent: React.FC<{
 
   return (
     <div className="p-6">
-      <h2 className="text-xl font-bold text-error-700 mb-4">
+      <h2 id="delete-modal-title" className="text-xl font-bold text-error-700 mb-4">
         Confirm Account Deletion
       </h2>
-      <p className="mb-4 text-gray-700">
+      <p id="delete-modal-desc" className="mb-4 text-gray-700">
         This will permanently delete your account and all data.
         This action cannot be undone.
         <br />
@@ -109,6 +111,8 @@ const DeleteAccountModalContent: React.FC<{
         value={localDeleteConfirm}
         onChange={(e) => setLocalDeleteConfirm(e.target.value)}
         autoFocus
+        aria-labelledby="delete-modal-title"
+        aria-describedby="delete-modal-desc"
       />
       {deleteError && (
         <div className="mb-4 text-error-600 text-sm">
@@ -161,6 +165,16 @@ const ProfilePage: React.FC = () => {
   const [passwordLoading, setPasswordLoading] = useState(false);
   const navigate = useNavigate();
   const { tokensAvailable, tokensUsed } = useTokenBalance(user?.id || null);
+  const [showLoadingModal, setShowLoadingModal] = useState(false);
+  const [loadingSteps] = useState([
+    "Canceling subscriptions...",
+    "Removing documents...",
+    "Deleting user data...",
+    "Finalizing deletion..."
+  ]);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const {
     register,
@@ -243,33 +257,33 @@ const ProfilePage: React.FC = () => {
   };
 
   const handleDeleteAccount = async () => {
-    setDeleteLoading(true);
-    setDeleteError(null);
-    const result = await deleteAccountRequest();
-    if (result.success) {
-      try {
-        await supabase.auth.signOut();
-      } catch (err) {
-        // Ignore "user_not_found" error after account deletion
-        if (
-          err &&
-          typeof err === "object" &&
-          "message" in err &&
-          err.message === "User from sub claim in JWT does not exist"
-        ) {
-          // Optionally log or ignore
-        } else {
-          // Handle/log other errors if needed
-          console.error("Logout error:", err);
-        }
-      }
-      setDeleteLoading(false);
-      navigate("/goodbye");
-    } else {
-      setDeleteLoading(false);
-      setDeleteError(
-        result.error || "Failed to delete account",
-      );
+    setShowDeleteModal(false);
+    setShowLoadingModal(true);
+    setCurrentStep(0);
+    try {
+      // Step 1: Cancel subscriptions
+      setCurrentStep(0);
+      await new Promise(res => setTimeout(res, 700));
+      // Step 2: Remove documents
+      setCurrentStep(1);
+      await new Promise(res => setTimeout(res, 700));
+      // Step 3: Delete user data
+      setCurrentStep(2);
+      await new Promise(res => setTimeout(res, 700));
+      // Step 4: Finalize deletion (call backend)
+      setCurrentStep(3);
+      const result = await deleteAccountRequest();
+      if (!result.success) throw new Error(result.error || "Unknown error");
+      // Success: log out, clear storage, redirect
+      await supabase.auth.signOut();
+      localStorage.clear();
+      sessionStorage.clear();
+      // Optionally clear cookies if you use them
+      window.location.replace("/goodbye");
+    } catch (err: any) {
+      setShowLoadingModal(false);
+      setErrorMessage(err.message || "Failed to delete account.");
+      setShowErrorModal(true);
     }
   };
 
@@ -781,6 +795,21 @@ const ProfilePage: React.FC = () => {
           onCancel={() => setShowDeleteModal(false)}
         />
       </Modal>
+      <LoadingModal
+        isOpen={showLoadingModal}
+        steps={loadingSteps}
+        currentStep={currentStep}
+      />
+      <ErrorModal
+        isOpen={showErrorModal}
+        error={errorMessage}
+        onRetry={() => {
+          setShowErrorModal(false);
+          handleDeleteAccount();
+        }}
+        onContact={() => window.location.href = "/contact"}
+        onClose={() => setShowErrorModal(false)}
+      />
     </PageLayout>
   );
 };
