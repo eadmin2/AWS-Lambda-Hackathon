@@ -29,7 +29,7 @@ const DocumentsPage: React.FC = () => {
   useEffect(() => {
     if (searchParams.get("payment") === "success") {
       setShowPaymentNotification(true);
-      const timer = setTimeout(() => setShowPaymentNotification(false), 3000);
+      const timer = setTimeout(() => setShowPaymentNotification(false), 10000);
       return () => clearTimeout(timer);
     }
   }, [searchParams]);
@@ -62,7 +62,7 @@ const DocumentsPage: React.FC = () => {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="max-w-4xl mx-auto">
           {showPaymentNotification && (
-            <div className="mb-6 max-w-md mx-auto bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded shadow">
+            <div className="mb-6 max-w-md mx-auto bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded shadow relative">
               <strong className="font-bold">Payment Received!</strong>
               <span className="block sm:inline"> Your payment was successful. You can now upload documents.</span>
             </div>

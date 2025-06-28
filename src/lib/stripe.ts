@@ -6,7 +6,7 @@ export async function createUploadCheckoutSession(userId?: string, productType?:
     
     const body: Record<string, unknown> = {
       mode: "payment",
-      success_url: `${window.location.origin}/dashboard?checkout=success`,
+      success_url: `${window.location.origin}/documents?payment=success`,
       cancel_url: `${window.location.origin}/pricing?checkout=canceled`,
     };
     if (userId) body.user_id = userId;
@@ -47,7 +47,7 @@ export async function createSubscriptionCheckoutSession(userId?: string) {
   try {
     const body: Record<string, unknown> = {
       mode: "subscription",
-      success_url: `${window.location.origin}/dashboard?subscription=success`,
+      success_url: `${window.location.origin}/documents?payment=success`,
       cancel_url: `${window.location.origin}/pricing?subscription=canceled`,
     };
     if (userId) body.user_id = userId;
