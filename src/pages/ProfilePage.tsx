@@ -647,7 +647,20 @@ const ProfilePage: React.FC = () => {
                   // Log out and redirect to goodbye page
                   try {
                     await supabase.auth.signOut();
-                  } catch {}
+                  } catch (err) {
+                    // Ignore "user_not_found" error after account deletion
+                    if (
+                      err &&
+                      typeof err === "object" &&
+                      "message" in err &&
+                      err.message === "User from sub claim in JWT does not exist"
+                    ) {
+                      // Optionally log or ignore
+                    } else {
+                      // Handle/log other errors if needed
+                      console.error("Logout error:", err);
+                    }
+                  }
                   setDeleteLoading(false);
                   navigate("/goodbye");
                 } else {
