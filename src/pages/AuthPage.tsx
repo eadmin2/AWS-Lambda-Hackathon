@@ -45,6 +45,7 @@ const AuthPage: React.FC = () => {
             <AuthTabs 
               onSuccess={handleAuthSuccess} 
               defaultTab={next === "checkout" ? "register" : "login"}
+              onlyRegister={next === "checkout"}
             />
           </div>
 
