@@ -72,70 +72,71 @@ async function deleteAccountRequest(): Promise<{
 }
 
 const DeleteAccountModalContent: React.FC<{
-  deleteConfirm: string;
-  setDeleteConfirm: (v: string) => void;
   deleteError: string | null;
   deleteLoading: boolean;
   onDelete: () => void;
   onCancel: () => void;
 }> = ({
-  deleteConfirm,
-  setDeleteConfirm,
   deleteError,
   deleteLoading,
   onDelete,
   onCancel,
-}) => (
-  <div className="p-6">
-    <h2 className="text-xl font-bold text-error-700 mb-4">
-      Confirm Account Deletion
-    </h2>
-    <p className="mb-4 text-gray-700">
-      This will permanently delete your account and all data.
-      This action cannot be undone.
-      <br />
-      To confirm, type{" "}
-      <span className="font-mono font-bold">DELETE</span> below.
-    </p>
-    <label htmlFor="deleteConfirm" className="block text-sm font-medium text-gray-700 mb-1">
-      Type DELETE to confirm
-    </label>
-    <input
-      type="text"
-      id="deleteConfirm"
-      name="deleteConfirm"
-      className="input w-full mb-4"
-      placeholder="Type DELETE to confirm"
-      autoComplete="off"
-      value={deleteConfirm}
-      onChange={(e) => setDeleteConfirm(e.target.value)}
-    />
-    {deleteError && (
-      <div className="mb-4 text-error-600 text-sm">
-        {deleteError}
+}) => {
+  const [localDeleteConfirm, setLocalDeleteConfirm] = useState("");
+
+  return (
+    <div className="p-6">
+      <h2 className="text-xl font-bold text-error-700 mb-4">
+        Confirm Account Deletion
+      </h2>
+      <p className="mb-4 text-gray-700">
+        This will permanently delete your account and all data.
+        This action cannot be undone.
+        <br />
+        To confirm, type{" "}
+        <span className="font-mono font-bold">DELETE</span> below.
+      </p>
+      <label htmlFor="deleteConfirm" className="block text-sm font-medium text-gray-700 mb-1">
+        Type DELETE to confirm
+      </label>
+      <input
+        type="text"
+        id="deleteConfirm"
+        name="deleteConfirm"
+        className="input w-full mb-4"
+        placeholder="Type DELETE to confirm"
+        autoComplete="off"
+        value={localDeleteConfirm}
+        onChange={(e) => setLocalDeleteConfirm(e.target.value)}
+        autoFocus
+      />
+      {deleteError && (
+        <div className="mb-4 text-error-600 text-sm">
+          {deleteError}
+        </div>
+      )}
+      <div className="flex gap-3">
+        <Button
+          variant="danger"
+          className="flex-1"
+          disabled={localDeleteConfirm !== "DELETE" || deleteLoading}
+          isLoading={deleteLoading}
+          onClick={onDelete}
+        >
+          Permanently Delete
+        </Button>
+        <Button
+          variant="secondary"
+          className="flex-1"
+          onClick={onCancel}
+          disabled={deleteLoading}
+        >
+          Cancel
+        </Button>
       </div>
-    )}
-    <div className="flex gap-3">
-      <Button
-        variant="danger"
-        className="flex-1"
-        disabled={deleteConfirm !== "DELETE" || deleteLoading}
-        isLoading={deleteLoading}
-        onClick={onDelete}
-      >
-        Permanently Delete
-      </Button>
-      <Button
-        variant="secondary"
-        className="flex-1"
-        onClick={onCancel}
-        disabled={deleteLoading}
-      >
-        Cancel
-      </Button>
     </div>
-  </div>
-);
+  );
+};
 
 const ProfilePage: React.FC = () => {
   const { user, profile, isLoading: isAuthLoading } = useAuth();
@@ -148,7 +149,6 @@ const ProfilePage: React.FC = () => {
   const [billingLoading, setBillingLoading] = useState(false);
   const [billingError, setBillingError] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
@@ -242,9 +242,40 @@ const ProfilePage: React.FC = () => {
     };
   };
 
+  const handleDeleteAccount = async () => {
+    setDeleteLoading(true);
+    setDeleteError(null);
+    const result = await deleteAccountRequest();
+    if (result.success) {
+      try {
+        await supabase.auth.signOut();
+      } catch (err) {
+        // Ignore "user_not_found" error after account deletion
+        if (
+          err &&
+          typeof err === "object" &&
+          "message" in err &&
+          err.message === "User from sub claim in JWT does not exist"
+        ) {
+          // Optionally log or ignore
+        } else {
+          // Handle/log other errors if needed
+          console.error("Logout error:", err);
+        }
+      }
+      setDeleteLoading(false);
+      navigate("/goodbye");
+    } else {
+      setDeleteLoading(false);
+      setDeleteError(
+        result.error || "Failed to delete account",
+      );
+    }
+  };
+
   // Redirect if not authenticated
   if (!isAuthLoading && !user) {
-    return <Navigate to="/auth\" replace />;
+    return <Navigate to="/auth" replace />;
   }
 
   return (
@@ -744,40 +775,9 @@ const ProfilePage: React.FC = () => {
         onClose={() => setShowDeleteModal(false)}
       >
         <DeleteAccountModalContent
-          deleteConfirm={deleteConfirm}
-          setDeleteConfirm={setDeleteConfirm}
           deleteError={deleteError}
           deleteLoading={deleteLoading}
-          onDelete={async () => {
-            setDeleteLoading(true);
-            setDeleteError(null);
-            const result = await deleteAccountRequest();
-            if (result.success) {
-              try {
-                await supabase.auth.signOut();
-              } catch (err) {
-                // Ignore "user_not_found" error after account deletion
-                if (
-                  err &&
-                  typeof err === "object" &&
-                  "message" in err &&
-                  err.message === "User from sub claim in JWT does not exist"
-                ) {
-                  // Optionally log or ignore
-                } else {
-                  // Handle/log other errors if needed
-                  console.error("Logout error:", err);
-                }
-              }
-              setDeleteLoading(false);
-              navigate("/goodbye");
-            } else {
-              setDeleteLoading(false);
-              setDeleteError(
-                result.error || "Failed to delete account",
-              );
-            }
-          }}
+          onDelete={handleDeleteAccount}
           onCancel={() => setShowDeleteModal(false)}
         />
       </Modal>
