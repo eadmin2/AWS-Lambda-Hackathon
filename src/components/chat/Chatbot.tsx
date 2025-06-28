@@ -312,6 +312,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
                       onKeyPress={handleKeyPress}
                       placeholder={config?.inputPlaceholder || "Type your message..."}
                       className="flex-1 px-3 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
+                      autoComplete="off"
                       disabled={isLoading}
                     />
                     <button

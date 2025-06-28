@@ -5,6 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { getUserPermissions, UserPermissions } from "../lib/supabase";
 import { UploadRequired } from "../components/ui/AccessControl";
 import { useSearchParams } from "react-router-dom";
+import Modal from "../components/ui/Modal";
 
 const DocumentsPage: React.FC = () => {
   const { profile } = useAuth();
@@ -12,6 +13,7 @@ const DocumentsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchParams] = useSearchParams();
   const [showPaymentNotification, setShowPaymentNotification] = useState(false);
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
 
   useEffect(() => {
     const fetchPermissions = async () => {
@@ -29,6 +31,7 @@ const DocumentsPage: React.FC = () => {
   useEffect(() => {
     if (searchParams.get("payment") === "success") {
       setShowPaymentNotification(true);
+      setShowOnboardingModal(true);
       const timer = setTimeout(() => setShowPaymentNotification(false), 10000);
       return () => clearTimeout(timer);
     }
@@ -59,6 +62,22 @@ const DocumentsPage: React.FC = () => {
 
   return (
     <PageLayout>
+      <Modal isOpen={showOnboardingModal} onClose={() => setShowOnboardingModal(false)}>
+        <h2 className="text-xl font-bold mb-2 text-center">Welcome to VA Rating Assistant!</h2>
+        <p className="mb-4 text-gray-700 text-center">
+          Thank you for your payment. Here's how to get started:
+        </p>
+        <ul className="list-disc pl-6 mb-4 text-gray-700 text-left">
+          <li>Click <b>Upload Document</b> to upload your medical or VA-related PDFs, images, or scanned documents.</li>
+          <li>After uploading, your documents will be processed automatically. You'll see a progress indicator.</li>
+          <li>Once processing is complete, you'll be able to view your estimated VA disability rating and detected conditions on your dashboard.</li>
+          <li>You can upload additional documents at any time for a more accurate estimate.</li>
+          <li>Need help? Visit the <b>Help</b> page or contact support for assistance.</li>
+        </ul>
+        <button className="btn btn-primary w-full" onClick={() => setShowOnboardingModal(false)}>
+          Got it!
+        </button>
+      </Modal>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="max-w-4xl mx-auto">
           {showPaymentNotification && (

@@ -134,6 +134,7 @@ const FacilitiesPage = () => {
             onChange={handleInputChange}
             className="border border-gray-300 p-2 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full"
             maxLength={2}
+            autoComplete="address-level1"
           />
           <input
             id="zip"
@@ -143,6 +144,7 @@ const FacilitiesPage = () => {
             onChange={handleInputChange}
             className="border border-gray-300 p-2 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full"
             maxLength={10}
+            autoComplete="postal-code"
           />
           <select
             id="facility-type"
@@ -163,6 +165,7 @@ const FacilitiesPage = () => {
             type="number"
             min={1}
             step="any"
+            autoComplete="off"
           />
           <Select
             id="services"
@@ -181,6 +184,7 @@ const FacilitiesPage = () => {
             classNamePrefix="react-select"
             placeholder="Select services..."
             closeMenuOnSelect={false}
+            aria-label="Select services"
           />
           <label className="flex items-center gap-2 border border-gray-300 p-2 rounded-lg w-full bg-white">
             <input
@@ -210,6 +214,7 @@ const FacilitiesPage = () => {
             value={search.facilityIds}
             onChange={handleInputChange}
             className="border border-gray-300 p-2 rounded-lg focus:ring-primary-500 focus:border-primary-500 w-full"
+            autoComplete="off"
           />
           <select
             id="per-page"

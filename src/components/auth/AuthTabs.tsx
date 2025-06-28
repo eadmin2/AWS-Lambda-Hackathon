@@ -44,6 +44,7 @@ function ResetPasswordModal({ isOpen, onClose }: { isOpen: boolean; onClose: () 
             value={email}
             onChange={e => setEmail(e.target.value)}
             required
+            autoComplete="email"
             className="mt-1 block w-full border rounded px-2 py-1"
           />
         </label>

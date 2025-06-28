@@ -263,6 +263,7 @@ const CalculatorPage: React.FC = () => {
                     className="border rounded px-3 py-2 w-full"
                     id="childrenU18"
                     name="childrenU18"
+                    autoComplete="off"
                     value={dependents.childrenU18}
                     onChange={(e) =>
                       setDependents((d) => ({
@@ -283,6 +284,7 @@ const CalculatorPage: React.FC = () => {
                     className="border rounded px-3 py-2 w-full"
                     id="children18to24"
                     name="children18to24"
+                    autoComplete="off"
                     value={dependents.children18to24}
                     onChange={(e) =>
                       setDependents((d) => ({
@@ -303,6 +305,7 @@ const CalculatorPage: React.FC = () => {
                     className="border rounded px-3 py-2 w-full"
                     id="parents"
                     name="parents"
+                    autoComplete="off"
                     value={dependents.parents}
                     onChange={(e) =>
                       setDependents((d) => ({

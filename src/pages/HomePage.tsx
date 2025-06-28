@@ -76,7 +76,7 @@ const HomePage: React.FC = () => {
                   </p>
                   <div className="flex flex-col gap-3 xl:flex-row xl:gap-4 w-full max-w-md mx-auto md:mx-0">
                     <a href="/pricing#pricing-section" className="w-full md:w-auto xl:w-auto">
-                      <Button size="lg" className="w-full md:w-auto xl:w-auto md:max-w-xs xl:max-w-xs whitespace-nowrap min-h-[48px]">
+                      <Button size="lg" className="w-full md:w-auto xl:w-auto md:max-w-xs xl:max-w-xs whitespace-nowrap min-h-[48px] bg-blue-800 text-white hover:bg-blue-900">
                         View Pricing
                       </Button>
                     </a>
@@ -266,11 +266,11 @@ const HomePage: React.FC = () => {
                 <svg className="h-7 w-7 text-blue-200" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
               </div>
               <h3 className="text-lg font-semibold mb-1 text-white">We Never Sell or Share Your Data</h3>
-              <p className="text-blue-100">At VARatingAssistant.com, your personal information is never sold, released, or shared. Your trust is our promise.</p>
+              <p className="text-blue-100">Your personal information is never sold, released, or shared. Your trust is our promise.</p>
             </div>
           </div>
           <div className="mt-10 text-center">
-            <span className="inline-block px-6 py-3 rounded-full bg-blue-800 text-lg font-semibold text-white shadow-md">Your privacy is our mission.</span>
+            {/* Removed 'Your privacy is our mission.' badge */}
           </div>
         </div>
       </section>
@@ -285,7 +285,7 @@ const HomePage: React.FC = () => {
               minutes.
             </p>
             <a href="/pricing#pricing-section">
-              <Button size="lg" className="min-w-[200px]">
+              <Button size="lg" className="min-w-[200px] bg-blue-800 text-white hover:bg-blue-900">
                 View Pricing
               </Button>
             </a>

@@ -212,6 +212,7 @@ export function VAFormSearch({ onFormSelect }: Props) {
               }}
               className="block w-full pl-10 pr-3 py-3 sm:py-2 text-base sm:text-sm border border-gray-300 rounded-lg sm:rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-[#003875] focus:border-[#003875] shadow-sm"
               placeholder="Search forms..."
+              autoComplete="off"
               aria-label="Search VA forms"
             />
           </div>

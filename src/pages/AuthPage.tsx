@@ -60,6 +60,7 @@ const AuthPage: React.FC = () => {
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
                 required
+                autoComplete="new-password"
                 className="mt-1 block w-full border rounded px-2 py-1"
               />
             </label>

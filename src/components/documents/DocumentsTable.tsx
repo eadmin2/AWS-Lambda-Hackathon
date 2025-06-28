@@ -143,6 +143,8 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
                     }
                     onKeyDown={(e) => handleKeyPress(e, document)}
                     autoFocus
+                    autoComplete="off"
+                    aria-label={`Edit name for ${document.file_name}`}
                   />
                   <span className="text-xs text-gray-500 whitespace-nowrap">
                     .{ext}
@@ -263,6 +265,8 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
                     }
                     onKeyDown={(e) => handleKeyPress(e, row)}
                     autoFocus
+                    autoComplete="off"
+                    aria-label={`Edit name for ${row.file_name}`}
                   />
                   <span className="text-xs text-gray-500">.{ext}</span>
                   <button
@@ -389,6 +393,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
             id="documents-search"
             name="documents-search"
             placeholder="Search documents..."
+            autoComplete="off"
             value={globalFilter}
             onChange={(e) => setGlobalFilter(e.target.value)}
           />

@@ -115,6 +115,7 @@ const ContactPage: React.FC = () => {
                   type="text"
                   id="name"
                   className="mt-1 input"
+                  autoComplete="name"
                   {...register("name", { required: "Name is required" })}
                 />
                 {errors.name && (
@@ -135,6 +136,7 @@ const ContactPage: React.FC = () => {
                   type="email"
                   id="email"
                   className="mt-1 input"
+                  autoComplete="email"
                   {...register("email", {
                     required: "Email is required",
                     pattern: {
@@ -161,6 +163,7 @@ const ContactPage: React.FC = () => {
                   type="text"
                   id="subject"
                   className="mt-1 input"
+                  autoComplete="off"
                   {...register("subject", { required: "Subject is required" })}
                 />
                 {errors.subject && (

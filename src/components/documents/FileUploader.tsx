@@ -662,6 +662,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                           }
                           disabled={uploading}
                           placeholder="File name"
+                          autoComplete="off"
+                          aria-label={`Edit name for file ${f.file.name}`}
                         />
                         <span className="text-xs text-gray-500 whitespace-nowrap">
                           .{ext}
@@ -689,6 +691,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                           )
                         }
                         disabled={uploading}
+                        autoComplete="off"
+                        aria-label={`Edit name for file ${f.file.name}`}
                       />
                       <span className="text-xs text-gray-500">.{ext}</span>
                       <button

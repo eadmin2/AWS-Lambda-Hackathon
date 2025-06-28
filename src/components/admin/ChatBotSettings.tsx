@@ -166,6 +166,7 @@ const ChatBotSettings = () => {
                   <input
                     type="text"
                     className="input w-full"
+                    autoComplete="off"
                     {...register('botName', { required: 'Bot name is required' })}
                   />
                   {errors.botName && (
@@ -180,6 +181,7 @@ const ChatBotSettings = () => {
                   <textarea
                     rows={3}
                     className="input w-full"
+                    autoComplete="off"
                     {...register('welcomeMessage', { required: 'Welcome message is required' })}
                   />
                   {errors.welcomeMessage && (
@@ -194,6 +196,7 @@ const ChatBotSettings = () => {
                   <input
                     type="text"
                     className="input w-full"
+                    autoComplete="off"
                     {...register('statusMessage', { required: 'Status message is required' })}
                   />
                   {errors.statusMessage && (
@@ -208,6 +211,7 @@ const ChatBotSettings = () => {
                   <input
                     type="text"
                     className="input w-full"
+                    autoComplete="off"
                     {...register('inputPlaceholder', { required: 'Input placeholder is required' })}
                   />
                   {errors.inputPlaceholder && (
@@ -251,6 +255,7 @@ const ChatBotSettings = () => {
                     <input
                       type="text"
                       className="input flex-1"
+                      autoComplete="off"
                       {...register('primaryColor')}
                     />
                   </div>
@@ -285,6 +290,7 @@ const ChatBotSettings = () => {
                     <input
                       type="text"
                       className="input flex-1"
+                      autoComplete="off"
                       {...register('headerColor')}
                     />
                   </div>
@@ -304,6 +310,7 @@ const ChatBotSettings = () => {
                     <input
                       type="text"
                       className="input flex-1"
+                      autoComplete="off"
                       value={watchedValues.userTextColor || ''}
                       onChange={e => setValue('userTextColor', normalizeHex(e.target.value))}
                     />

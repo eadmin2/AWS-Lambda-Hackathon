@@ -233,6 +233,7 @@ const ProfilePage: React.FC = () => {
                               type="text"
                               className={`input pl-10 ${errors.fullName ? "border-error-500" : ""}`}
                               placeholder="John Doe"
+                              autoComplete="name"
                               {...register("fullName", {
                                 required: "Full name is required",
                               })}
@@ -631,6 +632,7 @@ const ProfilePage: React.FC = () => {
             name="deleteConfirm"
             className="input w-full mb-4"
             placeholder="Type DELETE to confirm"
+            autoComplete="off"
             value={deleteConfirm}
             onChange={(e) => setDeleteConfirm(e.target.value)}
           />
@@ -731,6 +733,7 @@ const ProfilePage: React.FC = () => {
                 value={newPassword}
                 onChange={e => setNewPassword(e.target.value)}
                 required
+                autoComplete="new-password"
                 className="mt-1 block w-full border rounded px-2 py-1"
               />
             </label>
@@ -741,6 +744,7 @@ const ProfilePage: React.FC = () => {
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
                 required
+                autoComplete="new-password"
                 className="mt-1 block w-full border rounded px-2 py-1"
               />
             </label>

@@ -113,6 +113,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({
             id="fullName"
             type="text"
             className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+            autoComplete="name"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
           />
@@ -179,6 +180,7 @@ const UserDetailModal: React.FC<UserDetailModalProps> = ({
                       id={`credits-${pay.id}`}
                       type="number"
                       className="border border-gray-300 rounded px-2 py-1 w-20 text-xs"
+                      autoComplete="off"
                       value={
                         creditsEdit[pay.id] !== undefined
                           ? creditsEdit[pay.id]
