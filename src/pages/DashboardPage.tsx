@@ -149,6 +149,13 @@ const DashboardPage: React.FC = () => {
   return (
     <PageLayout>
       <div className="flex flex-col gap-6">
+        {inProgressCount > 0 && (
+          <div className="flex items-center bg-yellow-100 border border-yellow-300 text-yellow-900 px-4 py-3 rounded-md shadow mb-2">
+            <svg className="animate-spin h-5 w-5 mr-2 text-yellow-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+            <span className="font-semibold">Your document is being processed.</span>
+            <span className="ml-2">This usually takes 5-10 minutes. You will receive an email when it's ready.</span>
+          </div>
+        )}
         <Header
           veteranName={data.veteranName}
           uploadDate={data.uploadDate}
@@ -156,10 +163,13 @@ const DashboardPage: React.FC = () => {
         />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <SummaryCard icon={<FileText />} title="Documents Scanned" value={data.documentsScanned}>
-            <div className="text-xs mt-1 text-gray-600">
+            <div className="text-xs mt-1 text-gray-600 flex flex-wrap gap-2 items-center">
               {completeCount > 0 && <span>{completeCount} Complete</span>}
               {inProgressCount > 0 && (
-                <span>{completeCount > 0 ? ', ' : ''}{inProgressCount} In Progress</span>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-yellow-200 text-yellow-900 font-semibold animate-pulse">
+                  <svg className="animate-spin h-4 w-4 mr-1 text-yellow-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg>
+                  {inProgressCount} In Progress
+                </span>
               )}
             </div>
           </SummaryCard>
