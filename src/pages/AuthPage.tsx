@@ -4,6 +4,7 @@ import { FileText } from "lucide-react";
 import PageLayout from "../components/layout/PageLayout";
 import AuthTabs from "../components/auth/AuthTabs";
 import { useAuth } from "../contexts/AuthContext";
+import Button from "../components/ui/Button";
 
 const AuthPage: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -30,6 +31,16 @@ const AuthPage: React.FC = () => {
     <PageLayout>
       <div className="min-h-[calc(100vh-64px-200px)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
         <div className="w-full max-w-md space-y-8">
+          {next !== "checkout" && (
+            <div className="mb-6 max-w-md mx-auto bg-blue-50 border border-blue-200 text-blue-900 px-4 py-3 rounded shadow flex items-center justify-between">
+              <span>
+                <strong>New here?</strong> Please visit our Pricing page to select a plan and create your account.
+              </span>
+              <Button variant="primary" size="sm" className="ml-4" onClick={() => window.location.href = '/pricing#pricing-section'}>
+                View Pricing
+              </Button>
+            </div>
+          )}
           <div className="text-center">
             <FileText className="h-12 w-12 text-primary-600 mx-auto" />
             <h1 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">
