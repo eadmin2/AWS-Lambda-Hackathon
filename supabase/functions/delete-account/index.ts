@@ -162,11 +162,25 @@ Deno.serve(async (req) => {
       "stripe_user_subscriptions" // View of stripe_customers + stripe_subscriptions
     ];
 
+    // Tables that don't have user_id and need special handling
+    const specialHandlingTables = [
+      "document_chunks",
+      "document_summaries", 
+      "medical_entities",
+      "textract_jobs"
+    ];
+
     // Helper function to safely delete from table
     const safeDelete = async (tableName: string, whereClause: any, description: string) => {
       // Skip views - they can't be deleted from and will be cleaned automatically
       if (databaseViews.includes(tableName)) {
         console.log(`⏭ Skipping ${tableName} (view) - will be cleaned automatically when underlying tables are cleaned`);
+        return;
+      }
+
+      // Skip tables that need special handling
+      if (specialHandlingTables.includes(tableName)) {
+        console.log(`⏭ Skipping ${tableName} - will be handled with document relationship logic`);
         return;
       }
 
