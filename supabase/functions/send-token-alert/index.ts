@@ -1,29 +1,12 @@
 // @ts-nocheck
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.49.1";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
 );
-
-function corsResponse(body: string | object | null, status = 200) {
-  const headers = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "*",
-  };
-  if (status === 204) {
-    return new Response(null, { status, headers });
-  }
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      ...headers,
-      "Content-Type": "application/json",
-    },
-  });
-}
 
 async function sendEmail(to: string, subject: string, htmlContent: string) {
   const resendApiKey = Deno.env.get("PICA_RESEND_CONNECTION_KEY");
@@ -54,17 +37,18 @@ async function sendEmail(to: string, subject: string, htmlContent: string) {
 }
 
 Deno.serve(async (req) => {
+  const cors = getCorsHeaders(req.headers.get("origin"));
   try {
     if (req.method === "OPTIONS") {
-      return corsResponse({}, 204);
+      return new Response(null, { status: 204, headers: cors });
     }
     if (req.method !== "POST") {
-      return corsResponse({ error: "Method not allowed" }, 405);
+      return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405, headers: cors });
     }
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return corsResponse({ error: "Missing Authorization header" }, 401);
+      return new Response(JSON.stringify({ error: "Missing Authorization header" }), { status: 401, headers: cors });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -82,13 +66,13 @@ Deno.serve(async (req) => {
     } = await supabaseClient.auth.getUser();
 
     if (getUserError || !user) {
-      return corsResponse({ error: "Failed to authenticate user" }, 401);
+      return new Response(JSON.stringify({ error: "Failed to authenticate user" }), { status: 401, headers: cors });
     }
 
     const { alert_type, pages_required, current_balance, shortage } = await req.json();
 
     if (!alert_type) {
-      return corsResponse({ error: "Missing alert_type parameter" }, 400);
+      return new Response(JSON.stringify({ error: "Missing alert_type parameter" }), { status: 400, headers: cors });
     }
 
     // Get user profile for email
@@ -99,7 +83,7 @@ Deno.serve(async (req) => {
       .single();
 
     if (profileError || !profile) {
-      return corsResponse({ error: "User profile not found" }, 404);
+      return new Response(JSON.stringify({ error: "User profile not found" }), { status: 404, headers: cors });
     }
 
     let subject: string;
@@ -153,19 +137,19 @@ Deno.serve(async (req) => {
         break;
 
       default:
-        return corsResponse({ error: "Invalid alert_type" }, 400);
+        return new Response(JSON.stringify({ error: "Invalid alert_type" }), { status: 400, headers: cors });
     }
 
     // Send the email
     const emailResult = await sendEmail(profile.email, subject, htmlContent);
 
-    return corsResponse({
+    return new Response(JSON.stringify({
       success: true,
       message: "Alert email sent successfully",
       email_id: emailResult.id,
-    });
+    }), { headers: cors });
   } catch (error: any) {
     console.error("Error sending token alert:", error);
-    return corsResponse({ error: error.message }, 500);
+    return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: cors });
   }
 }); 

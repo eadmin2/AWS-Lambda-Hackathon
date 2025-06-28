@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.39.7';
-import { corsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
+import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 
 type Database = {
   public: {
@@ -65,7 +65,7 @@ async function expireOldSessions(userId: string, client: SupabaseClient<Database
 serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
-    return handleCorsPreflightRequest();
+    return handleCorsPreflightRequest(req.headers.get("origin"));
   }
 
   const url = new URL(req.url);
@@ -75,10 +75,11 @@ serve(async (req: Request) => {
 
   // Authenticate user (Supabase JWT)
   const authHeader = req.headers.get('Authorization');
+  const cors = getCorsHeaders(req.headers.get("origin"));
   if (!authHeader) {
     return new Response(JSON.stringify({ error: 'Missing Authorization header' }), { 
       status: 401, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      headers: { ...cors, 'Content-Type': 'application/json' } 
     });
   }
 
@@ -99,7 +100,7 @@ serve(async (req: Request) => {
   if (userError || !user) {
     return new Response(JSON.stringify({ error: 'Invalid or expired token' }), { 
       status: 401, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      headers: { ...cors, 'Content-Type': 'application/json' } 
     });
   }
 
@@ -112,7 +113,7 @@ serve(async (req: Request) => {
     if (!Array.isArray(files)) {
       return new Response(JSON.stringify({ error: 'Invalid files metadata' }), { 
         status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { ...cors, 'Content-Type': 'application/json' } 
       });
     }
 
@@ -133,7 +134,7 @@ serve(async (req: Request) => {
         expiresAt: activeSession.expires_at
       }), { 
         status: 409, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { ...cors, 'Content-Type': 'application/json' } 
       });
     }
 
@@ -155,7 +156,7 @@ serve(async (req: Request) => {
     if (_error || !data) {
       return new Response(JSON.stringify({ error: 'Failed to create session' }), { 
         status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        headers: { ...cors, 'Content-Type': 'application/json' } 
       });
     }
 
@@ -166,7 +167,7 @@ serve(async (req: Request) => {
       .eq('id', user.id);
 
     return new Response(JSON.stringify({ sessionId: data.id, expiresAt: data.expires_at }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...cors, 'Content-Type': 'application/json' }
     });
   }
 
@@ -178,11 +179,11 @@ serve(async (req: Request) => {
       .eq('id', sessionId)
       .single();
     if (_error || !data) {
-      return new Response('Session not found', { status: 404, headers: corsHeaders });
+      return new Response('Session not found', { status: 404, headers: cors });
     }
     // Only allow session owner
     if (data.user_id !== user.id) {
-      return new Response('Forbidden', { status: 403, headers: corsHeaders });
+      return new Response('Forbidden', { status: 403, headers: cors });
     }
     // Expire if needed
     if (data.status === 'active' && new Date(data.expires_at) < new Date()) {
@@ -191,7 +192,7 @@ serve(async (req: Request) => {
         .from('upload_sessions')
         .update({ status: 'expired', ended_at: new Date().toISOString(), audit_log: newAudit })
         .eq('id', sessionId);
-      return new Response(JSON.stringify({ error: 'expired', message: 'Session expired.' }), { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify({ error: 'expired', message: 'Session expired.' }), { status: 410, headers: { ...cors, 'Content-Type': 'application/json' } });
     }
     return new Response(JSON.stringify({
       id: data.id,
@@ -204,7 +205,7 @@ serve(async (req: Request) => {
       endedAt: data.ended_at,
       auditLog: data.audit_log
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      headers: { ...cors, 'Content-Type': 'application/json' }
     });
   }
 
@@ -217,10 +218,10 @@ serve(async (req: Request) => {
       .eq('id', sessionId)
       .single();
     if (sessionError || !session) {
-      return new Response('Session not found', { status: 404, headers: corsHeaders });
+      return new Response('Session not found', { status: 404, headers: cors });
     }
     if (session.user_id !== user.id) {
-      return new Response('Forbidden', { status: 403, headers: corsHeaders });
+      return new Response('Forbidden', { status: 403, headers: cors });
     }
     const updateFields: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (files) updateFields.files = files;
@@ -240,7 +241,7 @@ serve(async (req: Request) => {
       .update(updateFields)
       .eq('id', sessionId);
     if (_error) {
-      return new Response('Failed to update session', { status: 500, headers: corsHeaders });
+      return new Response('Failed to update session', { status: 500, headers: cors });
     }
     // If session is completed/expired/conflict, clear active_upload_session_id
     if (status && ['completed', 'expired', 'conflict'].includes(status)) {
@@ -249,7 +250,7 @@ serve(async (req: Request) => {
         .update({ active_upload_session_id: null })
         .eq('id', user.id);
     }
-    return new Response('Session updated', { status: 200, headers: corsHeaders });
+    return new Response('Session updated', { status: 200, headers: cors });
   }
 
   // DELETE /upload-sessions/:id - Clean up session
@@ -260,10 +261,10 @@ serve(async (req: Request) => {
       .eq('id', sessionId)
       .single();
     if (sessionError || !session) {
-      return new Response('Session not found', { status: 404, headers: corsHeaders });
+      return new Response('Session not found', { status: 404, headers: cors });
     }
     if (session.user_id !== user.id) {
-      return new Response('Forbidden', { status: 403, headers: corsHeaders });
+      return new Response('Forbidden', { status: 403, headers: cors });
     }
     const now = new Date().toISOString();
     const newAudit = appendAuditLog(session.audit_log as unknown[], 'deleted', user.id);
@@ -275,8 +276,8 @@ serve(async (req: Request) => {
       .from('profiles')
       .update({ active_upload_session_id: null })
       .eq('id', user.id);
-    return new Response('Session deleted', { status: 200, headers: corsHeaders });
+    return new Response('Session deleted', { status: 200, headers: cors });
   }
 
-  return new Response('Not Found', { status: 404, headers: corsHeaders });
+  return new Response('Not Found', { status: 404, headers: cors });
 }); 

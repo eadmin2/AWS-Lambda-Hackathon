@@ -1,24 +1,18 @@
 // supabase/functions/delete-document/index.ts
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, DELETE, OPTIONS",
-};
+import { getCorsHeaders } from "./_shared/cors.ts";
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, { status: 204, headers: getCorsHeaders(req.headers.get("origin")) });
   }
 
   if (req.method !== "POST" && req.method !== "DELETE") {
     return new Response("Method not allowed", {
       status: 405,
-      headers: corsHeaders,
+      headers: getCorsHeaders(req.headers.get("origin")),
     });
   }
 
@@ -32,7 +26,7 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "Missing authorization header" }),
         {
           status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req.headers.get("origin")), "Content-Type": "application/json" },
         },
       );
     }
@@ -70,7 +64,7 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: "Invalid token or user not found" }),
         {
           status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req.headers.get("origin")), "Content-Type": "application/json" },
         },
       );
     }
@@ -85,7 +79,7 @@ Deno.serve(async (req) => {
     if (!docId) {
       return new Response(JSON.stringify({ error: "Missing document ID" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req.headers.get("origin")), "Content-Type": "application/json" },
       });
     }
 
@@ -107,7 +101,7 @@ Deno.serve(async (req) => {
     if (fetchError || !document) {
       return new Response(JSON.stringify({ error: "Document not found" }), {
         status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req.headers.get("origin")), "Content-Type": "application/json" },
       });
     }
 
@@ -123,7 +117,7 @@ Deno.serve(async (req) => {
         }),
         {
           status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req.headers.get("origin")), "Content-Type": "application/json" },
         },
       );
     }
@@ -154,7 +148,7 @@ Deno.serve(async (req) => {
             JSON.stringify({ error: err.error || "Failed to delete file from S3" }),
             {
               status: 500,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              headers: { ...getCorsHeaders(req.headers.get("origin")), "Content-Type": "application/json" },
             },
           );
         }
@@ -164,7 +158,7 @@ Deno.serve(async (req) => {
           JSON.stringify({ error: "Error deleting file from S3" }),
           {
             status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            headers: { ...getCorsHeaders(req.headers.get("origin")), "Content-Type": "application/json" },
           },
         );
       }
@@ -184,7 +178,7 @@ Deno.serve(async (req) => {
         }),
         {
           status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: { ...getCorsHeaders(req.headers.get("origin")), "Content-Type": "application/json" },
         },
       );
     }
@@ -199,7 +193,7 @@ Deno.serve(async (req) => {
       }),
       {
         status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req.headers.get("origin")), "Content-Type": "application/json" },
       },
     );
   } catch (error) {
@@ -208,7 +202,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ error: error.message || "An unknown error occurred" }),
       {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req.headers.get("origin")), "Content-Type": "application/json" },
       },
     );
   }

@@ -2,7 +2,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { supabase } from "./_shared/supabase.ts";
 import { stripe } from "./_shared/stripe.ts";
-import { corsHeaders } from "./_shared/cors.ts";
+import { getCorsHeaders } from "./_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 Deno.serve(async (req) => {
@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
       status: 200,
-      headers: corsHeaders
+      headers: getCorsHeaders(req.headers.get("origin"))
     });
   }
 
@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
       }), {
         status: 405,
         headers: {
-          ...corsHeaders,
+          ...getCorsHeaders(req.headers.get("origin")),
           "Content-Type": "application/json"
         }
       });
@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
       }), {
         status: 401,
         headers: {
-          ...corsHeaders,
+          ...getCorsHeaders(req.headers.get("origin")),
           "Content-Type": "application/json"
         }
       });
@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
       }), {
         status: 401,
         headers: {
-          ...corsHeaders,
+          ...getCorsHeaders(req.headers.get("origin")),
           "Content-Type": "application/json"
         }
       });
@@ -274,7 +274,7 @@ Deno.serve(async (req) => {
     }), {
       status: 200,
       headers: {
-        ...corsHeaders,
+        ...getCorsHeaders(req.headers.get("origin")),
         "Content-Type": "application/json"
       }
     });
@@ -288,7 +288,7 @@ Deno.serve(async (req) => {
     }), {
       status: 500,
       headers: {
-        ...corsHeaders,
+        ...getCorsHeaders(req.headers.get("origin")),
         "Content-Type": "application/json"
       }
     });

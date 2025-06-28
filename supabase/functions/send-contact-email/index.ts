@@ -1,6 +1,6 @@
 // @deno-types="https://deno.land/x/servest@v1.3.1/types/react/index.d.ts"
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 const PICA_ACTION_ID = "conn_mod_def::GC4q4JE4I28::x8Elxo0VRMK1X-uH1C3NeA";
 
@@ -59,8 +59,9 @@ async function sendContactEmail({ name, email, subject, message }: { name: strin
 }
 
 serve(async (req: Request) => {
+  const cors = getCorsHeaders(req.headers.get("origin"));
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: cors });
   }
   try {
     console.log('[send-contact-email] Request received');
@@ -72,7 +73,7 @@ serve(async (req: Request) => {
     } catch (parseError) {
       console.error('[send-contact-email] Failed to parse JSON body:', parseError);
       return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...cors, 'Content-Type': 'application/json' },
         status: 400,
       });
     }
@@ -81,7 +82,7 @@ serve(async (req: Request) => {
     if (!name || !email || !subject || !message) {
       console.error('[send-contact-email] Missing required fields:', { name, email, subject, message });
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...cors, 'Content-Type': 'application/json' },
         status: 400,
       });
     }
@@ -89,14 +90,14 @@ serve(async (req: Request) => {
     await sendContactEmail({ name, email, subject, message });
     console.log('[send-contact-email] Email sent successfully');
     return new Response(JSON.stringify({ message: "Contact email sent successfully" }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...cors, 'Content-Type': 'application/json' },
       status: 200,
     });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error('[send-contact-email] Error:', errorMessage, error);
     return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...cors, 'Content-Type': 'application/json' },
       status: 500,
     });
   }

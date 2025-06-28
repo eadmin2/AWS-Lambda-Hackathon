@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { S3Client, PutObjectCommand } from "npm:@aws-sdk/client-s3";
 import { getSignedUrl } from "npm:@aws-sdk/s3-request-presigner";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
+import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 
 const REGION = "us-east-2";
 const BUCKET = "my-receipts-app-bucket";
@@ -26,7 +26,7 @@ const s3 = new S3Client({
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return handleCorsPreflightRequest();
+    return handleCorsPreflightRequest(req.headers.get("origin"));
   }
   
   try {
@@ -35,7 +35,7 @@ serve(async (req) => {
     if (!userId || !fileName || !fileType) {
       return new Response(JSON.stringify({ error: "Missing required parameters" }), {
         status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req.headers.get("origin")), "Content-Type": "application/json" },
       });
     }
 
@@ -56,7 +56,7 @@ serve(async (req) => {
         error: "Failed to validate token balance" 
       }), {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req.headers.get("origin")), "Content-Type": "application/json" },
       });
     }
 
@@ -70,7 +70,7 @@ serve(async (req) => {
         tokensRequired: tokensRequired
       }), {
         status: 402, // Payment Required
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req.headers.get("origin")), "Content-Type": "application/json" },
       });
     }
 
@@ -92,14 +92,14 @@ serve(async (req) => {
       tokenBalance: currentBalance,
       tokensRequired: tokensRequired
     }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req.headers.get("origin")), "Content-Type": "application/json" },
     });
     
   } catch (e) {
     console.error("Error in generate-presigned-url:", e);
     return new Response(JSON.stringify({ error: e.message }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req.headers.get("origin")), "Content-Type": "application/json" },
     });
   }
 });
