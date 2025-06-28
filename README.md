@@ -15,7 +15,7 @@ As an active-duty Navy Chief and advocate for veterans' welfare, I created **VA 
 **VA Rating Assistant** is a web-based application that allows veterans to upload their medical documents and receive **AI-powered VA disability rating estimates**. The platform also offers tools for **pre-filling VA forms**, **finding nearby VA facilities**, and **tracking conditions over time**.
 
 - **Frontend:** Built entirely in **Bolt.new (React + TypeScript)**.
-- **Backend:** Fully serverless, running on **AWS Lambda**, with integrations to **S3**, **Textract**, **Bedrock**, **SQS**, **SNS**, **API Gateway**, **Cognito**, and **X-Ray**.
+- **Backend:** Fully serverless, running on **AWS Lambda**, with integrations to **S3**, **Textract**, **Bedrock**, **SQS**, **SNS**, **API Gateway**, and **X-Ray**.
 
 ---
 
@@ -26,7 +26,6 @@ As an active-duty Navy Chief and advocate for veterans' welfare, I created **VA 
 | Tool | Purpose |
 |---|---|
 | **Bolt.new (React + TypeScript)** | Full user interface, state management, routing, and API consumption |
-| **Axios / Fetch** | API calls from Bolt frontend to AWS backend |
 | **Built with Bolt Badge** | Displayed proudly on the deployed site |
 
 ---
