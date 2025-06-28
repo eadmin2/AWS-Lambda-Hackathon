@@ -30,6 +30,49 @@ function normalizeHex(hex: string) {
   return hex.toLowerCase();
 }
 
+// WCAG contrast checking functions
+function hexToRgb(hex: string) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
+}
+
+function getRelativeLuminance(rgb: { r: number; g: number; b: number }) {
+  const { r, g, b } = rgb;
+  const [rs, gs, bs] = [r, g, b].map(c => {
+    c = c / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+}
+
+function getContrastRatio(color1: string, color2: string) {
+  const rgb1 = hexToRgb(color1);
+  const rgb2 = hexToRgb(color2);
+  
+  if (!rgb1 || !rgb2) return 0;
+  
+  const lum1 = getRelativeLuminance(rgb1);
+  const lum2 = getRelativeLuminance(rgb2);
+  
+  const lighter = Math.max(lum1, lum2);
+  const darker = Math.min(lum1, lum2);
+  
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function checkWCAGCompliance(textColor: string, bgColor: string) {
+  const ratio = getContrastRatio(textColor, bgColor);
+  return {
+    ratio: ratio.toFixed(2),
+    passAA: ratio >= 4.5,
+    passAAA: ratio >= 7.0
+  };
+}
+
 const ChatBotSettings = () => {
   const { config, loading, updateConfig } = useChatBotConfig();
   const [isUpdating, setIsUpdating] = useState(false);
@@ -49,7 +92,7 @@ const ChatBotSettings = () => {
       welcomeMessage: config?.welcomeMessage || "Hi! I'm your VA Rating Assistant. How can I help you today?",
       statusMessage: config?.statusMessage || 'Online • Typically replies instantly',
       inputPlaceholder: config?.inputPlaceholder || 'Type your message...',
-      primaryColor: config?.primaryColor || '#3b82f6',
+      primaryColor: config?.primaryColor || '#1e3a7a',
       headerColor: config?.headerColor || '#f8fafc',
       enabled: config?.enabled ?? true,
       position: config?.position || 'bottom-right',
@@ -96,12 +139,12 @@ const ChatBotSettings = () => {
   };
 
   const presetColors = [
-    { name: 'Primary Blue', value: '#3b82f6' },
+    { name: 'Primary Blue', value: '#1e3a7a' }, // WCAG AA compliant
     { name: 'VA Navy', value: '#0A2463' },
-    { name: 'Success Green', value: '#22c55e' },
-    { name: 'Warning Orange', value: '#f59e0b' },
-    { name: 'Purple', value: '#8b5cf6' },
-    { name: 'Red', value: '#ef4444' },
+    { name: 'Success Green', value: '#15803d' }, // WCAG AA compliant
+    { name: 'Warning Orange', value: '#ca8a04' }, // WCAG AA compliant
+    { name: 'Purple', value: '#7c3aed' }, // WCAG AA compliant
+    { name: 'Red', value: '#dc2626' }, // WCAG AA compliant
   ];
 
   if (loading) {
@@ -149,6 +192,35 @@ const ChatBotSettings = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Settings Form */}
         <div className="space-y-6">
+          {/* Accessibility Warnings */}
+          {(() => {
+            const primaryColorCompliance = checkWCAGCompliance('#ffffff', watchedValues.primaryColor || '#1e3a7a');
+            const userTextCompliance = checkWCAGCompliance(
+              normalizeHex(watchedValues.userTextColor || '#ffffff'), 
+              watchedValues.primaryColor || '#1e3a7a'
+            );
+            
+            const hasAccessibilityIssues = !primaryColorCompliance.passAA || !userTextCompliance.passAA;
+            
+            if (hasAccessibilityIssues) {
+              return (
+                <div className="bg-warning-100 border border-warning-200 rounded-lg p-4">
+                  <h3 className="text-warning-900 font-semibold text-sm mb-2">⚠️ Accessibility Warning</h3>
+                  <div className="text-warning-800 text-sm space-y-1">
+                    {!primaryColorCompliance.passAA && (
+                      <p>• Primary color on white background has low contrast ({primaryColorCompliance.ratio}:1). Minimum required: 4.5:1</p>
+                    )}
+                    {!userTextCompliance.passAA && (
+                      <p>• User text color on primary background has low contrast ({userTextCompliance.ratio}:1). Minimum required: 4.5:1</p>
+                    )}
+                    <p className="mt-2 font-medium">Consider using the preset colors below, which meet WCAG AA standards.</p>
+                  </div>
+                </div>
+              );
+            }
+            return null;
+          })()}
+
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {/* Basic Settings */}
             <Card>

@@ -169,7 +169,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <User className="h-5 w-5 text-gray-400" />
+                                <User className="h-5 w-5 text-gray-600" />
             </div>
             <input
               id="fullName"
@@ -197,7 +197,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Mail className="h-5 w-5 text-gray-400" />
+                                <Mail className="h-5 w-5 text-gray-600" />
             </div>
             <input
               id="email"
@@ -263,7 +263,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
 
       <div className="flex items-center my-4">
         <div className="flex-grow border-t border-gray-200" />
-        <span className="mx-2 text-gray-400 text-xs">OR</span>
+                        <span className="mx-2 text-gray-600 text-xs">OR</span>
         <div className="flex-grow border-t border-gray-200" />
       </div>
       <Button

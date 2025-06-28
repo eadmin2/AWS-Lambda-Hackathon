@@ -325,7 +325,7 @@ const CalculatorPage: React.FC = () => {
                 🧮 Your VA Compensation Results
               </h2>
               {disabilities.length === 0 ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
+                <div className="flex-1 flex flex-col items-center justify-center text-gray-600">
                   <span className="text-5xl mb-2">🎖️</span>
                   <div className="text-lg font-medium">
                     Enter your disability ratings to see results
@@ -336,7 +336,7 @@ const CalculatorPage: React.FC = () => {
                   </div>
                 </div>
               ) : !data ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
+                <div className="flex-1 flex flex-col items-center justify-center text-gray-600">
                   <span className="text-5xl mb-2">⏳</span>
                   <div className="text-lg font-medium">
                     Loading 2025 VA rates...

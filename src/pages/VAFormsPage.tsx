@@ -201,7 +201,7 @@ const VAFormsPage: React.FC = () => {
                         <div className="space-y-2">
                           {category.examples.map((form) => (
                             <div key={form} className="flex items-center text-sm text-gray-600">
-                              <FileText className="w-4 h-4 mr-2 text-gray-400" />
+                              <FileText className="w-4 h-4 mr-2 text-gray-600" />
                               Form {form}
                             </div>
                           ))}

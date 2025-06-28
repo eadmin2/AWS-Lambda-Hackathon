@@ -157,7 +157,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
             whileTap={{ scale: 0.9 }}
             onClick={() => setIsOpen(true)}
             className={`fixed bottom-6 right-6 z-[9999] w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-colors ${
-              config?.primaryColor || 'bg-primary-600 hover:bg-primary-700'
+              config?.primaryColor || 'bg-primary-700 hover:bg-primary-800'
             } text-white ${className}`}
             style={{
               backgroundColor: config?.primaryColor,
@@ -189,7 +189,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
               <div className="flex items-center space-x-3">
                 <div
                   className="w-8 h-8 rounded-full flex items-center justify-center"
-                  style={{ backgroundColor: config?.primaryColor || '#3b82f6' }}
+                  style={{ backgroundColor: config?.primaryColor || '#1e3a7a' }}
                 >
                   <Bot className="h-4 w-4 text-white" />
                 </div>
@@ -237,7 +237,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
                         {message.sender === 'bot' && (
                           <div
                             className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-1"
-                            style={{ backgroundColor: config?.primaryColor || '#3b82f6' }}
+                            style={{ backgroundColor: config?.primaryColor || '#1e3a7a' }}
                           >
                             <Bot className="h-3 w-3 text-white" />
                           </div>
@@ -251,7 +251,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
                           }`}
                           style={{
                             backgroundColor: message.sender === 'user'
-                              ? config?.primaryColor || '#3b82f6'
+                              ? config?.primaryColor || '#1e3a7a'
                               : undefined,
                             color: message.sender === 'user'
                               ? config?.userTextColor || '#fff'
@@ -283,15 +283,15 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
                       <div className="flex items-start space-x-2">
                         <div
                           className="w-6 h-6 rounded-full flex items-center justify-center"
-                          style={{ backgroundColor: config?.primaryColor || '#3b82f6' }}
+                          style={{ backgroundColor: config?.primaryColor || '#1e3a7a' }}
                         >
                           <Bot className="h-3 w-3 text-white" />
                         </div>
                         <div className="bg-gray-100 px-3 py-2 rounded-2xl">
                           <div className="flex space-x-1">
-                            <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
-                            <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                            <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                            <div className="w-1 h-1 bg-gray-600 rounded-full animate-bounce"></div>
+                            <div className="w-1 h-1 bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                            <div className="w-1 h-1 bg-gray-600 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                           </div>
                         </div>
                       </div>
@@ -319,7 +319,7 @@ const ChatBot: React.FC<ChatBotProps> = ({ className = '' }) => {
                       onClick={() => sendMessage(inputValue)}
                       disabled={!inputValue.trim() || isLoading}
                       className="w-8 h-8 rounded-full flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      style={{ backgroundColor: config?.primaryColor || '#3b82f6' }}
+                      style={{ backgroundColor: config?.primaryColor || '#1e3a7a' }}
                       aria-label="Send message"
                     >
                       <Send className="h-4 w-4 text-white" />

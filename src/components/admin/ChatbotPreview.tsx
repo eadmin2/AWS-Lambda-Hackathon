@@ -39,7 +39,7 @@ const ChatbotPreview: React.FC<ChatbotPreviewProps> = ({
             <p className="text-sm text-gray-500">{statusMessage}</p>
           </div>
         </div>
-        <button className="text-gray-400 hover:text-gray-600">
+                      <button className="text-gray-600 hover:text-gray-700">
           <X className="h-5 w-5" />
         </button>
       </div>

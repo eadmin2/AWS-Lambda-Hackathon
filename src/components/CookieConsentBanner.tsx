@@ -108,7 +108,7 @@ const CookieConsentBanner: React.FC = () => {
           Reject
         </button>
         <button
-          className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 focus:outline-none"
+          className="absolute top-2 right-2 text-gray-600 hover:text-gray-700 focus:outline-none"
           aria-label="Close cookie banner"
           onClick={() => setIsVisible(false)}
         >

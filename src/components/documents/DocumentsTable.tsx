@@ -48,7 +48,7 @@ function getFileIcon(fileName: string) {
   if (["jpg", "jpeg", "png", "gif", "tiff", "tif"].includes(ext || ""))
     return <FileImage className="h-5 w-5 text-primary-500" />;
   if (ext === "pdf") return <FileText className="h-5 w-5 text-red-500" />;
-  return <File className="h-5 w-5 text-gray-400" />;
+      return <File className="h-5 w-5 text-gray-600" />;
 }
 
 const DocumentsTable: React.FC<DocumentsTableProps> = ({
@@ -157,7 +157,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
                     <Check className="h-4 w-4" />
                   </button>
                   <button
-                    className="text-gray-400 hover:text-gray-600 p-1"
+                                          className="text-gray-600 hover:text-gray-700 p-1"
                     onClick={handleCancelEdit}
                     title="Cancel"
                   >
@@ -170,7 +170,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
                     {document.file_name}
                   </h3>
                   <button
-                    className="text-gray-400 hover:text-gray-600 p-1 flex-shrink-0"
+                                          className="text-gray-600 hover:text-gray-700 p-1 flex-shrink-0"
                     onClick={() => handleStartEdit(document)}
                     title="Edit file name"
                   >
@@ -186,7 +186,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
 
           <div className="relative flex-shrink-0">
             <button
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full"
+                                  className="p-2 text-gray-600 hover:text-gray-700 hover:bg-gray-50 rounded-full"
               onClick={(e) => {
                 e.stopPropagation();
                 setActiveDropdown(showDropdown ? null : document.id);
@@ -277,7 +277,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
                     <Check className="h-4 w-4" />
                   </button>
                   <button
-                    className="ml-1 text-gray-400 hover:text-gray-600"
+                    className="ml-1 text-gray-600 hover:text-gray-700"
                     onClick={handleCancelEdit}
                     title="Cancel"
                   >
@@ -290,7 +290,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
                     {row.file_name}
                   </span>
                   <button
-                    className="ml-1 text-gray-400 hover:text-gray-600"
+                    className="ml-1 text-gray-600 hover:text-gray-700"
                     onClick={() => handleStartEdit(row)}
                     title="Edit file name"
                   >
@@ -387,7 +387,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
       {/* Search and Controls */}
       <div className="flex flex-col gap-4 mb-4">
         <div className="relative">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                          <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-600" />
           <input
             className="input pl-10 w-full"
             id="documents-search"
@@ -429,7 +429,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({
       {/* Mobile Card View (visible on small screens) */}
       <div className="block md:hidden">
         {table.getRowModel().rows.length === 0 ? (
-          <div className="text-center py-8 text-gray-400 bg-white rounded-lg border">
+                      <div className="text-center py-8 text-gray-600 bg-white rounded-lg border">
             No documents found.
           </div>
         ) : (

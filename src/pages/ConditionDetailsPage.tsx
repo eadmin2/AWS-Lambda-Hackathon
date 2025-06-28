@@ -181,7 +181,7 @@ const ConditionDetailsPage: React.FC = () => {
             ))
           ) : (
             <div className="text-center py-10 bg-gray-50 rounded-lg">
-              <AlertCircle className="w-12 h-12 text-gray-400 mx-auto" />
+              <AlertCircle className="w-12 h-12 text-gray-600 mx-auto" />
               <p className="mt-4 text-gray-600">
                 No conditions were detected in this document.
               </p>

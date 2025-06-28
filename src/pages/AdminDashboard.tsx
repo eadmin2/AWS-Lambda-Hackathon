@@ -565,7 +565,7 @@ const AdminDashboard = () => {
                 <CardContent>
                   <div className="mb-4">
                     <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-600" />
                       <input
                         type="text"
                         id="user-search"
@@ -704,7 +704,7 @@ const AdminDashboard = () => {
                             </td>
                             <td className="px-4 py-2 whitespace-nowrap text-sm">
                               {log.target_type}{" "}
-                              <span className="text-gray-400">/</span>{" "}
+                              <span className="text-gray-600">/</span>{" "}
                               {log.target_id}
                             </td>
                             <td

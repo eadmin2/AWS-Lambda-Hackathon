@@ -88,7 +88,7 @@ const Modal: React.FC<ModalProps> = ({
               transition={{ duration: 0.25, ease: 'easeOut' }}
             >
               <button
-                className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold focus:outline-none"
+                className="absolute top-2 right-2 text-gray-600 hover:text-gray-800 text-2xl font-bold focus:outline-none"
                 onClick={onClose}
                 aria-label="Close"
               >

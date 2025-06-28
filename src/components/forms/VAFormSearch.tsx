@@ -193,7 +193,7 @@ export function VAFormSearch({ onFormSelect }: Props) {
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-gray-400" />
+              <Search className="h-5 w-5 text-gray-600" />
             </div>
             <input
               ref={searchInputRef}
@@ -210,7 +210,7 @@ export function VAFormSearch({ onFormSelect }: Props) {
               onKeyDown={(e) => {
                 if (e.key === 'Enter') setShowSuggestions(false);
               }}
-              className="block w-full pl-10 pr-3 py-3 sm:py-2 text-base sm:text-sm border border-gray-300 rounded-lg sm:rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-[#003875] focus:border-[#003875] shadow-sm"
+              className="block w-full pl-10 pr-3 py-3 sm:py-2 text-base sm:text-sm border border-gray-300 rounded-lg sm:rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-600 focus:ring-1 focus:ring-[#003875] focus:border-[#003875] shadow-sm"
               placeholder="Search forms..."
               autoComplete="off"
               aria-label="Search VA forms"
@@ -236,9 +236,9 @@ export function VAFormSearch({ onFormSelect }: Props) {
                 onClick={() => handleSuggestionClick(suggestion)}
                 className="w-full text-left px-4 py-3 sm:py-2 hover:bg-gray-100 flex items-center space-x-3"
               >
-                {suggestion.type === 'form_number' && <FileText className="h-5 w-5 sm:h-4 sm:w-4 text-gray-400" />}
-                {suggestion.type === 'keyword' && <Search className="h-5 w-5 sm:h-4 sm:w-4 text-gray-400" />}
-                {suggestion.type === 'category' && <Filter className="h-5 w-5 sm:h-4 sm:w-4 text-gray-400" />}
+                                  {suggestion.type === 'form_number' && <FileText className="h-5 w-5 sm:h-4 sm:w-4 text-gray-600" />}
+                                  {suggestion.type === 'keyword' && <Search className="h-5 w-5 sm:h-4 sm:w-4 text-gray-600" />}
+                                  {suggestion.type === 'category' && <Filter className="h-5 w-5 sm:h-4 sm:w-4 text-gray-600" />}
                 <span className="text-base sm:text-sm">{suggestion.text}</span>
               </button>
             ))}

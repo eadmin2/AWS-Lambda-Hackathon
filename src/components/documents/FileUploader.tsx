@@ -523,7 +523,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     if (["doc", "docx"].includes(ext || ""))
       return <FileText className="h-5 w-5 text-blue-500" />;
     if (ext === "txt") return <FileText className="h-5 w-5 text-gray-500" />;
-    return <File className="h-5 w-5 text-gray-400" />;
+    return <File className="h-5 w-5 text-gray-600" />;
   }
 
   // Format file size for display
@@ -577,7 +577,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
 
           <Upload
             className={`h-8 w-8 sm:h-12 sm:w-12 mb-3 sm:mb-4 ${
-              isDragActive ? "text-primary-500" : "text-gray-400"
+              isDragActive ? "text-primary-500" : "text-gray-600"
             }`}
           />
 
@@ -641,7 +641,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                         </div>
                         <button
                           onClick={() => handleRemoveFile(idx)}
-                          className="text-gray-400 hover:text-gray-600 p-1"
+                          className="text-gray-600 hover:text-gray-700 p-1"
                           disabled={uploading}
                           title="Remove file"
                         >
@@ -697,7 +697,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                       <span className="text-xs text-gray-500">.{ext}</span>
                       <button
                         onClick={() => handleRemoveFile(idx)}
-                        className="ml-2 text-gray-400 hover:text-gray-500 focus:outline-none"
+                        className="ml-2 text-gray-600 hover:text-gray-700 focus:outline-none"
                         disabled={uploading}
                         title="Remove file"
                       >

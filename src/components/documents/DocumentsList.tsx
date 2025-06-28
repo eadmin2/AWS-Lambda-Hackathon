@@ -164,7 +164,7 @@ const DocumentsList: React.FC = () => {
         <Card>
           <CardContent className="py-10">
             <div className="text-center">
-              <FileText className="h-12 w-12 text-gray-400 mx-auto" />
+              <FileText className="h-12 w-12 text-gray-600 mx-auto" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">
                 No documents
               </h3>
@@ -242,7 +242,7 @@ const DocumentsList: React.FC = () => {
                       {/* Mobile Dropdown Menu */}
                       <div className="relative flex-shrink-0">
                         <button
-                          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full"
+                          className="p-2 text-gray-600 hover:text-gray-700 hover:bg-gray-50 rounded-full"
                           onClick={(e) => {
                             e.stopPropagation();
                             setActiveDropdown(showDropdown ? null : document.id);
