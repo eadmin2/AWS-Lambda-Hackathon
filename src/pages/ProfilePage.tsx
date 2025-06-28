@@ -87,6 +87,12 @@ const ProfilePage: React.FC = () => {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [tokenInfo, setTokenInfo] = useState<TokenInfo | null>(null);
   const [tokenLoading, setTokenLoading] = useState(false);
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordStatus, setPasswordStatus] = useState<string | null>(null);
+  const [passwordLoading, setPasswordLoading] = useState(false);
   const navigate = useNavigate();
   const { tokensAvailable, tokensUsed } = useTokenBalance(user?.id || null);
 
@@ -684,6 +690,67 @@ const ProfilePage: React.FC = () => {
           </div>
         </div>
       </Modal>
+      <div className="mt-8 bg-white p-6 rounded shadow-md max-w-md mx-auto">
+        <h3 className="text-lg font-semibold mb-2">Change Password</h3>
+        {!showPasswordForm ? (
+          <button className="btn btn-primary" onClick={() => setShowPasswordForm(true)}>
+            Change Password
+          </button>
+        ) : (
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setPasswordStatus(null);
+              setPasswordLoading(true);
+              if (newPassword !== confirmPassword) {
+                setPasswordStatus("New passwords do not match.");
+                setPasswordLoading(false);
+                return;
+              }
+              try {
+                // Optionally, you can re-authenticate the user here if needed
+                const { error } = await supabase.auth.updateUser({ password: newPassword });
+                if (error) throw error;
+                setPasswordStatus("Password updated successfully.");
+                setShowPasswordForm(false);
+                setCurrentPassword("");
+                setNewPassword("");
+                setConfirmPassword("");
+              } catch (err: any) {
+                setPasswordStatus(err.message || "Failed to update password.");
+              } finally {
+                setPasswordLoading(false);
+              }
+            }}
+            className="space-y-4"
+          >
+            <label className="block">
+              New Password
+              <input
+                type="password"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                required
+                className="mt-1 block w-full border rounded px-2 py-1"
+              />
+            </label>
+            <label className="block">
+              Confirm New Password
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                required
+                className="mt-1 block w-full border rounded px-2 py-1"
+              />
+            </label>
+            <button type="submit" className="btn btn-primary w-full" disabled={passwordLoading}>
+              {passwordLoading ? "Updating..." : "Update Password"}
+            </button>
+            {passwordStatus && <div className="text-sm mt-2 text-center">{passwordStatus}</div>}
+          </form>
+        )}
+      </div>
     </PageLayout>
   );
 };

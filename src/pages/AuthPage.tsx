@@ -27,12 +27,7 @@ const AuthPage: React.FC = () => {
     }
   };
 
-  // Redirect if already authenticated
-  if (!isLoading && user) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
-  // Check if we're on the reset password route
+  // Always show the password reset form if on /auth/reset-password
   if (location.pathname === "/auth/reset-password") {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
@@ -47,6 +42,9 @@ const AuthPage: React.FC = () => {
                 const { error } = await supabase.auth.updateUser({ password: newPassword });
                 if (error) throw error;
                 setResetStatus("Password updated! You can now log in with your new password.");
+                setTimeout(() => {
+                  navigate("/dashboard");
+                }, 2000);
               } catch (err: any) {
                 setResetStatus(err.message || "Failed to update password.");
               } finally {
@@ -73,6 +71,11 @@ const AuthPage: React.FC = () => {
         </div>
       </div>
     );
+  }
+
+  // Redirect if already authenticated (but not on reset-password page)
+  if (!isLoading && user) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return (
