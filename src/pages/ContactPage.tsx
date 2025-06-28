@@ -196,6 +196,11 @@ const ContactPage: React.FC = () => {
               <Button type="submit" isLoading={isSubmitting}>
                 Send Message
               </Button>
+              {submitStatus === 'success' && (
+                <div className="mt-8 rounded-lg bg-green-100 border border-green-400 text-green-700 px-4 py-3 text-center">
+                  <strong className="font-bold">Message sent!</strong> We'll get back to you as soon as possible.
+                </div>
+              )}
             </form>
           </CardContent>
         </Card>
