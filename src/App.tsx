@@ -120,6 +120,7 @@ function App() {
                   <Route path="/forms" element={<VAFormsPage />} />
                   <Route path="/pricing" element={<PricingPage />} />
                   <Route path="/auth" element={<AuthPage />} />
+                  <Route path="/auth/reset-password" element={<AuthPage />} />
                   <Route path="/faq" element={<FAQPage />} />
                   <Route path="/contact" element={<ContactPage />} />
                   <Route path="/help" element={<HelpPage />} />

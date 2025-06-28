@@ -5,9 +5,11 @@ import Button from "../ui/Button";
 import { Mail, AlertCircle } from "lucide-react";
 import { supabase } from "../../lib/supabase";
 import { m } from 'framer-motion';
+import Modal from "../ui/Modal";
 
 interface LoginFormProps {
   onSuccess?: () => void;
+  onForgotPassword?: () => void;
 }
 
 interface LoginFormData {
@@ -15,7 +17,7 @@ interface LoginFormData {
   password: string;
 }
 
-const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
+const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onForgotPassword }) => {
   const {
     register,
     handleSubmit,
@@ -25,7 +27,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const [isRedirecting, setIsRedirecting] = useState(false);
-
+  
   // Capture redirect parameters
   const next = searchParams.get("next");
   const type = searchParams.get("type");
@@ -200,6 +202,11 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess }) => {
               {errors.password.message}
             </p>
           )}
+        </div>
+        <div style={{ textAlign: "right", marginTop: 8 }}>
+          <button type="button" className="text-blue-600 hover:underline text-sm" onClick={onForgotPassword}>
+            Forgot Password?
+          </button>
         </div>
         <Button type="submit" className="w-full" isLoading={isSubmitting}>
           Sign In

@@ -1,15 +1,20 @@
-import React from "react";
-import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import React, { useState } from "react";
+import { Navigate, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { FileText } from "lucide-react";
 import PageLayout from "../components/layout/PageLayout";
 import AuthTabs from "../components/auth/AuthTabs";
 import { useAuth } from "../contexts/AuthContext";
 import Button from "../components/ui/Button";
+import { supabase } from "../lib/supabase";
 
 const AuthPage: React.FC = () => {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const [newPassword, setNewPassword] = useState("");
+  const [resetStatus, setResetStatus] = useState<string | null>(null);
+  const [resetLoading, setResetLoading] = useState(false);
 
   const next = searchParams.get("next");
   const type = searchParams.get("type");
@@ -25,6 +30,49 @@ const AuthPage: React.FC = () => {
   // Redirect if already authenticated
   if (!isLoading && user) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  // Check if we're on the reset password route
+  if (location.pathname === "/auth/reset-password") {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <div className="bg-white p-6 rounded shadow-md w-full max-w-md">
+          <h2 className="text-xl font-semibold mb-4 text-center">Set New Password</h2>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setResetStatus(null);
+              setResetLoading(true);
+              try {
+                const { error } = await supabase.auth.updateUser({ password: newPassword });
+                if (error) throw error;
+                setResetStatus("Password updated! You can now log in with your new password.");
+              } catch (err: any) {
+                setResetStatus(err.message || "Failed to update password.");
+              } finally {
+                setResetLoading(false);
+              }
+            }}
+            className="space-y-4"
+          >
+            <label className="block">
+              New Password
+              <input
+                type="password"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                required
+                className="mt-1 block w-full border rounded px-2 py-1"
+              />
+            </label>
+            <button type="submit" className="btn btn-primary w-full" disabled={resetLoading}>
+              {resetLoading ? "Updating..." : "Update Password"}
+            </button>
+            {resetStatus && <div className="text-sm mt-2 text-center">{resetStatus}</div>}
+          </form>
+        </div>
+      </div>
+    );
   }
 
   return (
