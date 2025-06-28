@@ -66,7 +66,7 @@ const HomePage: React.FC = () => {
           <div className="flex-1">
             <div className="grid md:grid-cols-2 gap-12 items-center">
               <LazyMotion features={domAnimation} strict>
-                <m.div {...fadeInUp} className="ml-[clamp(56px,16vw,104px)] sm:ml-0">
+                <m.div {...fadeInUp} className="md:ml-[clamp(56px,16vw,104px)] ml-0 text-center md:text-left flex flex-col items-center md:items-start">
                   <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-4 text-white">
                     Simplify Your VA Disability Claim Process!
                   </h1>
@@ -74,13 +74,13 @@ const HomePage: React.FC = () => {
                     Upload your medical documents and get an estimated VA disability
                     rating in minutes using advanced AI.
                   </p>
-                  <div className="flex flex-col xl:flex-row space-y-3 xl:space-y-0 xl:space-x-4">
-                    <a href="/pricing#pricing-section">
+                  <div className="flex flex-col xl:flex-row space-y-3 xl:space-y-0 xl:space-x-4 w-full md:w-auto items-center md:items-start">
+                    <a href="/pricing#pricing-section" className="w-full xl:w-auto">
                       <Button size="lg" className="w-full xl:w-auto">
                         View Pricing
                       </Button>
                     </a>
-                    <a href="#how-it-works">
+                    <a href="#how-it-works" className="w-full xl:w-auto">
                       <Button
                         variant="secondary"
                         size="lg"
@@ -89,7 +89,7 @@ const HomePage: React.FC = () => {
                         How It Works
                       </Button>
                     </a>
-                    <Link to="/calculator">
+                    <Link to="/calculator" className="w-full xl:w-auto">
                       <Button
                         variant="secondary"
                         size="lg"
@@ -103,9 +103,9 @@ const HomePage: React.FC = () => {
                   {/* Trust Message Box */}
                   <m.div
                     {...fadeIn}
-                    className="mt-8 p-4 rounded-lg bg-blue-800/30 backdrop-blur-sm border border-blue-700/30"
+                    className="mt-8 p-4 rounded-lg bg-blue-800/30 backdrop-blur-sm border border-blue-700/30 w-full md:w-auto"
                   >
-                    <div className="flex items-start space-x-3">
+                    <div className="flex items-start space-x-3 justify-center md:justify-start">
                       <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-r from-red-600 to-blue-600 flex items-center justify-center">
                         <Star className="h-5 w-5 text-white" />
                       </div>
