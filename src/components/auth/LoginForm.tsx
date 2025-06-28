@@ -93,8 +93,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onForgotPassword }) =>
       // Build redirect URL with parameters
       let redirectTo = window.location.origin + "/dashboard";
       if (next && type) {
-        // Store checkout info in session storage
-        sessionStorage.setItem("pendingRedirect", window.location.origin + `/checkout?type=${type}`);
+        // Store checkout info in session storage for the current environment
+        sessionStorage.setItem("pendingRedirect", `${window.location.origin}/checkout?type=${type}`);
         redirectTo = window.location.origin + "/dashboard";
       }
 
