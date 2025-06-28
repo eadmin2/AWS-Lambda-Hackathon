@@ -2,6 +2,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import Stripe from "npm:stripe@17.7.0";
 import { createClient } from "npm:@supabase/supabase-js@2.49.1";
+import { getCorsHeaders, handleCorsPreflightRequest } from "../_shared/cors.ts";
 
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
@@ -37,15 +38,22 @@ function corsResponse(body: string | object | null, status = 200) {
 
 Deno.serve(async (req) => {
   try {
+    const origin = req.headers.get("origin") || undefined;
     if (req.method === "OPTIONS") {
-      return corsResponse({}, 204);
+      return handleCorsPreflightRequest(origin);
     }
     if (req.method !== "POST") {
-      return corsResponse({ error: "Method not allowed" }, 405);
+      return new Response(JSON.stringify({ error: "Method not allowed" }), {
+        status: 405,
+        headers: getCorsHeaders(origin),
+      });
     }
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return corsResponse({ error: "Missing Authorization header" }, 401);
+      return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
+        status: 401,
+        headers: getCorsHeaders(origin),
+      });
     }
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
@@ -60,7 +68,10 @@ Deno.serve(async (req) => {
       error: getUserError,
     } = await supabaseClient.auth.getUser();
     if (getUserError || !user) {
-      return corsResponse({ error: "Failed to authenticate user" }, 401);
+      return new Response(JSON.stringify({ error: "Failed to authenticate user" }), {
+        status: 401,
+        headers: getCorsHeaders(origin),
+      });
     }
     // Look up Stripe customer ID for this user
     const { data: customer, error: getCustomerError } = await supabase
@@ -71,9 +82,11 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (getCustomerError || !customer?.customer_id) {
       // If customer is not found, it's not an error, just means they have no billing info.
-      return corsResponse({
+      return new Response(JSON.stringify({
         subscription: null,
         invoices: [],
+      }), {
+        headers: getCorsHeaders(origin),
       });
     }
     // Fetch subscription info
@@ -90,12 +103,18 @@ Deno.serve(async (req) => {
       limit: 20,
     });
     // Compose response
-    return corsResponse({
+    return new Response(JSON.stringify({
       subscription,
       invoices: invoices.data,
+    }), {
+      headers: getCorsHeaders(origin),
     });
   } catch (error: any) {
     console.error("Error fetching Stripe billing info:", error);
-    return corsResponse({ error: error.message }, 500);
+    const origin = req.headers.get("origin") || undefined;
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: getCorsHeaders(origin),
+    });
   }
 });
