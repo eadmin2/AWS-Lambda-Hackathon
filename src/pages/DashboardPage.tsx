@@ -142,6 +142,10 @@ const DashboardPage: React.FC = () => {
     );
   }
 
+  // After fetching documents and conditions, count status
+  const inProgressCount = data ? data.documentsScanned - data.conditionsFound : 0;
+  const completeCount = data ? data.conditionsFound : 0;
+
   return (
     <PageLayout>
       <div className="flex flex-col gap-6">
@@ -151,7 +155,14 @@ const DashboardPage: React.FC = () => {
           combinedRating={data.combinedRating}
         />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <SummaryCard icon={<FileText />} title="Documents Scanned" value={data.documentsScanned} />
+          <SummaryCard icon={<FileText />} title="Documents Scanned" value={data.documentsScanned}>
+            <div className="text-xs mt-1 text-gray-600">
+              {completeCount > 0 && <span>{completeCount} Complete</span>}
+              {inProgressCount > 0 && (
+                <span>{completeCount > 0 ? ', ' : ''}{inProgressCount} In Progress</span>
+              )}
+            </div>
+          </SummaryCard>
           <SummaryCard icon={<CheckCircle />} title="Conditions Found" value={data.conditionsFound} />
           <SummaryCard icon={<Medal />} title="Combined Rating" value={`${data.combinedRating}%`} />
         </div>

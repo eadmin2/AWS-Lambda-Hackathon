@@ -225,8 +225,13 @@ const DocumentsList: React.FC = () => {
                       <div className="flex items-start space-x-3 flex-1 min-w-0">
                         <FileText className="h-5 w-5 text-primary-500 mt-1 flex-shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <CardTitle className="text-base leading-tight">
+                          <CardTitle className="text-base leading-tight flex items-center gap-2">
                             {document.file_name}
+                            {documentEstimates.length === 0 ? (
+                              <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">In Progress</span>
+                            ) : (
+                              <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200">Complete</span>
+                            )}
                           </CardTitle>
                           <p className="text-xs text-gray-500 mt-1">
                             {formatDate(document.uploaded_at)}
@@ -312,8 +317,13 @@ const DocumentsList: React.FC = () => {
                       <div className="flex items-start space-x-3">
                         <FileText className="h-6 w-6 text-primary-500 mt-1" />
                         <div>
-                          <CardTitle className="text-lg">
+                          <CardTitle className="text-lg flex items-center gap-2">
                             {document.file_name}
+                            {documentEstimates.length === 0 ? (
+                              <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">In Progress</span>
+                            ) : (
+                              <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 border border-green-200">Complete</span>
+                            )}
                           </CardTitle>
                           <p className="text-sm text-gray-500 mt-1">
                             Uploaded on {formatDate(document.uploaded_at)}

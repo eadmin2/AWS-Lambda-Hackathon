@@ -56,12 +56,13 @@ const PricingPage: React.FC = () => {
 
   useEffect(() => {
     if (checkoutSuccess || subscriptionSuccess) {
+      // Show notification for 2 seconds, then redirect to /documents?payment=success
       const timer = setTimeout(() => {
-        window.history.replaceState({}, document.title, location.pathname);
-      }, 5000);
+        window.location.href = "/documents?payment=success";
+      }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [checkoutSuccess, subscriptionSuccess, location.pathname]);
+  }, [checkoutSuccess, subscriptionSuccess]);
 
   const handlePurchase = async (type: "starter" | "file-review" | "full-review" | "tokens-100" | "tokens-250" | "tokens-500") => {
     console.log("Button clicked!", { type, user });
@@ -152,10 +153,10 @@ const PricingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {checkoutSuccess && (
             <div className="mb-8 max-w-md mx-auto bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-              <strong className="font-bold">Payment Successful!</strong>
+              <strong className="font-bold">Payment Received!</strong>
               <span className="block sm:inline">
                 {" "}
-                Your single upload credit has been added to your account.
+                Your payment was successful. Redirecting to your documents...
               </span>
             </div>
           )}
@@ -164,8 +165,7 @@ const PricingPage: React.FC = () => {
               <strong className="font-bold">Subscription Active!</strong>
               <span className="block sm:inline">
                 {" "}
-                Welcome to unlimited uploads. You can start using the service
-                immediately.
+                Welcome to unlimited uploads. Redirecting to your documents...
               </span>
             </div>
           )}

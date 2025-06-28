@@ -5,9 +5,10 @@ interface SummaryCardProps {
   icon: React.ReactNode;
   title: string;
   value: string | number;
+  children?: React.ReactNode;
 }
 
-const SummaryCard: React.FC<SummaryCardProps> = ({ icon, title, value }) => {
+const SummaryCard: React.FC<SummaryCardProps> = ({ icon, title, value, children }) => {
   return (
     <LazyMotion features={domAnimation} strict>
       <m.div
@@ -20,6 +21,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ icon, title, value }) => {
         <div>
           <div className="text-lg font-semibold text-gray-900">{value}</div>
           <div className="text-sm text-gray-500">{title}</div>
+          {children && <div className="mt-1">{children}</div>}
         </div>
       </m.div>
     </LazyMotion>

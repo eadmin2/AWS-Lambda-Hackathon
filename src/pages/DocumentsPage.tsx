@@ -4,11 +4,14 @@ import FileUploader from "../components/documents/FileUploader";
 import { useAuth } from "../contexts/AuthContext";
 import { getUserPermissions, UserPermissions } from "../lib/supabase";
 import { UploadRequired } from "../components/ui/AccessControl";
+import { useSearchParams } from "react-router-dom";
 
 const DocumentsPage: React.FC = () => {
   const { profile } = useAuth();
   const [permissions, setPermissions] = useState<UserPermissions | null>(null);
   const [loading, setLoading] = useState(true);
+  const [searchParams] = useSearchParams();
+  const [showPaymentNotification, setShowPaymentNotification] = useState(false);
 
   useEffect(() => {
     const fetchPermissions = async () => {
@@ -22,6 +25,14 @@ const DocumentsPage: React.FC = () => {
 
     fetchPermissions();
   }, [profile]);
+
+  useEffect(() => {
+    if (searchParams.get("payment") === "success") {
+      setShowPaymentNotification(true);
+      const timer = setTimeout(() => setShowPaymentNotification(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
 
   const handleUploadSuccess = (_document: any) => {};
   const handleUploadError = (_errorMessage: string) => {};
@@ -50,6 +61,12 @@ const DocumentsPage: React.FC = () => {
     <PageLayout>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="max-w-4xl mx-auto">
+          {showPaymentNotification && (
+            <div className="mb-6 max-w-md mx-auto bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded shadow">
+              <strong className="font-bold">Payment Received!</strong>
+              <span className="block sm:inline"> Your payment was successful. You can now upload documents.</span>
+            </div>
+          )}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">
               Upload Document

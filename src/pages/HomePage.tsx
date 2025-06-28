@@ -74,28 +74,29 @@ const HomePage: React.FC = () => {
                     Upload your medical documents and get an estimated VA disability
                     rating in minutes using advanced AI.
                   </p>
-                  <div className="flex flex-col xl:flex-row space-y-3 xl:space-y-0 xl:space-x-4 w-full md:w-auto items-center md:items-start">
-                    <a href="/pricing#pricing-section" className="w-full xl:w-auto">
-                      <Button size="lg" className="w-full xl:w-auto">
+                  <div className="flex flex-col gap-3 xl:flex-row xl:gap-4 w-full max-w-md mx-auto md:mx-0">
+                    <a href="/pricing#pricing-section" className="w-full md:w-auto xl:w-auto">
+                      <Button size="lg" className="w-full md:w-auto xl:w-auto md:max-w-xs xl:max-w-xs whitespace-nowrap min-h-[48px]">
                         View Pricing
                       </Button>
                     </a>
-                    <a href="#how-it-works" className="w-full xl:w-auto">
+                    <a href="#how-it-works" className="w-full md:w-auto xl:w-auto">
                       <Button
                         variant="secondary"
                         size="lg"
-                        className="w-full xl:w-auto"
+                        className="w-full md:w-auto xl:w-auto md:max-w-xs xl:max-w-xs whitespace-nowrap min-h-[48px]"
                       >
                         How It Works
                       </Button>
                     </a>
-                    <Link to="/calculator" className="w-full xl:w-auto">
+                    <Link to="/calculator" className="w-full md:w-auto xl:w-auto">
                       <Button
                         variant="secondary"
                         size="lg"
-                        className="w-full xl:w-auto text-primary-900"
+                        className="w-full md:w-auto xl:w-auto text-primary-900 md:max-w-[11rem] xl:max-w-[11rem] whitespace-nowrap min-h-[48px] truncate"
+                        title="Try the 2025 VA Disability Calculator"
                       >
-                        Try the 2025 VA Disability Calculator
+                        2025 VA Calculator
                       </Button>
                     </Link>
                   </div>
