@@ -43,7 +43,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({
           <Sidebar />
         </Suspense>
       )}
-      <main className="flex-1 px-2 sm:px-4 md:px-8 py-4 md:py-8 transition-all duration-200">
+      <main id="main-content" role="main" className="flex-1 px-2 sm:px-4 md:px-8 py-4 md:py-8 transition-all duration-200">
         <Navbar 
           notifications={notifications}
           onDismissNotification={onDismissNotification}
@@ -51,14 +51,12 @@ const PageLayout: React.FC<PageLayoutProps> = ({
           onBellOpenChange={onBellOpenChange}
         />
         <LazyMotion features={domAnimation} strict>
-          <m.main
+          <div
             className="flex-grow mt-4 md:mt-8"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
+            style={{ minHeight: 0 }}
           >
             {children}
-          </m.main>
+          </div>
         </LazyMotion>
         <Footer />
         <Suspense fallback={null}>
