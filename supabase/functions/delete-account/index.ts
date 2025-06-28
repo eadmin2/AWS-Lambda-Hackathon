@@ -4,7 +4,8 @@ import { supabase } from "./_shared/supabase.ts";
 import { stripe } from "./_shared/stripe.ts";
 import { corsHeaders } from "./_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-Deno.serve(async (req)=>{
+
+Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -12,6 +13,7 @@ Deno.serve(async (req)=>{
       headers: corsHeaders
     });
   }
+
   try {
     // Only allow authenticated DELETE requests
     if (req.method !== "DELETE") {
@@ -25,6 +27,7 @@ Deno.serve(async (req)=>{
         }
       });
     }
+
     // Get user from JWT
     const authHeader = req.headers.get("Authorization") || req.headers.get("authorization");
     if (!authHeader) {
@@ -38,6 +41,7 @@ Deno.serve(async (req)=>{
         }
       });
     }
+
     // Create a Supabase client as the current user (JWT in global.headers)
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
@@ -51,6 +55,7 @@ Deno.serve(async (req)=>{
         persistSession: false
       }
     });
+
     let userId;
     try {
       const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
@@ -67,87 +72,160 @@ Deno.serve(async (req)=>{
         }
       });
     }
+
+    console.log(`Starting account deletion for user: ${userId}`);
+
     // 1. Fetch Stripe customer_id for this user (if any)
-    const { data: stripeCustomer, error: stripeCustomerError } = await supabase.from("stripe_customers").select("customer_id").eq("user_id", userId).maybeSingle();
+    const { data: stripeCustomer, error: stripeCustomerError } = await supabase
+      .from("stripe_customers")
+      .select("customer_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+    
     if (stripeCustomerError) throw stripeCustomerError;
     const customerId = stripeCustomer?.customer_id;
+
     // 2. Cancel Stripe subscriptions and delete customer (if exists)
     if (customerId) {
+      console.log(`Processing Stripe customer: ${customerId}`);
+      
       // Cancel all active subscriptions for this customer via Stripe API
       const subscriptions = await stripe.subscriptions.list({
         customer: customerId,
         status: "all"
       });
-      for (const sub of subscriptions.data){
+      
+      for (const sub of subscriptions.data) {
         if (sub.status !== "canceled") {
           await stripe.subscriptions.del(sub.id);
+          console.log(`Cancelled Stripe subscription: ${sub.id}`);
         }
       }
+
       // Delete the Stripe customer via Stripe API
       await stripe.customers.del(customerId);
+      console.log(`Deleted Stripe customer: ${customerId}`);
     }
+
     // 3. Delete all user files from Supabase Storage (documents bucket)
-    // Note: You may want to uncomment and modify this section based on your storage setup
     try {
-      const { data: fileList, error: fileListError } = await supabase.storage.from("documents").list(userId, {
-        limit: 1000,
-        offset: 0,
-        search: ""
-      });
+      const { data: fileList, error: fileListError } = await supabase.storage
+        .from("documents")
+        .list(userId, {
+          limit: 1000,
+          offset: 0,
+          search: ""
+        });
+
       if (!fileListError && fileList && fileList.length > 0) {
-        const paths = fileList.map((f)=>`${userId}/${f.name}`);
-        const { error: removeError } = await supabase.storage.from("documents").remove(paths);
+        const paths = fileList.map((f) => `${userId}/${f.name}`);
+        const { error: removeError } = await supabase.storage
+          .from("documents")
+          .remove(paths);
+        
         if (removeError) {
           console.warn("Error removing files:", removeError);
-        // Don't throw here - continue with database cleanup
+        } else {
+          console.log(`Deleted ${paths.length} files from storage`);
         }
       }
     } catch (storageError) {
       console.warn("Storage cleanup failed:", storageError);
-    // Don't throw here - continue with database cleanup
+      // Don't throw here - continue with database cleanup
     }
-    // 4. Delete all user data from database tables (in correct order to avoid foreign key issues)
-    // Delete from disability_estimates
-    const { error: deError } = await supabase.from("disability_estimates").delete().eq("user_id", userId);
-    if (deError) throw deError;
-    // Delete from documents
-    const { error: docError } = await supabase.from("documents").delete().eq("user_id", userId);
-    if (docError) throw docError;
-    // Delete from payments
-    const { error: payError } = await supabase.from("payments").delete().eq("user_id", userId);
-    if (payError) throw payError;
-    // Delete from user_tokens if it exists
-    const { error: tokenError } = await supabase.from("user_tokens").delete().eq("user_id", userId);
-    if (tokenError && tokenError.code !== "42P01") {
-      throw tokenError;
-    }
-    // Delete from token_purchases if it exists
-    const { error: purchaseError } = await supabase.from("token_purchases").delete().eq("user_id", userId);
-    if (purchaseError && purchaseError.code !== "42P01") {
-      throw purchaseError;
-    }
-    // Delete from stripe_orders (by customer_id)
+
+    // 4. Delete all user data from database tables in correct order to avoid foreign key issues
+    console.log("Starting database cleanup...");
+
+    // Helper function to safely delete from table
+    const safeDelete = async (tableName: string, whereClause: any, description: string) => {
+      try {
+        const { error } = await supabase.from(tableName).delete().match(whereClause);
+        if (error && error.code !== "42P01") { // 42P01 = table doesn't exist
+          throw error;
+        }
+        console.log(`✓ Deleted from ${tableName}: ${description}`);
+      } catch (error) {
+        console.warn(`⚠ Failed to delete from ${tableName}: ${error.message}`);
+        // For some tables, we might want to continue even if deletion fails
+        if (!["admin_activity_log", "audit_log_entries", "processed_webhook_events"].includes(tableName)) {
+          throw error;
+        }
+      }
+    };
+
+    // Delete dependent records first (respecting foreign key constraints)
+    
+    // Auth-related tables (Supabase managed)
+    await safeDelete("sessions", { user_id: userId }, "user sessions");
+    await safeDelete("mfa_factors", { user_id: userId }, "MFA factors");
+    await safeDelete("identities", { user_id: userId }, "user identities");
+    await safeDelete("one_time_tokens", { user_id: userId }, "one-time tokens");
+    await safeDelete("refresh_tokens", { user_id: userId }, "refresh tokens");
+    await safeDelete("flow_state", { user_id: userId }, "auth flow state");
+
+    // Application-specific tables (ordered by dependencies)
+    await safeDelete("condition_updates", { user_id: userId }, "condition updates");
+    await safeDelete("searchable_chunks", { user_id: userId }, "searchable chunks");
+    await safeDelete("document_chunks", { user_id: userId }, "document chunks");
+    await safeDelete("document_summaries", { user_id: userId }, "document summaries");
+    await safeDelete("medical_entities", { user_id: userId }, "medical entities");
+    await safeDelete("textract_jobs", { user_id: userId }, "textract jobs");
+    await safeDelete("disability_estimates", { user_id: userId }, "disability estimates");
+    await safeDelete("user_conditions", { user_id: userId }, "user conditions");
+    await safeDelete("documents", { user_id: userId }, "documents");
+    await safeDelete("upload_sessions", { user_id: userId }, "upload sessions");
+    
+    // Token and purchase related
+    await safeDelete("token_purchases", { user_id: userId }, "token purchases");
+    await safeDelete("user_tokens", { user_id: userId }, "user tokens");
+    await safeDelete("user_promotional_codes", { user_id: userId }, "promotional code usage");
+    
+    // Payment related
+    await safeDelete("payments", { user_id: userId }, "payments");
+
+    // Stripe-related tables (by customer_id)
     if (customerId) {
-      const { error: soError } = await supabase.from("stripe_orders").delete().eq("customer_id", customerId);
-      if (soError) throw soError;
+      await safeDelete("stripe_user_orders", { customer_id: customerId }, "Stripe user orders");
+      await safeDelete("stripe_user_subscriptions", { customer_id: customerId }, "Stripe user subscriptions");
+      await safeDelete("stripe_orders", { customer_id: customerId }, "Stripe orders");
+      await safeDelete("stripe_subscriptions", { customer_id: customerId }, "Stripe subscriptions");
     }
-    // Delete from stripe_subscriptions (by customer_id)
-    if (customerId) {
-      const { error: ssError } = await supabase.from("stripe_subscriptions").delete().eq("customer_id", customerId);
-      if (ssError) throw ssError;
-    }
-    // Delete from stripe_customers
-    const { error: scError } = await supabase.from("stripe_customers").delete().eq("user_id", userId);
-    if (scError) throw scError;
-    // Delete from profiles
-    const { error: profError } = await supabase.from("profiles").delete().eq("id", userId);
-    if (profError) throw profError;
+
+    // Delete stripe_customers record
+    await safeDelete("stripe_customers", { user_id: userId }, "Stripe customer record");
+
+    // Storage-related cleanup (objects table - by owner)
+    await safeDelete("objects", { owner: userId }, "storage objects by owner UUID");
+    await safeDelete("objects", { owner_id: userId }, "storage objects by owner_id");
+
+    // Admin activity logs (if user was an admin)
+    await safeDelete("admin_activity_log", { admin_id: userId }, "admin activity logs");
+
+    // Webhook processing logs
+    await safeDelete("processed_webhook_events", { user_id: userId }, "webhook event logs");
+
+    // Delete user profile
+    await safeDelete("profiles", { id: userId }, "user profile");
+
     // 5. Delete user from Supabase Auth (auth.users) - this should be last
+    console.log("Deleting user from auth.users...");
     const { error: authError } = await supabase.auth.admin.deleteUser(userId);
-    if (authError) throw authError;
+    if (authError) {
+      console.error("Failed to delete from auth.users:", authError);
+      throw authError;
+    }
+
+    console.log(`✓ Successfully completed account deletion for user: ${userId}`);
+
     return new Response(JSON.stringify({
       success: true,
-      message: "Account successfully deleted"
+      message: "Account successfully deleted",
+      details: {
+        userId,
+        customerId,
+        deletedAt: new Date().toISOString()
+      }
     }), {
       status: 200,
       headers: {
@@ -155,10 +233,13 @@ Deno.serve(async (req)=>{
         "Content-Type": "application/json"
       }
     });
+
   } catch (error) {
     console.error("Account deletion error:", error);
+    
     return new Response(JSON.stringify({
-      error: error.message || "An unexpected error occurred"
+      error: error.message || "An unexpected error occurred",
+      timestamp: new Date().toISOString()
     }), {
       status: 500,
       headers: {
