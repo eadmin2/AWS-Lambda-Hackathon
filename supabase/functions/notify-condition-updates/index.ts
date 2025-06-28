@@ -1,7 +1,7 @@
 // @deno-types="https://deno.land/x/servest@v1.3.1/types/react/index.d.ts"
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { corsHeaders } from "../_shared/cors.ts";
+import { getCorsHeaders } from "../_shared/cors.ts";
 
 const PICA_ACTION_ID = "conn_mod_def::GC4q4JE4I28::x8Elxo0VRMK1X-uH1C3NeA";
 
@@ -149,7 +149,7 @@ async function processNotifications(supabaseClient: SupabaseClient) {
 
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+    return new Response('ok', { headers: getCorsHeaders() });
   }
 
   try {
@@ -161,14 +161,14 @@ serve(async (req: Request) => {
     await processNotifications(supabaseClient);
 
     return new Response(JSON.stringify({ message: "Notifications processed successfully" }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
       status: 200,
     });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error("Error processing notifications:", error);
     return new Response(JSON.stringify({ error: errorMessage }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...getCorsHeaders(), 'Content-Type': 'application/json' },
       status: 500,
     });
   }
