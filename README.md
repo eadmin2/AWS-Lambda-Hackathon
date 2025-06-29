@@ -40,7 +40,7 @@ As an active-duty Navy Chief and advocate for veterans' welfare, I created **VA 
 | **Amazon Textract** | OCR for text and data extraction from PDFs and images |
 | **Amazon Bedrock + Bedrock Agent** | AI and RAG-driven disability condition analysis |
 | **Amazon SQS / SNS** | Asynchronous event handling for large document jobs |
-| **Amazon Cognito** | User authentication and authorization |
+| **Supabase (Powered by AWS)** | User authentication and authorization |
 | **AWS X-Ray** | Distributed tracing and backend monitoring |
 
 ---
@@ -75,12 +75,12 @@ All Lambda functions run in a fully stateless, scalable manner, perfectly aligne
 | **Amazon Textract** | OCR and data extraction |
 | **Amazon Bedrock + Bedrock Agent** | Generative AI and RAG |
 | **Amazon SQS / SNS** | Async event handling |
-| **Amazon Cognito** | User authentication |
+| **Amazon Supabase (Powered by AWS)** | User authentication |
 | **AWS X-Ray** | Backend tracing |
 
 ---
 
-## 🚧 Challenges We Overcame
+## 🚧 Challenges I Overcame
 
 - **Document Variability:**  
 Dealing with a wide range of file types (PDFs, scanned images, handwritten notes).
@@ -123,9 +123,6 @@ Generate pre-filled **VA disability forms (21-526EZ and more)**.
 - **AI Appeals Helper:**  
 Help veterans understand their ratings and guide them through the appeals process.
 
-- **Mobile Optimization:**  
-Continue improving mobile-first UX for veterans on smartphones.
-
 ---
 
 ## 📽️ Demo Video
@@ -139,7 +136,7 @@ Continue improving mobile-first UX for veterans on smartphones.
 
 - **Frontend:** 100% built in **Bolt.new**
 - **Backend:** AWS Lambda (with required API Gateway triggers and S3/Lambda event triggers)
-- **AWS Integration:** Uses over **8 AWS services**
+- **AWS Integration:** Uses over **7+ AWS services**
 - **Deployment Badge:** ✅ **Bolt.new Badge present on production site**
 - **Significant Updates:** All core features and UI were built from scratch in Bolt during the Hackathon period.
 - **Third-Party APIs:** Uses **VA.gov public APIs (planned for production launch)** and **Supabase for Postgres storage**.
@@ -154,6 +151,6 @@ Continue improving mobile-first UX for veterans on smartphones.
 
 ## 📂 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is not for cloning and should not be forked.
 
 ---
