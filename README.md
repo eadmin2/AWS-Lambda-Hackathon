@@ -63,6 +63,54 @@ All Lambda functions run in a fully stateless, scalable manner, perfectly aligne
 
 ---
 
+## 🧩 How AWS Lambda Functions Work & What Triggers Them
+
+The VA Rating Assistant backend is powered by a set of AWS Lambda functions, each designed to handle a specific part of the document processing and AI analysis workflow. Here's a detailed breakdown of how these Lambdas operate and what triggers them:
+
+### Lambda Triggers & Event Sources
+
+- **Amazon API Gateway (REST & WebSocket):**
+  - **Trigger:** HTTP requests from the frontend (e.g., document upload, status check, user actions) and WebSocket connections for real-time updates.
+  - **Purpose:** Initiates Lambda functions for processing uploads, registering sessions, and broadcasting results.
+
+- **Amazon S3 (ObjectCreated Event):**
+  - **Trigger:** When a user uploads a document to S3 using a pre-signed URL, the S3 bucket emits an ObjectCreated event.
+  - **Purpose:** Triggers a Lambda to start the OCR and AI analysis pipeline.
+
+- **Amazon SNS/SQS:**
+  - **Trigger:** Asynchronous events for large or long-running document jobs, or to notify other services of processing stages.
+  - **Purpose:** Decouples heavy processing and enables scalable, event-driven workflows.
+
+### Lambda Workflow & Orchestration
+
+1. **Document Upload Initiation:**
+   - User uploads a document via the frontend, which is stored in S3.
+   - S3 triggers a Lambda function to begin processing.
+
+2. **OCR Processing:**
+   - The triggered Lambda calls Amazon Textract to extract text and data from the uploaded document.
+   - Results are stored in S3 and/or passed to the next Lambda.
+
+3. **AI Analysis:**
+   - Another Lambda function invokes Amazon Bedrock (Claude) to analyze the extracted text and generate a summary or rating estimate.
+   - The summary is saved back to S3.
+
+4. **Status & Notification:**
+   - Lambdas update user status and job progress in Supabase.
+   - For real-time updates, a Lambda sends messages via API Gateway WebSocket to notify the frontend when processing is complete.
+   - SNS/SQS may be used to queue and manage large jobs or notifications.
+
+5. **Result Retrieval:**
+   - The frontend polls or receives a WebSocket message when the summary is ready, and retrieves the result from S3 or via an API endpoint.
+
+### Key Points
+- All Lambdas are stateless and event-driven, scaling automatically with demand.
+- Triggers include API Gateway (REST/WebSocket), S3 ObjectCreated events, and SNS/SQS messages.
+- Lambdas orchestrate the full workflow: from upload, through OCR and AI, to user notification and result delivery.
+- Monitoring and tracing are handled by AWS X-Ray for all Lambda executions.
+
+---
+
 ## ✅ AWS Tools Used
 
 | AWS Service | Purpose |
@@ -135,7 +183,6 @@ Help veterans understand their ratings and guide them through the appeals proces
 - **Frontend:** 100% built in **Bolt.new**
 - **Backend:** AWS Lambda (with required API Gateway triggers and S3/Lambda event triggers)
 - **AWS Integration:** Uses over **7+ AWS services**
-- **Deployment Badge:** ✅ **Bolt.new Badge present on production site**
 - **Significant Updates:** All core features and UI were built from scratch in Bolt during the Hackathon period.
 - **Third-Party APIs:** Uses **VA.gov public APIs (planned for production launch)** and **Supabase for Postgres storage**.
 
