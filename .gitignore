@@ -75,3 +75,7 @@ supabase/.env.local
 supabase/.env.keys
 .supabase/docker/volumes/
 supabase/migrations/
+
+# Deployment scripts
+deploy.ps1
+**/deploy.ps1
