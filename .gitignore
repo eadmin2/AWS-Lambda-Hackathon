@@ -1,6 +1,7 @@
 # Logs
-logs
+logs/
 *.log
+log.txt
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -8,19 +9,29 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # Dependencies
-node_modules
+node_modules/
 package-lock.json
+deno.lock
 
 # Build outputs
-dist
-dist-ssr
+# (add dev-dist if used for builds)
+dist/
+dist-ssr/
+dev-dist/
+.cache/
 *.local
+
+# Build info
+*.tsbuildinfo
+tsconfig.*.tsbuildinfo
 
 # Environment variables & secrets
 .env
+.env.*
 .env.local
 .env.production
 .env.test
+.env.keys
 
 # AWS-specific files
 .aws/
@@ -31,9 +42,9 @@ aws-credentials.json
 lambda-code.zip
 
 # Editor directories and files
-.vscode/*
+.vscode/
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
 *.suo
 *.ntvs*
@@ -48,11 +59,19 @@ lambda-code.zip
 .cursor/
 .bolt/
 
-# Build cache
-.cache/
-
 # OS generated files
 Thumbs.db
 ehthumbs.db
 .Trashes
 .Spotlight-V100
+
+# Supabase local dev and Docker volumes
+.supabase/
+supabase/.temp/
+supabase/.branches/
+supabase/.env*
+supabase/.env.*
+supabase/.env.local
+supabase/.env.keys
+.supabase/docker/volumes/
+supabase/migrations/
