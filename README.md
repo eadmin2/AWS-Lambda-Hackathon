@@ -199,3 +199,24 @@ Help veterans understand their ratings and guide them through the appeals proces
 This project is not for cloning and should not be forked.
 
 ---
+
+## 🚀 Demo Login & Test Instructions
+
+To explore the app quickly, use the following demo credentials:
+
+**Login Credentials:**
+- **Email:** support@varatingassistant.com
+- **Password:** demo123!@
+
+This account already has a sample medical document uploaded. You can also create your own account if you wish.
+
+**Stripe Test Card for Orders:**
+- **Card Number:** 4242 4242 4242 4242
+- **Expiration:** 12/28
+- **CVC:** 123
+- **Name:** John Doe
+- **ZIP:** 12345
+- Uncheck "Save my information"
+- Click "Pay"
+
+---
