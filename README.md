@@ -1,7 +1,5 @@
 # VA Rating Assistant - Built with Bolt.new & AWS Lambda 🚀
 
-[![Built with Bolt.new](https://bolt.new/assets/badges/bolt-badge.svg)](https://bolt.new)
-
 ---
 
 ## 🎯 Inspiration
@@ -45,7 +43,7 @@ As an active-duty Navy Chief and advocate for veterans' welfare, I created **VA 
 
 ---
 
-## ✅ How We Used AWS Lambda
+## ✅ How I Used AWS Lambda
 
 **AWS Lambda is the core backend engine of VA Rating Assistant.**  
 
