@@ -173,7 +173,7 @@ Help veterans understand their ratings and guide them through the appeals proces
 
 ## 📽️ Demo Video
 
-[Watch on YouTube](https://your-demo-video-link-here.com)  
+[Watch on YouTube](https://www.youtube.com/watch?v=RGmAZSE2vqQ)  
 (3-minute demo showing **Bolt UI**, **AWS Lambda execution**, and **end-to-end user flow**)
 
 ---
